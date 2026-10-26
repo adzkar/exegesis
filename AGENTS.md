@@ -53,9 +53,10 @@ chapters.
   its column edge AND vertically isolated (>0.7× line-height gaps on both
   sides) becomes `<blockquote>` (quotes, verse).
 - **Tables** — rotated/landscape tables (≥3 tall-narrow blocks sharing a
-  y-band) are clipped, re-rendered upright via `show_pdf_page(rotate=-90)`,
-  and embedded as PNGs. Horizontal tables are not yet detected — their
-  cells currently flow as text.
+  y-band) are rasterized and embedded as PNGs. The clip is padded in
+  mediabox (unrotated) space and mapped through the page's own `/Rotate`
+  (90/180/270) so the render comes out upright and uncropped. Horizontal
+  tables are not yet detected — their cells currently flow as text.
 - **Abstract** — first small-font inset block in the top half of pages 0–1
   injects an `Abstract` h2.
 - **Styles** — bold via flags or `.B`/`Bold` font-name suffix, italic via
