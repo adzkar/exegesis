@@ -582,21 +582,30 @@ def _render_page(page, page_index, state):
             if not tbl_done:
                 tbl_done = True
                 flush_par()
-                tbl = tbl + fitz.Rect(-4, -4, 4, 4) & page.rect
-                if tbl.height > tbl.width:
-                    tmp = fitz.open()
-                    tp = tmp.new_page(width=tbl.height, height=tbl.width)
-                    tp.show_pdf_page(
-                        fitz.Rect(0, 0, tbl.height, tbl.width),
-                        page.parent,
-                        page.number,
-                        clip=tbl,
-                        rotate=-90,
+                mb = page.mediabox
+                tbl = fitz.Rect(
+                    max(0, tbl.x0 - 8), max(0, tbl.y0 - 20),
+                    min(mb.width, tbl.x1 + 8),
+                    min(mb.height, tbl.y1 + 20),
+                )
+                rot = page.rotation
+                if rot == 90:
+                    clip = fitz.Rect(
+                        tbl.y0, mb.width - tbl.x1, tbl.y1, mb.width - tbl.x0
                     )
-                    pix = tp.get_pixmap(matrix=fitz.Matrix(2, 2))
-                    tmp.close()
+                elif rot == 270:
+                    clip = fitz.Rect(
+                        mb.height - tbl.y1, tbl.x0,
+                        mb.height - tbl.y0, tbl.x1,
+                    )
+                elif rot == 180:
+                    clip = fitz.Rect(
+                        mb.width - tbl.x1, mb.height - tbl.y1,
+                        mb.width - tbl.x0, mb.height - tbl.y0,
+                    )
                 else:
-                    pix = page.get_pixmap(clip=tbl, matrix=fitz.Matrix(2, 2))
+                    clip = tbl
+                pix = page.get_pixmap(clip=clip, matrix=fitz.Matrix(2, 2))
                 data = pix.tobytes("png")
                 digest = hashlib.sha1(data).hexdigest()[:16]
                 if digest not in state["images"]:
