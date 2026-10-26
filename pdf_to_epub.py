@@ -20,11 +20,17 @@ from ebooklib import epub
 
 EDGE_ZONE = 0.20
 BOILERPLATE_COVERAGE = 0.4
-COLUMN_GAP = 0.08
 MIN_IMAGE_BYTES = 2048
 MIN_HEADING_CHARS = 4
 MAX_HEADING_CHARS = 120
 PAGES_PER_FALLBACK_CHAPTER = 10
+
+BOLD_FONT_RE = re.compile(r"(?i)(bold|\.b\d*$|-b\d*$|/b\d*$)")
+ITAL_FONT_RE = re.compile(r"(?i)(italic|oblique|\.i\d*$|-i\d*$|/i\d*$)")
+FURNITURE_RE = re.compile(
+    r"(?i)(www\.|downloaded from|vol\.?\s*\d|issn|doi[:\s]|©|copyright|"
+    r"\b\d{2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))"
+)
 
 
 def _block_lines(block):
@@ -52,9 +58,21 @@ def _line_max_size(line):
     return max((s["size"] for s in line["spans"]), default=0)
 
 
+def _span_is_bold(span):
+    """Bold via flags or font-name suffix (.B/Bold) — flags are often absent."""
+    return bool(
+        span["flags"] & 16 or BOLD_FONT_RE.search(span.get("font", ""))
+    )
+
+
+def _span_is_italic(span):
+    """Italic via font-name suffix (.I/Italic/Oblique)."""
+    return bool(ITAL_FONT_RE.search(span.get("font", "")))
+
+
 def _line_is_bold(line):
-    """True when every span in the line has the bold flag set."""
-    return bool(line["spans"]) and all(s["flags"] & 16 for s in line["spans"])
+    """True when every span in the line is bold."""
+    return bool(line["spans"]) and all(_span_is_bold(s) for s in line["spans"])
 
 
 def _block_median_size(block):
@@ -72,7 +90,18 @@ def _join_lines(parts):
     """Join line fragments, merging words split by a soft hyphen."""
     out = []
     for t in parts:
-        if out and re.search(r"[a-z]-$", out[-1]):
+        t = t.strip()
+        if not t:
+            continue
+        if (
+            out
+            and len(out[-1]) == 1
+            and out[-1].isupper()
+            and out[-1] not in "IA"
+            and t[:1].islower()
+        ):
+            out[-1] += t
+        elif out and re.search(r"[a-z]-$", out[-1]):
             out[-1] = out[-1][:-1] + t
         else:
             out.append(t)
@@ -95,6 +124,47 @@ def _body_font_size(doc):
     return (
         sizes.most_common(1)[0][0] if sizes else 10.0,
         median(heights) if heights else 12.0,
+    )
+
+
+SECTION_LABEL_RE = re.compile(
+    r"^(References and Notes|Notes and References|References|Bibliography|"
+    r"Supporting Online Material|Supplementary Materials?|Acknowledg?ements|"
+    r"Acknowledgments|Materials and Methods|Appendix|Funding|"
+    r"Author Contributions|Data Availability)\b"
+)
+
+
+def _section_label(text):
+    """Leading section label if a text starts with a known heading phrase.
+
+    Labels like 'References and Notes' often share a block/line with the
+    first entry, so font-size heading detection can't see them. The rest of
+    the text is returned separately to continue as a paragraph.
+    """
+    m = SECTION_LABEL_RE.match(text)
+    if not m:
+        return None
+    rest = text[m.end():].strip()
+    if rest and not (rest[0].isdigit() or rest[0].isupper()):
+        return None
+    return m.group(1), rest
+
+
+def _authorish(text):
+    """True if a short block plausibly lists author names (not a sentence)."""
+    t = text.strip()
+    return (
+        3 < len(t) < 120
+        and (", " in t or " and " in t)
+        and not t.endswith((".", ":", ";", "?", "!"))
+    )
+
+
+def _valid_title(t):
+    """True if a metadata title is usable (has letters, not pagination junk)."""
+    return bool(t) and bool(re.search(r"[A-Za-z]", t)) and not re.match(
+        r"^[\d\s.\-_()]+$", t
     )
 
 
@@ -127,6 +197,10 @@ def _standalone_heading_level(block, body_size):
     """
     lines = _block_lines(block)
     if len(lines) != 1:
+        if all(_line_max_size(l) >= body_size * 1.6 for l in lines):
+            text = " ".join(_line_text(l).strip() for l in lines)
+            if _looks_like_heading(text):
+                return 1
         return None
     size = _line_max_size(lines[0])
     if size >= body_size * 1.6:
@@ -160,8 +234,8 @@ def _sup_marker(block, body_size):
     return None
 
 
-def _footnote_tops(blocks, mid_x, body_size, page_height, line_h):
-    """Map each column ('L'/'R') to the y where its footnote region starts.
+def _footnote_tops(blocks, edges, body_size, page_height, line_h):
+    """Map each column index to the y where its footnote region starts.
 
     Two detection paths: (a) blocks opening with a superscript digit in the
     lower half of the page, and (b) unnumbered footnote zones — a smaller-than
@@ -169,12 +243,12 @@ def _footnote_tops(blocks, mid_x, body_size, page_height, line_h):
     larger than the line height (author notes sit under a rule or whitespace).
     """
     tops = {}
-    cols = {"L": [], "R": []}
+    cols = {}
     for b in blocks:
         if b["type"] != 0:
             continue
-        col = "L" if (b["bbox"][0] + b["bbox"][2]) / 2 < mid_x else "R"
-        cols[col].append(b)
+        col = _assign_column(b, edges)
+        cols.setdefault(col, []).append(b)
         if b["bbox"][1] >= page_height * 0.45 and _sup_marker(b, body_size) is not None:
             tops[col] = min(tops.get(col, b["bbox"][1]), b["bbox"][1])
     for col, cblocks in cols.items():
@@ -218,17 +292,79 @@ def _boilerplate_signatures(doc):
     return {sig for sig, n in counts.items() if n >= threshold}
 
 
-def _ordered_blocks(page, boilerplate):
-    """Return page blocks in reading order, handling two-column layouts.
+def _column_edges(items):
+    """Detect column left edges by clustering block x0 positions.
 
-    Full-width blocks (titles, abstracts, wide figures) split the page into
-    horizontal segments; within each segment the left column is read top to
-    bottom, then the right column. Text blocks whose signature is in
-    ``boilerplate`` (running headers/footers) are dropped.
+    Clusters of ≥2 blocks within 15pt count as a column; stray x0s (page
+    numbers, margin notes) don't form edges. Returns 1+ edges left to right.
+    """
+    xs = sorted(b["bbox"][0] for b in items if b["type"] == 0)
+    clusters = []
+    for x in xs:
+        if clusters and x - clusters[-1][-1] < 15:
+            clusters[-1].append(x)
+        else:
+            clusters.append([x])
+    return [median(c) for c in clusters if len(c) >= 2] or [0.0]
+
+
+def _doc_column_edges(doc):
+    """Column edges for the document: edges found on ≥half of all pages.
+
+    Per-page clustering produces phantom edges from bylines, headings, and
+    other spanning elements; real columns repeat on most pages, so only
+    edges that recur survive. Prevents mid-page splits that corrupt both
+    ordering and footnote-gap detection.
+    """
+    votes = []
+    for page in doc:
+        items = page.get_text("dict")["blocks"]
+        for e in _column_edges(items):
+            for v in votes:
+                if abs(v[0] - e) < 15:
+                    v[1] += 1
+                    break
+            else:
+                votes.append([e, 1])
+    votes.sort(key=lambda v: -v[1])
+    needed = max(1, doc.page_count // 2)
+    edges = sorted(v[0] for v in votes if v[1] >= needed)
+    return edges or [0.0]
+
+
+def _assign_column(block, edges):
+    """Index of the column edge nearest a block's left position."""
+    x0 = block["bbox"][0]
+    return min(range(len(edges)), key=lambda i: abs(x0 - edges[i]))
+
+
+def _is_spanning(block, edges):
+    """True if a block crosses a gutter between detected columns."""
+    x0, _, x1, _ = block["bbox"]
+    return any(x0 < e - 12 < x1 for e in edges[1:])
+
+
+def _covered_cols(block, edges, page_width):
+    """Column indices a block overlaps, based on column edge bands."""
+    x0, _, x1, _ = block["bbox"]
+    bounds = list(edges) + [page_width]
+    return [
+        i
+        for i in range(len(edges))
+        if x0 < bounds[i + 1] and x1 > bounds[i]
+    ]
+
+
+def _ordered_blocks(page, boilerplate, edges):
+    """Return page blocks in reading order for any column layout.
+
+    Blocks above the first spanning element come first (page header zone).
+    Each column then emits its own sequence — non-spanning blocks plus the
+    spanning elements that cover it, in y order — columns left to right.
+    A span covering several columns emits at its first encounter only.
+    Text blocks whose signature is in ``boilerplate`` are dropped.
     """
     rect = page.rect
-    mid_x = rect.width / 2
-    margin = rect.width * COLUMN_GAP
     items = []
     for block in page.get_text("dict")["blocks"]:
         x0, y0, x1, y1 = block["bbox"]
@@ -241,34 +377,54 @@ def _ordered_blocks(page, boilerplate):
             )
             if near_edge and _signature(text) in boilerplate:
                 continue
+            if (
+                x1 - x0 < 25
+                and y1 - y0 > 4 * (x1 - x0)
+                and (x0 > rect.width * 0.9 or x1 < rect.width * 0.1)
+            ):
+                continue
+            if (
+                y0 > rect.height * 0.93 or y1 < rect.height * 0.07
+            ) and FURNITURE_RE.search(text):
+                continue
         items.append(block)
 
-    def is_full_width(b):
-        x0, _, x1, _ = b["bbox"]
-        return x0 < mid_x - margin and x1 > mid_x + margin
+    key = lambda b: (b["bbox"][1], b["bbox"][0])
+    spans = {id(b) for b in items if _is_spanning(b, edges)}
+    nonspans = [b for b in items if id(b) not in spans]
 
-    def flush_segment(segment):
-        left = [b for b in segment if (b["bbox"][0] + b["bbox"][2]) / 2 < mid_x]
-        right = [b for b in segment if (b["bbox"][0] + b["bbox"][2]) / 2 >= mid_x]
-        if len(left) >= 2 and len(right) >= 2:
-            key = lambda b: (b["bbox"][1], b["bbox"][0])
-            return sorted(left, key=key) + sorted(right, key=key)
-        return sorted(segment, key=lambda b: (b["bbox"][1], b["bbox"][0]))
+    cut = min((b["bbox"][1] for b in items if id(b) in spans), default=None)
+    top_zone = (
+        sorted((b for b in nonspans if b["bbox"][3] < cut), key=key)
+        if cut is not None
+        else []
+    )
+    nonspans = [b for b in nonspans if b not in top_zone] if top_zone else nonspans
 
-    ordered, segment = [], []
-    for block in sorted(items, key=lambda b: (b["bbox"][1], b["bbox"][0])):
-        if is_full_width(block):
-            ordered.extend(flush_segment(segment))
-            segment = []
-            ordered.append(block)
-        else:
-            segment.append(block)
-    ordered.extend(flush_segment(segment))
+    cols = {i: [] for i in range(len(edges))}
+    for b in nonspans:
+        cols[_assign_column(b, edges)].append(b)
+    for b in items:
+        if id(b) in spans:
+            for c in _covered_cols(b, edges, rect.width):
+                cols[c].append(b)
+    for c in cols:
+        cols[c].sort(key=key)
+
+    ordered = list(top_zone)
+    emitted = set()
+    for c in sorted(cols):
+        for b in cols[c]:
+            if id(b) in emitted:
+                continue
+            emitted.add(id(b))
+            ordered.append(b)
     return ordered
 
 
 def _line_html(line, body_size):
-    """Render a line's spans to HTML, linking superscript footnote markers."""
+    """Render a line's spans to HTML: sup markers link to notes, font-name
+    bold/italic suffixes become <b>/<i>."""
     parts = []
     for s in line["spans"]:
         text = html.escape(s["text"])
@@ -278,8 +434,12 @@ def _line_html(line, body_size):
                 parts.append(f'<sup><a href="notes.xhtml#fn{inner}">{inner}</a></sup>')
             else:
                 parts.append(f"<sup>{inner}</sup>")
-        else:
-            parts.append(text)
+            continue
+        if _span_is_bold(s):
+            text = f"<b>{text}</b>"
+        if _span_is_italic(s):
+            text = f"<i>{text}</i>"
+        parts.append(text)
     return "".join(parts)
 
 
@@ -307,10 +467,10 @@ def _render_page(page, page_index, state):
     ``state['footnotes']``.
     """
     body_size = state["body_size"]
-    mid_x = page.rect.width / 2
-    ordered = _ordered_blocks(page, state["boilerplate"])
+    edges = state["edges"]
+    ordered = _ordered_blocks(page, state["boilerplate"], edges)
     foot_tops = _footnote_tops(
-        ordered, mid_x, body_size, page.rect.height, state["line_h"]
+        ordered, edges, body_size, page.rect.height, state["line_h"]
     )
     frags = state["page_frags"][page_index]
 
@@ -323,6 +483,8 @@ def _render_page(page, page_index, state):
 
     def emit_heading(level, text):
         flush_par()
+        if level == 1:
+            state["after_h1"] = True
         state["heading_seq"] += 1
         anchor = f"h{state['heading_seq']}"
         state["headings"].append((level, text, anchor, page_index))
@@ -347,41 +509,62 @@ def _render_page(page, page_index, state):
                 )
             continue
 
-        col = "L" if (block["bbox"][0] + block["bbox"][2]) / 2 < mid_x else "R"
+        col = _assign_column(block, edges)
         if col in foot_tops and block["bbox"][1] >= foot_tops[col] - 5:
             state["footnotes"].append(_footnote_text(block, body_size))
             continue
 
+        btext = _block_text(block)
+        if (
+            block["bbox"][1] < page.rect.height * 0.12
+            and btext.isupper()
+            and len(btext) < 30
+        ):
+            flush_par()
+            frags.append(f'<p class="label">{html.escape(btext)}</p>')
+            continue
+
         level = _standalone_heading_level(block, body_size)
         if level:
-            emit_heading(level, _line_text(block["lines"][0]).strip())
+            emit_heading(
+                level,
+                " ".join(_line_text(l).strip() for l in _block_lines(block)),
+            )
             continue
 
         med = _block_median_size(block)
         is_byline = med >= body_size * 1.15
-        if is_byline or (
+        if is_byline or (state["after_h1"] and _authorish(btext)) or (
             frags
             and frags[-1].startswith('<p class="byline">')
             and len(_block_lines(block)) == 1
             and len(_line_text(block["lines"][0]).strip()) < 100
         ):
             flush_par()
+            blines = [l for l in _block_lines(block) if _line_text(l).strip()]
+            tail = _line_text(blines[-1]).strip() if blines else ""
+            if len(tail) == 1 and tail.isupper() and tail not in "IA":
+                blines = blines[:-1]
+                state["par"] = [html.escape(tail)]
+                state["par_page"] = page_index
             text = _join_lines(
-                _line_html(l, body_size).strip()
-                for l in _block_lines(block)
-                if _line_text(l).strip()
+                _line_html(l, body_size).strip() for l in blines
             )
             if frags and frags[-1].startswith('<p class="byline">'):
                 frags[-1] = frags[-1][:-4] + " " + text + "</p>"
+                state["byline_text"] = re.sub(r"<[^>]+>", "", frags[-1])
             else:
                 frags.append(f'<p class="byline">{text}</p>')
+                state["byline_text"] = re.sub(r"<[^>]+>", "", text)
             continue
 
+        state["after_h1"] = False
         if (
             not state["abstract_done"]
             and page_index <= 1
             and 0.75 * body_size < med < 0.92 * body_size
             and block["bbox"][0] > page.rect.width * 0.15
+            and block["bbox"][1] < page.rect.height * 0.5
         ):
             emit_heading(2, "Abstract")
             state["abstract_done"] = True
@@ -390,9 +573,18 @@ def _render_page(page, page_index, state):
         if not new_par and state["par"]:
             tail = re.sub(r"<[^>]+>", "", state["par"][-1]).rstrip()
             new_par = bool(re.search(r"[.!?…][\"”’)\]]*$", tail))
-        if new_par:
+        if new_par and not (
+            len(state["par"]) == 1 and len(state["par"][0]) == 1
+        ):
             flush_par()
-        for line in _block_lines(block):
+        for li, line in enumerate(_block_lines(block)):
+            if li == 0:
+                m = _section_label(_line_text(line).strip())
+                if m:
+                    emit_heading(2, m[0])
+                    if m[1]:
+                        state["par"].append(html.escape(m[1]))
+                    continue
             line_level = _heading_level(line, body_size)
             if line_level:
                 emit_heading(line_level, _line_text(line).strip())
@@ -408,14 +600,15 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
     """Convert ``pdf_path`` to an EPUB at ``out_path``; returns a stats dict."""
     doc = fitz.open(pdf_path)
     meta = doc.metadata or {}
-    title = title or meta.get("title") or pdf_path.stem
-    author = author or meta.get("author") or "Unknown"
 
     body_size, line_h = _body_font_size(doc)
     state = {
         "body_size": body_size,
         "line_h": line_h,
+        "edges": _doc_column_edges(doc),
         "abstract_done": False,
+        "after_h1": False,
+        "byline_text": None,
         "images": {},
         "headings": [],
         "footnotes": [],
@@ -462,6 +655,21 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
         ]
     if not boundaries or boundaries[0] != 0:
         boundaries.insert(0, 0)
+
+    if title is None:
+        title = meta.get("title") or ""
+        if not _valid_title(title):
+            title = next(
+                (t for lv, t, _a, _p in state["headings"] if lv == 1),
+                pdf_path.stem,
+            )
+    if author is None:
+        author = meta.get("author") or ""
+        if not _valid_title(author):
+            author = state.get("byline_text") or "Unknown"
+            author = re.sub(r"[*†‡§]", "", author).strip()
+        else:
+            author = author.strip()
 
     book = epub.EpubBook()
     book.set_identifier(hashlib.sha1(str(pdf_path).encode()).hexdigest()[:16])

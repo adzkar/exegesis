@@ -42,21 +42,30 @@ python3 pdf_to_epub.py <input.pdf> [-o output.epub] [--title "..."] [--author ".
 
 ## How it works
 
-- Text is extracted as positioned blocks via PyMuPDF. Blocks spanning the page
-  midline are full-width; the rest are segmented into left/right columns and
-  emitted left-column-then-right, so two-column journals read correctly.
+- Text is extracted as positioned blocks via PyMuPDF. Column edges are
+  detected document-wide (x0 clusters on ≥50% of pages); gutter-crossing
+  blocks are spans, and each column emits its own sequence left to right —
+  handles 1/2/3-column layouts.
 - Paragraphs are reconstructed: blocks starting flush-left continue the open
   paragraph (merging mid-sentence splits across blocks/columns/pages);
   first-line-indented blocks or blocks after sentence-terminal punctuation
   start a new one.
-- Headings are detected by font size relative to the modal body size (large
-  fonts => h1; standalone single-line blocks modestly larger => h2) and
-  become the EPUB TOC and chapter splits.
-- Footnotes (blocks opening with a superscript digit in the bottom of a
-  column) are moved out of the body flow into a "Notes" chapter; superscript
-  markers in the body link to them.
-- Embedded raster images are deduplicated and included; tiny artifacts
-  (<2 KB) are dropped.
+- Headings: font-size heuristics (h1/h2) plus named section labels
+  (References, Supporting Online Material, ...) become the EPUB TOC and
+  chapter splits; chapters begin exactly at their heading.
+- Bylines (size-based or right-after-h1 name lists) merge into one group;
+  a trailing drop-cap letter relocates into the first paragraph.
+- Footnotes (superscript-digit starts and unnumbered gap-separated zones at
+  column bottom) are moved out of the body flow into a "Notes" chapter;
+  superscript markers in the body link to them.
+- Furniture is stripped three ways: repeated edge signatures (≥40% of
+  pages), pattern matches (VOL/www./ISSN/doi/dates) in the outer 7% edge,
+  and narrow+tall margin strips (rotated sidebars).
+- Bold/italic come from font-name suffixes (.B/Bold/.I/Italic) when flags
+  are absent; embedded raster images are deduplicated and included; tiny
+  artifacts (<2 KB) are dropped.
+- Title/author metadata is validated (pagination junk rejected) with h1
+  heading/byline fallbacks.
 
 ## Verify
 

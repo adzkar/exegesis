@@ -16,26 +16,40 @@ Single-pass pipeline: per page, positioned text/image blocks are extracted,
 reordered into reading order, rendered to HTML fragments, then chunked into
 chapters.
 
-- **Column order** — blocks spanning the midline are full-width; the rest form
-  left/right segments read left-then-right.
+- **Column order** — column edges are x0 clusters found on ≥50% of pages
+  (doc-wide voting kills phantom edges from bylines/headings). Blocks
+  crossing a gutter are spans; each column emits its own sequence of
+  non-spans + covering spans in y order, columns left to right. Works for
+  1/2/3-column layouts.
 - **Paragraphs** — blocks merge into the open paragraph unless the first line
   is indented (>4pt) or the previous line ends with terminal punctuation.
-  Open paragraphs carry across columns and page breaks.
-- **Headings/TOC** — large fonts → h1; standalone single-line blocks ≥1.08×
-  body → h2 (rejects sentence-like text with mid-string periods). Chapters
-  split at heading fragments, so each chapter begins exactly at its heading;
-  a paragraph crossing a page break emits on the page where it started.
-- **Bylines** — blocks ≥1.15× body size that aren't headings merge into a
-  single `<p class="byline">`, absorbing short single-line followers
-  (affiliations).
+  Open paragraphs carry across columns and page breaks; a lone drop-cap
+  letter fragment is never flushed alone.
+- **Headings/TOC** — h1: single-line ≥1.6× body or multi-line block whose
+  lines are all ≥1.6×; h2: standalone single-line ≥1.08×, rejecting
+  sentence-like text with mid-string periods. Named labels (`References`,
+  `Supporting Online Material`, `Methods`…) at block start also emit h2.
+  All-caps short labels in the top 12% emit `<p class="label">` instead.
+  Chapters split at heading fragments — each begins exactly at its heading.
+- **Bylines** — blocks ≥1.15× body, or the block right after an h1 when it
+  looks like a name list; merge into one `<p class="byline">` with short
+  single-line followers. A trailing drop-cap letter moves into the body
+  paragraph. The merged text feeds the author metadata fallback.
+- **Headers/footers** — two layers: signatures repeated on ≥40% of pages in
+  edge zones, and pattern furniture (`VOL`, `www.`, `ISSN`, `doi`, `©`,
+  dates) in the outer 7% edge (works on 1-page docs). Narrow+tall blocks in
+  outer 10% margins (rotated sidebars) are dropped.
 - **Footnotes** — superscript-digit starts in the lower half, OR an unnumbered
   smaller-than-body block below a >2×line-height gap in the bottom 40%
   (author notes under a rule). Removed from the body flow into a `Notes`
   chapter; in-body superscripts link to `#fnN` (dead links are stripped).
-- **Headers/footers** — short texts in page edge zones recurring on ≥40% of
-  pages are dropped (normalized, digit-insensitive signatures).
-- **Abstract** — first small-font inset block on pages 0–1 injects an
-  `Abstract` h2.
+- **Abstract** — first small-font inset block in the top half of pages 0–1
+  injects an `Abstract` h2.
+- **Styles** — bold via flags or `.B`/`Bold` font-name suffix, italic via
+  `.I`/`Italic`/`Oblique` suffix → `<b>`/`<i>` spans.
+- **Metadata** — title/author from PDF metadata are validated (must contain
+  letters, not pagination junk like `932 932..932`); invalid/missing falls
+  back to the first h1 heading and the byline text.
 
 ## Conventions
 
