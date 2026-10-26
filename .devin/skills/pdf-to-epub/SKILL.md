@@ -1,6 +1,6 @@
 ---
 name: pdf-to-epub
-description: Convert a PDF file (including two-column journal/academic papers) to a reflowable EPUB ebook with a table of contents and embedded images
+description: Convert a PDF file (including multi-column journal/academic papers) to a reflowable EPUB ebook with a table of contents and embedded images
 argument-hint: "<path to PDF> [output path]"
 allowed-tools:
   - exec
@@ -81,7 +81,7 @@ unzip -l output.epub          # chapters, images, nav present
 ```
 
 Spot-check the first chapter's XHTML for correct reading order (especially if
-the source is a two-column paper).
+the source is a multi-column paper).
 
 ## Limitations
 

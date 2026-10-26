@@ -3,15 +3,15 @@
 > *exegesis* — Greek ἐξήγησις, "to lead out." This tool leads the text out of
 > its fixed layout.
 
-Convert PDFs — especially **two-column academic papers and journals** — into
+Convert PDFs — especially **multi-column academic papers and journals** — into
 clean, reflowable EPUB ebooks for e-readers. Pure Python, rule-based layout
 analysis, no OCR or ML dependencies.
 
 ## Features
 
-- **Two-column reading order** — text blocks are segmented by the page midline
-  and emitted left-column-then-right, so papers read correctly instead of
-  interleaving lines.
+- **Multi-column reading order** — column edges are clustered document-wide
+  (x0 positions recurring on ≥50% of pages); each column emits its own
+  sequence left to right. Handles 1, 2, or 3-column layouts.
 - **Paragraph reconstruction** — merges mid-sentence splits across blocks,
   columns, and page breaks; indented or post-sentence blocks start new
   paragraphs.
@@ -21,9 +21,11 @@ analysis, no OCR or ML dependencies.
   (below a rule/gap) move to a linked **Notes** chapter; in-body superscripts
   become clickable references.
 - **Header/footer stripping** — running heads and page numbers detected by
-  repetition and removed.
+  repetition, pattern matching, or margin geometry and removed.
 - **Front-matter handling** — title, byline/affiliation, and abstract are
   detected and kept as distinct, well-structured elements.
+- **Structure preservation** — numbered lists, blockquotes, bold/italic
+  styling, and rotated tables (re-rendered upright as images).
 - **Image extraction** — embedded figures are deduplicated and included.
 
 ## Requirements

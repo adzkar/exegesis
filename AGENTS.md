@@ -1,6 +1,6 @@
 # exegesis
 
-PDF → EPUB converter tuned for two-column academic/journal papers. Rule-based
+PDF → EPUB converter tuned for multi-column academic/journal papers. Rule-based
 layout analysis over PyMuPDF blocks — no OCR, no ML dependencies.
 
 ## Commands
