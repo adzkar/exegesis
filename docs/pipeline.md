@@ -12,21 +12,21 @@ flowchart TD
     C --> F["Body font &amp; line height<br/>modal size · median height"]
 
     D & E & F --> G{Per-page ordering}
-    G -->|"top zone" (above first span)| H["Header zone blocks"]
-    G -->|"per-column sequence"| I["Column blocks + covering spans<br/>interleaved by y, deduped"]
+    G -->|top zone above first span| H["Header zone blocks"]
+    G -->|per-column sequence| I["Column blocks + covering spans<br/>interleaved by y, deduped"]
 
     H & I --> J{Classify each block}
 
-    J -->|type=image| K["Figure<br/>dedupe by hash, drop <2KB"]
+    J -->|image| K["Figure<br/>dedupe by hash, drop under 2KB"]
     J -->|footnote zone| L["Notes collection"]
-    J -->|all-caps, top 12%| M["&lt;p class=label&gt;<br/>(BREVIA etc.)"]
+    J -->|all-caps top label| M["&lt;p class=label&gt;<br/>(BREVIA etc.)"]
     J -->|heading font| N["h1/h2<br/>single-line ≥1.08× · multi-line ≥1.6×"]
-    J -->|size or after-h1 + name-like| O["&lt;p class=byline&gt;<br/>+ drop-cap relocation"]
-    J -->|"References"/"Methods"/etc| N
-    J -->|small inset, top half| P["Abstract → inject h2"]
+    J -->|byline size or position| O["&lt;p class=byline&gt;<br/>+ drop-cap relocation"]
+    J -->|named section label| N
+    J -->|small inset top half| P["Abstract - inject h2"]
     J -->|otherwise| Q["Text lines<br/>+ &lt;b&gt;/&lt;i&gt; via font names"]
 
-    Q --> R{"Paragraph merge<br/>indent >4pt or prev ends '.'?<br/>drop-cap seed never flushes"}
+    Q --> R{"Paragraph merge<br/>indent &gt;4pt or prev ends period<br/>drop-cap seed never flushes"}
     N --> S["Chapter boundaries<br/>(split at heading fragments)"]
     R --> S
     L --> T["Notes chapter<br/>+ sup link backfill"]
