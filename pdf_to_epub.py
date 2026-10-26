@@ -13,6 +13,7 @@ import re
 import sys
 from collections import Counter
 from pathlib import Path
+from statistics import median
 
 import fitz
 from ebooklib import epub
@@ -56,6 +57,17 @@ def _line_is_bold(line):
     return bool(line["spans"]) and all(s["flags"] & 16 for s in line["spans"])
 
 
+def _block_median_size(block):
+    """Median span size of a text block."""
+    sizes = [
+        s["size"]
+        for l in _block_lines(block)
+        for s in l["spans"]
+        if s["text"].strip()
+    ]
+    return median(sizes) if sizes else 0
+
+
 def _join_lines(parts):
     """Join line fragments, merging words split by a soft hyphen."""
     out = []
@@ -68,17 +80,22 @@ def _join_lines(parts):
 
 
 def _body_font_size(doc):
-    """Estimate the body text size as the modal span size across the document."""
+    """Return (modal body span size, median line height) across the document."""
     sizes = Counter()
+    heights = []
     for page in doc:
         for block in page.get_text("dict")["blocks"]:
             if block["type"] != 0:
                 continue
             for line in _block_lines(block):
+                heights.append(line["bbox"][3] - line["bbox"][1])
                 for span in line["spans"]:
                     if span["text"].strip():
                         sizes[round(span["size"], 1)] += len(span["text"])
-    return sizes.most_common(1)[0][0] if sizes else 10.0
+    return (
+        sizes.most_common(1)[0][0] if sizes else 10.0,
+        median(heights) if heights else 12.0,
+    )
 
 
 def _looks_like_heading(text):
@@ -143,18 +160,33 @@ def _sup_marker(block, body_size):
     return None
 
 
-def _footnote_tops(blocks, mid_x, body_size, page_height):
-    """Map each column ('L'/'R') to the y where its footnote region starts."""
+def _footnote_tops(blocks, mid_x, body_size, page_height, line_h):
+    """Map each column ('L'/'R') to the y where its footnote region starts.
+
+    Two detection paths: (a) blocks opening with a superscript digit in the
+    lower half of the page, and (b) unnumbered footnote zones — a smaller-than
+    -body block in the bottom 40% separated from the text above by a gap much
+    larger than the line height (author notes sit under a rule or whitespace).
+    """
     tops = {}
+    cols = {"L": [], "R": []}
     for b in blocks:
-        if (
-            b["type"] != 0
-            or b["bbox"][1] < page_height * 0.45
-            or _sup_marker(b, body_size) is None
-        ):
+        if b["type"] != 0:
             continue
         col = "L" if (b["bbox"][0] + b["bbox"][2]) / 2 < mid_x else "R"
-        tops[col] = min(tops.get(col, b["bbox"][1]), b["bbox"][1])
+        cols[col].append(b)
+        if b["bbox"][1] >= page_height * 0.45 and _sup_marker(b, body_size) is not None:
+            tops[col] = min(tops.get(col, b["bbox"][1]), b["bbox"][1])
+    for col, cblocks in cols.items():
+        cblocks.sort(key=lambda b: b["bbox"][1])
+        for prev, cur in zip(cblocks, cblocks[1:]):
+            if (
+                cur["bbox"][1] > page_height * 0.6
+                and cur["bbox"][1] - prev["bbox"][3] > 2 * line_h
+                and _block_median_size(cur) < body_size * 0.95
+            ):
+                tops[col] = min(tops.get(col, cur["bbox"][1]), cur["bbox"][1])
+                break
     return tops
 
 
@@ -274,7 +306,9 @@ def _render_page(page, page_index, state):
     body_size = state["body_size"]
     mid_x = page.rect.width / 2
     ordered = _ordered_blocks(page, state["boilerplate"])
-    foot_tops = _footnote_tops(ordered, mid_x, body_size, page.rect.height)
+    foot_tops = _footnote_tops(
+        ordered, mid_x, body_size, page.rect.height, state["line_h"]
+    )
     frags = []
 
     def flush_par():
@@ -318,6 +352,26 @@ def _render_page(page, page_index, state):
             emit_heading(level, _line_text(block["lines"][0]).strip())
             continue
 
+        med = _block_median_size(block)
+        if med >= body_size * 1.15:
+            flush_par()
+            text = _join_lines(
+                _line_html(l, body_size).strip()
+                for l in _block_lines(block)
+                if _line_text(l).strip()
+            )
+            frags.append(f'<p class="byline">{text}</p>')
+            continue
+
+        if (
+            not state["abstract_done"]
+            and page_index <= 1
+            and 0.75 * body_size < med < 0.92 * body_size
+            and block["bbox"][0] > page.rect.width * 0.15
+        ):
+            emit_heading(2, "Abstract")
+            state["abstract_done"] = True
+
         new_par = _first_line_indent(block) > 4
         if not new_par and state["par"]:
             tail = re.sub(r"<[^>]+>", "", state["par"][-1]).rstrip()
@@ -342,8 +396,11 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
     title = title or meta.get("title") or pdf_path.stem
     author = author or meta.get("author") or "Unknown"
 
+    body_size, line_h = _body_font_size(doc)
     state = {
-        "body_size": _body_font_size(doc),
+        "body_size": body_size,
+        "line_h": line_h,
+        "abstract_done": False,
         "images": {},
         "headings": [],
         "footnotes": [],
