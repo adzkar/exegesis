@@ -31,6 +31,13 @@ FURNITURE_RE = re.compile(
     r"(?i)(www\.|downloaded from|vol\.?\s*\d|issn|doi[:\s]|©|copyright|"
     r"\b\d{2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))"
 )
+NOTE_START_RE = re.compile(
+    r"(?i)^[*\s]*(preparation of (?:this|the)|requests? for reprints|"
+    r"correspondence (?:concerning|should be|addressed)|"
+    r"(?:this (?:paper|article|work) was )?supported by|"
+    r"the author[s]? (?:thank|acknowledge|wish)|to whom correspondence)"
+)
+LIST_ITEM_RE = re.compile(r"^\d{1,2}[.)]\s+\S")
 
 
 def _block_lines(block):
@@ -155,7 +162,7 @@ def _authorish(text):
     """True if a short block plausibly lists author names (not a sentence)."""
     t = text.strip()
     return (
-        3 < len(t) < 120
+        3 < len(t) < 170
         and (", " in t or " and " in t)
         and not t.endswith((".", ":", ";", "?", "!"))
     )
@@ -169,9 +176,11 @@ def _valid_title(t):
 
 
 def _looks_like_heading(text):
-    """True if the string is plausible heading text (no mid-sentence periods)."""
-    return MIN_HEADING_CHARS <= len(text) <= MAX_HEADING_CHARS and not re.search(
-        r"\.", text[:-1]
+    """True if the string is plausible heading text (no sentence periods)."""
+    return (
+        MIN_HEADING_CHARS <= len(text) <= MAX_HEADING_CHARS
+        and not re.search(r"\.", text[:-1])
+        and not text.rstrip().endswith(".")
     )
 
 
@@ -197,20 +206,57 @@ def _standalone_heading_level(block, body_size):
     """
     lines = _block_lines(block)
     if len(lines) != 1:
+        text = " ".join(_line_text(l).strip() for l in lines)
         if all(_line_max_size(l) >= body_size * 1.6 for l in lines):
-            text = " ".join(_line_text(l).strip() for l in lines)
             if _looks_like_heading(text):
                 return 1
+        elif all(_line_is_bold(l) for l in lines):
+            if _looks_like_heading(text):
+                return 2
         return None
     size = _line_max_size(lines[0])
     if size >= body_size * 1.6:
         level = 1
     elif size >= body_size * 1.08:
         level = 2
+    elif size >= body_size * 0.9 and _line_is_bold(lines[0]):
+        level = 2
     else:
         return None
     text = _line_text(lines[0]).strip()
     return level if _looks_like_heading(text) else None
+
+
+def _rotated_table_region(blocks):
+    """Bbox of a rotated (landscape) table: ≥3 tall-narrow text blocks sharing
+    a common y-point, i.e. rotated text columns standing side by side."""
+    tall = [
+        b
+        for b in blocks
+        if b["type"] == 0
+        and (b["bbox"][3] - b["bbox"][1]) > 4 * max(1, b["bbox"][2] - b["bbox"][0])
+        and (b["bbox"][3] - b["bbox"][1]) > 60
+    ]
+    if len(tall) < 3:
+        return None
+    events = sorted(
+        [(b["bbox"][1], 1) for b in tall] + [(b["bbox"][3], -1) for b in tall]
+    )
+    cov = 0
+    shared = False
+    for _, d in events:
+        cov += d
+        if cov >= 3:
+            shared = True
+            break
+    if not shared:
+        return None
+    return fitz.Rect(
+        min(b["bbox"][0] for b in tall),
+        min(b["bbox"][1] for b in tall),
+        max(b["bbox"][2] for b in tall),
+        max(b["bbox"][3] for b in tall),
+    )
 
 
 def _first_line_indent(block):
@@ -261,6 +307,14 @@ def _footnote_tops(blocks, edges, body_size, page_height, line_h):
             ):
                 tops[col] = min(tops.get(col, cur["bbox"][1]), cur["bbox"][1])
                 break
+    for col, cblocks in cols.items():
+        for b in cblocks:
+            if (
+                b["bbox"][1] > page_height * 0.55
+                and _block_median_size(b) < body_size * 0.95
+                and NOTE_START_RE.match(_block_text(b))
+            ):
+                tops[col] = min(tops.get(col, b["bbox"][1]), b["bbox"][1])
     return tops
 
 
@@ -383,10 +437,9 @@ def _ordered_blocks(page, boilerplate, edges):
                 and (x0 > rect.width * 0.9 or x1 < rect.width * 0.1)
             ):
                 continue
-            if (
-                y0 > rect.height * 0.93 or y1 < rect.height * 0.07
-            ) and FURNITURE_RE.search(text):
-                continue
+            if y0 > rect.height * 0.93 or y1 < rect.height * 0.07:
+                if FURNITURE_RE.search(text) or re.fullmatch(r"\d{1,4}", text):
+                    continue
         items.append(block)
 
     key = lambda b: (b["bbox"][1], b["bbox"][0])
@@ -474,12 +527,28 @@ def _render_page(page, page_index, state):
     )
     frags = state["page_frags"][page_index]
 
+    tbl = _rotated_table_region(ordered)
+    tbl_ids = (
+        {id(b) for b in ordered if fitz.Rect(b["bbox"]).intersects(tbl)}
+        if tbl is not None
+        else set()
+    )
+    tbl_done = False
+
     def flush_par():
         if state["par"]:
             state["page_frags"][state["par_page"]].append(
                 f"<p>{_join_lines(state['par'])}</p>"
             )
             state["par"] = []
+        flush_item()
+
+    def flush_item():
+        if state["item"]:
+            frags.append(
+                f'<p class="listitem">{_join_lines(state["item"])}</p>'
+            )
+            state["item"] = []
 
     def emit_heading(level, text):
         flush_par()
@@ -490,7 +559,7 @@ def _render_page(page, page_index, state):
         state["headings"].append((level, text, anchor, page_index))
         frags.append(f'<h{level} id="{anchor}">{html.escape(text)}</h{level}>')
 
-    for block in ordered:
+    for b_i, block in enumerate(ordered):
         if block["type"] == 1:
             data = block.get("image")
             if data and len(data) >= MIN_IMAGE_BYTES:
@@ -506,6 +575,38 @@ def _render_page(page, page_index, state):
                     )
                 frags.append(
                     f'<p class="fig"><img src="{state["images"][digest].file_name}" alt=""/></p>'
+                )
+            continue
+
+        if id(block) in tbl_ids:
+            if not tbl_done:
+                tbl_done = True
+                flush_par()
+                tbl = tbl + fitz.Rect(-4, -4, 4, 4) & page.rect
+                if tbl.height > tbl.width:
+                    tmp = fitz.open()
+                    tp = tmp.new_page(width=tbl.height, height=tbl.width)
+                    tp.show_pdf_page(
+                        fitz.Rect(0, 0, tbl.height, tbl.width),
+                        page.parent,
+                        page.number,
+                        clip=tbl,
+                        rotate=-90,
+                    )
+                    pix = tp.get_pixmap(matrix=fitz.Matrix(2, 2))
+                    tmp.close()
+                else:
+                    pix = page.get_pixmap(clip=tbl, matrix=fitz.Matrix(2, 2))
+                data = pix.tobytes("png")
+                digest = hashlib.sha1(data).hexdigest()[:16]
+                if digest not in state["images"]:
+                    state["images"][digest] = epub.EpubItem(
+                        file_name=f"images/table_{digest}.png",
+                        media_type="image/png",
+                        content=data,
+                    )
+                frags.append(
+                    f'<p class="fig"><img src="{state["images"][digest].file_name}" alt="table"/></p>'
                 )
             continue
 
@@ -525,6 +626,18 @@ def _render_page(page, page_index, state):
             continue
 
         level = _standalone_heading_level(block, body_size)
+        if (
+            level == 2
+            and _line_max_size(_block_lines(block)[0]) < body_size * 1.08
+            and (
+                block["bbox"][1] < page.rect.height * 0.12
+                or block["bbox"][3] > page.rect.height * 0.88
+            )
+        ):
+            level = None
+        if level == 2 and page_index == 0 and not state["headings"]:
+            if _line_max_size(_block_lines(block)[0]) >= body_size * 1.3:
+                level = 1
         if level:
             emit_heading(
                 level,
@@ -569,6 +682,33 @@ def _render_page(page, page_index, state):
             emit_heading(2, "Abstract")
             state["abstract_done"] = True
 
+        if (
+            block["bbox"][0] - edges[col] > 12
+            and med <= body_size * 1.05
+            and len(btext) > 60
+        ):
+            prev = ordered[b_i - 1] if b_i > 0 else None
+            nxt = ordered[b_i + 1] if b_i + 1 < len(ordered) else None
+            isolated = (
+                prev is not None
+                and prev["type"] == 0
+                and _assign_column(prev, edges) == col
+                and block["bbox"][1] - prev["bbox"][3] > state["line_h"] * 0.7
+                and nxt is not None
+                and nxt["type"] == 0
+                and _assign_column(nxt, edges) == col
+                and nxt["bbox"][1] - block["bbox"][3] > state["line_h"] * 0.7
+            )
+            if isolated:
+                flush_par()
+                qhtml = _join_lines(
+                    _line_html(l, body_size).strip()
+                    for l in _block_lines(block)
+                    if _line_text(l).strip()
+                )
+                frags.append(f"<blockquote><p>{qhtml}</p></blockquote>")
+                continue
+
         new_par = _first_line_indent(block) > 4
         if not new_par and state["par"]:
             tail = re.sub(r"<[^>]+>", "", state["par"][-1]).rstrip()
@@ -590,10 +730,19 @@ def _render_page(page, page_index, state):
                 emit_heading(line_level, _line_text(line).strip())
                 continue
             t = _line_html(line, body_size).strip()
-            if t:
-                if not state["par"]:
-                    state["par_page"] = page_index
-                state["par"].append(t)
+            if not t:
+                continue
+            if LIST_ITEM_RE.match(_line_text(line).strip()):
+                flush_par()
+                state["item"] = [t]
+                continue
+            if state["item"]:
+                state["item"].append(t)
+                continue
+            if not state["par"]:
+                state["par_page"] = page_index
+            state["par"].append(t)
+        flush_item()
 
 
 def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
@@ -613,6 +762,7 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
         "headings": [],
         "footnotes": [],
         "par": [],
+        "item": [],
         "par_page": 0,
         "page_frags": [[] for _ in range(doc.page_count)],
         "heading_seq": 0,
@@ -667,7 +817,11 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
         author = meta.get("author") or ""
         if not _valid_title(author):
             author = state.get("byline_text") or "Unknown"
-            author = re.sub(r"[*†‡§]", "", author).strip()
+            author = re.split(
+                r"\s+(?:Department|University|Institute|Center|College|School of)\b",
+                author,
+            )[0]
+            author = re.sub(r"[*†‡§]", "", author).strip(" ,")
         else:
             author = author.strip()
 
@@ -676,6 +830,21 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
     book.set_title(title)
     book.set_language("en")
     book.add_author(author)
+
+    css = epub.EpubItem(
+        uid="style",
+        file_name="style.css",
+        media_type="text/css",
+        content=(
+            "p.byline { font-style: italic; } "
+            "p.label { font-size: 0.8em; letter-spacing: 0.1em; "
+            "text-transform: uppercase; color: #666; } "
+            "p.fig { text-align: center; } p.fig img { max-width: 100%; } "
+            "p.listitem { margin-left: 2em; } "
+            "blockquote { margin: 0.8em 1.5em; font-size: 0.95em; }"
+        ),
+    )
+    book.add_item(css)
 
     chapters = []
     for idx, start in enumerate(boundaries):
@@ -694,6 +863,7 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
             file_name=f"chap_{idx + 1}.xhtml",
             lang="en",
         )
+        chap.add_item(css)
         chap.content = (
             f"<html><body>{content.strip() or '<p></p>'}</body></html>"
         )
