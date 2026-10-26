@@ -51,7 +51,8 @@ python3 pdf_to_epub.py paper.pdf --keep-headers       # keep headers/footers
 4. **Emit** — fragments are chunked into chapters at headings, footnotes are
    collected into a Notes section, and everything is packaged via ebooklib.
 
-See [AGENTS.md](AGENTS.md) for the detailed heuristics.
+See the [pipeline diagram](docs/pipeline.md) for a visual walkthrough and
+[AGENTS.md](AGENTS.md) for the detailed heuristics.
 
 ## Limitations
 
