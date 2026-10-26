@@ -19,21 +19,25 @@ flowchart TD
 
     J -->|image| K["Figure<br/>dedupe by hash, drop under 2KB"]
     J -->|footnote zone| L["Notes collection"]
+    J -->|rotated table region| K2["Rasterize clip<br/>rotate=-90 via temp page"]
     J -->|all-caps top label| M["&lt;p class=label&gt;<br/>(BREVIA etc.)"]
-    J -->|heading font| N["h1/h2<br/>single-line ≥1.08× · multi-line ≥1.6×"]
-    J -->|byline size or position| O["&lt;p class=byline&gt;<br/>+ drop-cap relocation"]
+    J -->|heading font| N["h1/h2<br/>size-based · all-bold · named labels<br/>first p0 heading ≥1.3× promotes h1"]
     J -->|named section label| N
+    J -->|byline size or position| O["&lt;p class=byline&gt;<br/>+ drop-cap relocation"]
     J -->|small inset top half| P["Abstract - inject h2"]
-    J -->|otherwise| Q["Text lines<br/>+ &lt;b&gt;/&lt;i&gt; via font names"]
+    J -->|indented and isolated| Q2["&lt;blockquote&gt;<br/>quotes, verse"]
+    J -->|otherwise| Q["Text lines<br/>+ &lt;b&gt;/&lt;i&gt; via font names<br/>+ N. lines as list items"]
 
     Q --> R{"Paragraph merge<br/>indent &gt;4pt or prev ends period<br/>drop-cap seed never flushes"}
     N --> S["Chapter boundaries<br/>(split at heading fragments)"]
     R --> S
+    Q2 --> S
     L --> T["Notes chapter<br/>+ sup link backfill"]
     K --> U[ebooklib packaging]
+    K2 --> U
     S --> U
     T --> U
-    U --> V["EPUB<br/>spine · TOC · nav<br/>validated title/author meta"]
+    U --> V["EPUB<br/>spine · TOC · nav · style.css<br/>validated title/author meta"]
 
     style A fill:#eef,stroke:#66c
     style V fill:#efe,stroke:#6c6
@@ -48,14 +52,18 @@ flowchart TD
 | Column edges | x0 clusters found on ≥50% of pages |
 | Full-width span | block crosses a gutter between column edges |
 | Top zone | blocks fully above the first spanning element |
-| h1 | single-line ≥1.6× body, or multi-line block all-lines ≥1.6× |
-| h2 | standalone single-line ≥1.08× body, no mid-string `.` |
+| h1 | single-line ≥1.6× body, multi-line block all-lines ≥1.6×, or first p0 heading ≥1.3× (promoted) |
+| h2 | standalone ≥1.08× body, all-bold line/block ≥0.9× body (outside edge zones), no sentence periods |
 | Section label | `References`, `Supporting Online Material`, `Methods`, … at block start → h2 |
 | Top label | all-caps short text in top 12% of page → `<p class="label">` |
 | Byline | median ≥1.15× body, or directly after h1 + name-like (` and `/`,`); short single-line followers merge; trailing drop-cap letter relocates into the paragraph |
 | Abstract | median in (0.75–0.92)× body, inset margins, top half of page 0–1 |
 | Footnote | opens with superscript digit in lower 45% of page |
-| Unnumbered note | bottom 40%, median <0.95× body, gap >2× line height |
+| Unnumbered note | bottom 40% + gap >2× line height + <0.95× body, OR acknowledgment opener in bottom 55% |
+| Page number | pure-digit block in outer 7% edge → dropped |
+| List item | line starting `N.`/`N)` → `<p class="listitem">`; absorbs continuation lines |
+| Blockquote | block indented >12pt from column edge AND isolated (gap >0.7× line height both sides) |
+| Rotated table | ≥3 tall-narrow blocks sharing a y-band → region rasterized, rotated landscape |
 | Header/footer | signature repeated on ≥40% of pages in edge zone |
 | Furniture | pattern (`VOL`, `www.`, `ISSN`, `doi`, `©`, dates) in outer 7% edge |
 | Margin strip | <25pt wide, >4× tall, in outer 10% margin (rotated sidebars) |

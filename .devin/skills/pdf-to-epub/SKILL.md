@@ -50,17 +50,22 @@ python3 pdf_to_epub.py <input.pdf> [-o output.epub] [--title "..."] [--author ".
   paragraph (merging mid-sentence splits across blocks/columns/pages);
   first-line-indented blocks or blocks after sentence-terminal punctuation
   start a new one.
-- Headings: font-size heuristics (h1/h2) plus named section labels
-  (References, Supporting Online Material, ...) become the EPUB TOC and
-  chapter splits; chapters begin exactly at their heading.
+- Headings: font-size heuristics (h1/h2), all-bold lines/blocks at body
+  size, and named section labels (References, Supporting Online Material,
+  ...) become the EPUB TOC and chapter splits; the first page-0 heading
+  ≥1.3× promotes to h1; chapters begin exactly at their heading.
 - Bylines (size-based or right-after-h1 name lists) merge into one group;
   a trailing drop-cap letter relocates into the first paragraph.
-- Footnotes (superscript-digit starts and unnumbered gap-separated zones at
-  column bottom) are moved out of the body flow into a "Notes" chapter;
-  superscript markers in the body link to them.
-- Furniture is stripped three ways: repeated edge signatures (≥40% of
+- Footnotes (superscript-digit starts, unnumbered gap-separated zones, and
+  acknowledgment-opener blocks at column bottom) are moved into a "Notes"
+  chapter; superscript markers in the body link to them.
+- Furniture is stripped four ways: repeated edge signatures (≥40% of
   pages), pattern matches (VOL/www./ISSN/doi/dates) in the outer 7% edge,
-  and narrow+tall margin strips (rotated sidebars).
+  pure-digit page numbers in edge zones, and narrow+tall margin strips
+  (rotated sidebars).
+- Numbered lines (N./N)) become list-item paragraphs; vertically isolated
+  indented blocks become <blockquote>; rotated tables (tall-narrow block
+  clusters) are re-rendered upright and embedded as images.
 - Bold/italic come from font-name suffixes (.B/Bold/.I/Italic) when flags
   are absent; embedded raster images are deduplicated and included; tiny
   artifacts (<2 KB) are dropped.
