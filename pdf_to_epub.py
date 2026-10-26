@@ -294,14 +294,17 @@ def _footnote_text(block, body_size):
 def _render_page(page, page_index, state):
     """Render one page to HTML fragments; collect headings, images, footnotes.
 
-    ``state`` carries ``images`` (hash -> EpubItem), ``headings`` (as
-    ``(level, text, anchor, page_index)`` tuples), ``footnotes`` (as
-    ``(number|None, html)`` tuples), ``par`` (open paragraph line fragments
-    carried across blocks and pages), ``heading_seq`` and ``boilerplate``.
+    ``state`` carries ``page_frags`` (list of fragment lists, one per page),
+    ``images`` (hash -> EpubItem), ``headings`` (as ``(level, text, anchor,
+    page_index)`` tuples), ``footnotes`` (as ``(number|None, html)`` tuples),
+    ``par`` / ``par_page`` (open paragraph fragments and the page they
+    started on), ``heading_seq`` and ``boilerplate``.
 
     Blocks that start flush-left continue the open paragraph; blocks whose
-    first line is indented start a new one. Footnote-region blocks are pulled
-    out of the flow into ``state['footnotes']``.
+    first line is indented start a new one. A paragraph that crosses a page
+    boundary is emitted on the page where it began, so chapter splits never
+    relocate text. Footnote-region blocks are pulled out of the flow into
+    ``state['footnotes']``.
     """
     body_size = state["body_size"]
     mid_x = page.rect.width / 2
@@ -309,11 +312,13 @@ def _render_page(page, page_index, state):
     foot_tops = _footnote_tops(
         ordered, mid_x, body_size, page.rect.height, state["line_h"]
     )
-    frags = []
+    frags = state["page_frags"][page_index]
 
     def flush_par():
         if state["par"]:
-            frags.append(f"<p>{_join_lines(state['par'])}</p>")
+            state["page_frags"][state["par_page"]].append(
+                f"<p>{_join_lines(state['par'])}</p>"
+            )
             state["par"] = []
 
     def emit_heading(level, text):
@@ -353,14 +358,23 @@ def _render_page(page, page_index, state):
             continue
 
         med = _block_median_size(block)
-        if med >= body_size * 1.15:
+        is_byline = med >= body_size * 1.15
+        if is_byline or (
+            frags
+            and frags[-1].startswith('<p class="byline">')
+            and len(_block_lines(block)) == 1
+            and len(_line_text(block["lines"][0]).strip()) < 100
+        ):
             flush_par()
             text = _join_lines(
                 _line_html(l, body_size).strip()
                 for l in _block_lines(block)
                 if _line_text(l).strip()
             )
-            frags.append(f'<p class="byline">{text}</p>')
+            if frags and frags[-1].startswith('<p class="byline">'):
+                frags[-1] = frags[-1][:-4] + " " + text + "</p>"
+            else:
+                frags.append(f'<p class="byline">{text}</p>')
             continue
 
         if (
@@ -385,8 +399,9 @@ def _render_page(page, page_index, state):
                 continue
             t = _line_html(line, body_size).strip()
             if t:
+                if not state["par"]:
+                    state["par_page"] = page_index
                 state["par"].append(t)
-    return "\n".join(frags)
 
 
 def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
@@ -405,35 +420,46 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
         "headings": [],
         "footnotes": [],
         "par": [],
+        "par_page": 0,
+        "page_frags": [[] for _ in range(doc.page_count)],
         "heading_seq": 0,
         "boilerplate": (
             _boilerplate_signatures(doc) if drop_edges and doc.page_count > 3 else set()
         ),
     }
 
-    page_html = [_render_page(page, i, state) for i, page in enumerate(doc)]
-    if state["par"] and page_html:
-        page_html[-1] += f"\n<p>{_join_lines(state['par'])}</p>"
-
-    fn_nums = {n for n, _ in state["footnotes"] if n is not None}
-    page_html = [
-        re.sub(
-            r'<sup><a href="notes.xhtml#fn(\d+)">(\d+)</a></sup>',
-            lambda m: m.group(0)
-            if int(m.group(1)) in fn_nums
-            else f"<sup>{m.group(2)}</sup>",
-            frag,
+    for i, page in enumerate(doc):
+        _render_page(page, i, state)
+    if state["par"]:
+        state["page_frags"][state["par_page"]].append(
+            f"<p>{_join_lines(state['par'])}</p>"
         )
-        for frag in page_html
-    ]
+    fn_nums = {n for n, _ in state["footnotes"] if n is not None}
+    for frags in state["page_frags"]:
+        for k, frag in enumerate(frags):
+            frags[k] = re.sub(
+                r'<sup><a href="notes.xhtml#fn(\d+)">(\d+)</a></sup>',
+                lambda m: m.group(0)
+                if int(m.group(1)) in fn_nums
+                else f"<sup>{m.group(2)}</sup>",
+                frag,
+            )
 
-    boundaries = [
-        i
-        for i, frag in enumerate(page_html)
-        if '<h1 id="' in frag or '<h2 id="' in frag
+    flat = [
+        (pi, frag)
+        for pi, frags in enumerate(state["page_frags"])
+        for frag in frags
     ]
-    if not boundaries and len(page_html) > PAGES_PER_FALLBACK_CHAPTER:
-        boundaries = list(range(0, len(page_html), PAGES_PER_FALLBACK_CHAPTER))
+    boundaries = [
+        i for i, (_, f) in enumerate(flat) if '<h1 id="' in f or '<h2 id="' in f
+    ]
+    if not boundaries:
+        boundaries = [
+            i
+            for i, (pi, _) in enumerate(flat)
+            if pi % PAGES_PER_FALLBACK_CHAPTER == 0
+            and (i == 0 or flat[i - 1][0] != pi)
+        ]
     if not boundaries or boundaries[0] != 0:
         boundaries.insert(0, 0)
 
@@ -445,10 +471,14 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
 
     chapters = []
     for idx, start in enumerate(boundaries):
-        end = boundaries[idx + 1] if idx + 1 < len(boundaries) else len(page_html)
-        content = "\n".join(page_html[start:end])
+        end = boundaries[idx + 1] if idx + 1 < len(boundaries) else len(flat)
+        content = "\n".join(f for _, f in flat[start:end])
         heading = next(
-            (t for lv, t, a, p in state["headings"] if lv in (1, 2) and start <= p < end),
+            (
+                re.sub(r"<[^>]+>", "", f)
+                for _, f in flat[start:end]
+                if f.startswith("<h")
+            ),
             None,
         )
         chap = epub.EpubHtml(
@@ -476,9 +506,15 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
         else:
             note_entries.append(f'<p class="fn">{frag}</p>')
 
+    anchor_pos = {}
+    for i, (_, f) in enumerate(flat):
+        m = re.search(r'id="(h\d+)"', f)
+        if m:
+            anchor_pos[m.group(1)] = i
     book.toc = []
-    for level, text, anchor, page_i in state["headings"]:
-        chap_idx = max(j for j, (_, s) in enumerate(chapters) if s <= page_i)
+    for level, text, anchor, _page_i in state["headings"]:
+        pos = anchor_pos.get(anchor, 0)
+        chap_idx = max(j for j, (_, s) in enumerate(chapters) if s <= pos)
         book.toc.append(
             epub.Link(f"{chapters[chap_idx][0].file_name}#{anchor}", text, anchor)
         )
@@ -488,7 +524,7 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
             "<html><body><h1>Notes</h1>" + "".join(note_entries) + "</body></html>"
         )
         book.add_item(notes)
-        chapters.append((notes, len(page_html)))
+        chapters.append((notes, len(flat)))
         book.toc.append(epub.Link("notes.xhtml", "Notes", "notes"))
     for item in state["images"].values():
         book.add_item(item)

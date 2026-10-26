@@ -22,16 +22,18 @@ chapters.
   is indented (>4pt) or the previous line ends with terminal punctuation.
   Open paragraphs carry across columns and page breaks.
 - **Headings/TOC** — large fonts → h1; standalone single-line blocks ≥1.08×
-  body → h2 (rejects sentence-like text with mid-string periods). Headings
-  drive chapter splits and the TOC.
+  body → h2 (rejects sentence-like text with mid-string periods). Chapters
+  split at heading fragments, so each chapter begins exactly at its heading;
+  a paragraph crossing a page break emits on the page where it started.
+- **Bylines** — blocks ≥1.15× body size that aren't headings merge into a
+  single `<p class="byline">`, absorbing short single-line followers
+  (affiliations).
 - **Footnotes** — superscript-digit starts in the lower half, OR an unnumbered
   smaller-than-body block below a >2×line-height gap in the bottom 40%
   (author notes under a rule). Removed from the body flow into a `Notes`
   chapter; in-body superscripts link to `#fnN` (dead links are stripped).
 - **Headers/footers** — short texts in page edge zones recurring on ≥40% of
   pages are dropped (normalized, digit-insensitive signatures).
-- **Bylines** — blocks ≥1.15× body size that aren't headings emit as own
-  `<p class="byline">`, never merged.
 - **Abstract** — first small-font inset block on pages 0–1 injects an
   `Abstract` h2.
 
