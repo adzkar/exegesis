@@ -33,14 +33,15 @@ chapters.
   table, and kept-furniture blocks don't count (a trailing bold line is
   usually a note, not a heading). The same edge+follower check gates a
   bold line inside a mixed-weight block, and the follower scan is
-  page-local — a bold line that ends a page can't see its next-page
-  follower and stays demoted. Lines opening with footnote markers
-  (`*†‡§`) are never headings.
+  column- and page-local — a bold line ending a column or page can't see
+  its next-column/next-page follower and stays demoted. Lines opening
+  with footnote markers (`*†‡§`) are never headings.
   Sentence-like text with periods is rejected. Named labels (`References`,
-  `Supporting Online Material`…) at block start intentionally override
-  the demotion and emit h2 — the label is itself the signal. All-caps
-  short labels in the top 12% emit `<p class="label">` instead. Chapters
-  split at heading fragments — each begins exactly at its heading.
+  `Supporting Online Material`…) at block start emit h2, but respect the
+  demotion — a trailing `Funding NIH grant…` is a plausible note tail,
+  not a section head. All-caps short labels in the top 12% emit
+  `<p class="label">` instead. Chapters split at heading fragments — each
+  begins exactly at its heading.
 - **Bylines** — blocks ≥1.15× body, or the block right after an h1 when it
   looks like a name list; merge into one `<p class="byline">` with short
   single-line followers. A trailing drop-cap letter moves into the body
@@ -49,11 +50,11 @@ chapters.
   edge zones, and pattern furniture (`VOL`, `www.`, `ISSN`, `doi`, `©`,
   dates) in the outer 7% edge (works on 1-page docs). Narrow+tall blocks in
   outer 10% margins (rotated sidebars) are dropped. `--keep-headers` keeps
-  all of it flagged `is_furniture` — the signature set is still built so
-  repeated running heads flag the same way: such blocks skip the
-  spans/cut/column machinery entirely (emitted at the page's top/bottom
-  edge), render verbatim as their own paragraphs, and never feed any
-  classifier — headings, abstract, bylines, footnotes, followers,
+  all of it flagged `is_furniture` — the signature set is built on any
+  doc length so repeated running heads flag the same way: such blocks
+  skip the spans/cut/column machinery entirely (emitted at the page's
+  top/bottom edge), render verbatim as their own paragraphs, and never
+  feed any classifier — headings, abstract, bylines, footnotes, followers,
   blockquote isolation, or table regions (a kept block inside a table's
   bbox still emits verbatim rather than being rasterized away).
 - **Footnotes** — superscript-digit starts in the lower half, OR an unnumbered
