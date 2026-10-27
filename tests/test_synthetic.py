@@ -289,6 +289,47 @@ def test_figure_alt_from_caption(tmp_path):
     assert any('alt="Figure 1. A noise gradient."' in h for h in htmls.values())
 
 
+def test_figure_alt_never_from_a_foreign_caption(tmp_path):
+    """Neither an intervening paragraph's later caption nor the adjacent
+    column's 'Table N.' caption may be borrowed as alt text."""
+    data = _noise_png()
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 90, 290, 160), "Left column opens the page.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 180, 290, 260), "More left column body text.", fontsize=BODY
+    )
+    # mid-column image: a paragraph then a caption inside its own column —
+    # the caption belongs to a later figure, not this one
+    p.insert_image(fitz.Rect(80, 380, 260, 470), stream=data)
+    p.insert_textbox(
+        fitz.Rect(72, 485, 290, 540), "Body resumes below the image.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 545, 290, 575), "Figure 7. Not this image.", fontsize=BODY
+    )
+    # column-ending image: the next text in reading order is the right
+    # column's 'Table 3.' caption — a different column's caption entirely
+    p.insert_image(fitz.Rect(80, 600, 260, 690), stream=data)
+    p.insert_textbox(
+        fitz.Rect(340, 90, 560, 130), "Table 3. Foreign results.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(340, 160, 560, 240),
+        "Right column body text follows.",
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "foreigncap.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "foreigncap.epub"
+    convert(pdf, out)
+    figs = "\n".join(h for h in doc_html(out).values() if "<img" in h)
+    assert 'alt="Figure 7' not in figs and 'alt="Table 3' not in figs
+    assert figs.count('alt=""') == 2
+
+
 def test_paragraph_merges_across_page_break(tmp_path):
     doc = fitz.open()
     p = _page(doc)

@@ -140,15 +140,34 @@ def _line_html(line, body_size):
     return "".join(parts)
 
 
-def _figure_alt(ordered, b_i, fallback=""):
-    """Alt text for a figure: the first following block that opens with a
-    caption pattern ('Fig. 1', 'Table 2'…) gives the image a real label."""
+def _figure_alt(
+    ordered, b_i, edges, page_width, fallback="", skip_ids=frozenset()
+):
+    """Alt text for a figure: the first foreign text block after the image
+    is its caption when it opens with a caption pattern ('Fig. 1',
+    'Table 2'…), starts within 120pt below the figure's bottom, and
+    shares a column with it.
+
+    Stopping at the first non-caption text block keeps an uncaptioned
+    figure from inheriting a later figure's caption, and the shared-column
+    requirement keeps a two-column page's image from stealing the adjacent
+    column's 'Table 3.' caption. ``skip_ids`` lets the rotated-table call
+    step over its own cells without ending the search.
+    """
+    img_cols = set(_covered_cols(ordered[b_i], edges, page_width))
     for b in ordered[b_i + 1 : b_i + 4]:
-        if b["type"] != 0 or b["bbox"][1] - ordered[b_i]["bbox"][3] > 120:
+        if b["type"] != 0:
+            break
+        if id(b) in skip_ids:
+            continue
+        if b["bbox"][1] - ordered[b_i]["bbox"][3] > 120:
             break
         t = _block_text(b)
-        if CAPTION_RE.match(t):
+        if CAPTION_RE.match(t) and img_cols & set(
+            _covered_cols(b, edges, page_width)
+        ):
             return html.escape(t[:200], quote=True)
+        break
     return fallback
 
 
@@ -235,9 +254,10 @@ def _render_page(page, page_index: int, state: PipelineState):
                         media_type=f"image/{'jpeg' if ext in ('jpg', 'jpeg') else ext}",
                         content=data,
                     )
+                alt = _figure_alt(ordered, b_i, edges, page.rect.width)
                 frags.append(
                     f'<p class="fig"><img src="{state.images[digest].file_name}"'
-                    f' alt="{_figure_alt(ordered, b_i)}"/></p>'
+                    f' alt="{alt}"/></p>'
                 )
             continue
 
@@ -263,9 +283,17 @@ def _render_page(page, page_index: int, state: PipelineState):
                         media_type="image/png",
                         content=data,
                     )
+                alt = _figure_alt(
+                    ordered,
+                    b_i,
+                    edges,
+                    page.rect.width,
+                    fallback="table",
+                    skip_ids=tbl_ids,
+                )
                 frags.append(
                     f'<p class="fig"><img src="{state.images[digest].file_name}"'
-                    f' alt="{_figure_alt(ordered, b_i, "table")}"/></p>'
+                    f' alt="{alt}"/></p>'
                 )
             continue
 
