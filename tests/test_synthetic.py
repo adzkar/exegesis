@@ -276,6 +276,29 @@ def test_rotated_table_alt_gap_from_region_bottom(tmp_path):
     assert any('alt="Table 2. Deep landscape."' in h for h in htmls.values())
 
 
+def test_rotated_table_alt_from_caption_above(tmp_path):
+    """Journals set 'Table N.' legends above the table body — a caption
+    preceding the figure in reading order must still be found."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 300, 540, 340), "Table 3. Legend above.", fontsize=BODY
+    )
+    for i, x in enumerate((180, 220, 260, 300, 340)):
+        p.insert_textbox(
+            fitz.Rect(x, 380, x + 15, 520), f"r1c{i} r2c{i} r3c{i}", fontsize=BODY
+        )
+    p.insert_textbox(
+        fitz.Rect(72, 560, 540, 620), "Body text resumes below.", fontsize=BODY
+    )
+    pdf = tmp_path / "rtableabove.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "rtableabove.epub"
+    convert(pdf, out)
+    htmls = doc_html(out)
+    assert any('alt="Table 3. Legend above."' in h for h in htmls.values())
+
+
 def test_nested_toc_h2_under_h1(tmp_path):
     doc = fitz.open()
     p = _page(doc)

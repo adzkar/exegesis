@@ -169,20 +169,43 @@ def _figure_alt(
     """
     bbox = region if region is not None else ordered[b_i]["bbox"]
     img_cols = _overlap_cols(bbox, edges, page_width)
-    for b in ordered[b_i + 1 :]:
-        if b["type"] != 0:
-            break
-        if id(b) in skip_ids:
-            continue
-        if b["bbox"][1] - bbox[3] > 120:
-            break
+
+    def _is_caption(b):
+        """The block's escaped text if it is a caption in the figure's
+        column band, else None."""
         t = _block_text(b)
-        if CAPTION_RE.match(t) and img_cols & _overlap_cols(
-            b["bbox"], edges, page_width
-        ):
-            return html.escape(t[:200], quote=True)
-        break
-    return fallback
+        if not CAPTION_RE.match(t):
+            return None
+        if not img_cols & _overlap_cols(b["bbox"], edges, page_width):
+            return None
+        return html.escape(t[:200], quote=True)
+
+    def _scan(seq, gap_of):
+        """Caption text if the first foreign text block in ``seq`` is one —
+        the scan ends at that block either way. ``gap_of`` measures its
+        distance from the figure edge facing the scan direction."""
+        for b in seq:
+            if b["type"] != 0:
+                break
+            if id(b) in skip_ids:
+                continue
+            if gap_of(b) > 120:
+                break
+            return _is_caption(b)
+        return None
+
+    if region is not None:
+        # journals set 'Table N.' legends above the table body — and text
+        # below a table is likelier the *next* table's legend — so the
+        # preceding block is tried before the following one
+        alt = _scan(
+            reversed(ordered[:b_i]), lambda b: bbox[1] - b["bbox"][3]
+        )
+        if alt is not None:
+            return alt
+    return _scan(
+        iter(ordered[b_i + 1 :]), lambda b: b["bbox"][1] - bbox[3]
+    ) or fallback
 
 
 def _footnote_text(block, body_size):
