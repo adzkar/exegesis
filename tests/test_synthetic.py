@@ -3,6 +3,7 @@ controlled positions/sizes, so assertions hold without any corpus files."""
 import zipfile
 
 import fitz
+import pytest
 from helpers import chapter_text, doc_html, doc_texts, lint_epub, snapshot_epub
 
 import pdf_to_epub as m
@@ -333,6 +334,51 @@ def test_tall_narrow_region_rasterized(tmp_path):
         tables = [n for n in zf.namelist() if "table_" in n]
     assert tables, "expected a rasterized table image"
     assert "r1c0" not in chapter_text(out)
+
+
+@pytest.mark.parametrize("rotation", [90, 270])
+def test_rotated_table_clip_on_rotated_page(tmp_path, rotation):
+    """On a /Rotate page the raster must come from the region the table
+    actually occupies in displayed space.
+
+    The red patch is painted where the correct clip (mediabox rect pushed
+    through ``page.rotation_matrix``) lands but the transposed 90/270 map
+    does not — under the old swapped transform the PNG contains no red.
+    """
+    doc = fitz.open()
+    p = _page(doc)
+    p.set_rotation(rotation)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 200), "A caption above the rotated table.",
+        fontsize=BODY,
+    )
+    for i, x in enumerate((200, 260, 320)):
+        p.insert_textbox(
+            fitz.Rect(x, 400, x + 15, 520), f"r1c{i} r2c{i} r3c{i}",
+            fontsize=BODY,
+        )
+    p.draw_rect(fitz.Rect(200, 430, 330, 500), color=None, fill=(1, 0, 0))
+    p.insert_textbox(
+        fitz.Rect(72, 560, 540, 700), "Body text resumes below the table.",
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "rtable_rot.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "rtable_rot.epub"
+    m.convert(pdf, out)
+    with zipfile.ZipFile(out) as zf:
+        tables = [n for n in zf.namelist() if "table_" in n]
+        assert tables, "expected a rasterized table image"
+        pix = fitz.Pixmap(zf.read(tables[0]))
+    reds = sum(
+        1
+        for y in range(0, pix.height, 2)
+        for x in range(0, pix.width, 2)
+        if pix.pixel(x, y)[0] > 200
+        and pix.pixel(x, y)[1] < 80
+        and pix.pixel(x, y)[2] < 80
+    )
+    assert reds > 0, "table image misses the painted region (wrong clip)"
 
 
 def test_paragraph_merges_across_page_break(tmp_path):

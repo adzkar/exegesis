@@ -19,7 +19,7 @@ flowchart TD
 
     J -->|image| K["Figure<br/>dedupe by hash, drop under 2KB"]
     J -->|footnote zone| L["Notes collection"]
-    J -->|rotated table region| K2["Rasterize clip<br/>via page /Rotate + mediabox coords"]
+    J -->|rotated table region| K2["Rasterize clip<br/>mediabox rect via rotation_matrix"]
     J -->|all-caps top label| M["&lt;p class=label&gt;<br/>(BREVIA etc.)"]
     J -->|heading font| N["h1/h2<br/>size-based · all-bold · named labels<br/>first p0 heading ≥1.3× promotes h1"]
     J -->|named section label| N
@@ -63,7 +63,7 @@ flowchart TD
 | Page number | pure-digit block in outer 7% edge → dropped |
 | List item | line starting `N.`/`N)` → `<p class="listitem">`; absorbs continuation lines |
 | Blockquote | block indented >12pt from column edge AND isolated (gap >0.7× line height both sides) |
-| Rotated table | ≥3 tall-narrow blocks sharing a y-band → region rasterized; clip transformed through the page's `/Rotate` (mediabox coords) |
+| Rotated table | ≥3 tall-narrow blocks sharing a y-band → region rasterized; clip mapped mediabox→displayed via `page.rotation_matrix` |
 | Header/footer | signature repeated on ≥40% of pages in edge zone |
 | Furniture | pattern (`VOL`, `www.`, `ISSN`, `doi`, `©`, dates) in outer 7% edge |
 | Margin strip | <25pt wide, >4× tall, in outer 10% margin (rotated sidebars) |
