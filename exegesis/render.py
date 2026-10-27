@@ -36,7 +36,15 @@ from .text import (
 )
 
 CAPTION_RE = re.compile(
-    r"(?i)^\s*(fig\.?|figure|table|plate|scheme|chart)\s*\.?\s*\d"
+    r"(?i)^\s*(fig\.?|figure|table|plate|scheme|chart)\s*\.?\s*"
+    r"\d+\s*(?:[.:)]|$)"
+)
+# the image call must not accept 'Table N.' — tables keep their legends
+# above the body, so a following 'Table N.' block belongs to a
+# text-flowed table, not to the figure
+FIGURE_CAPTION_RE = re.compile(
+    r"(?i)^\s*(fig\.?|figure|plate|scheme|chart)\s*\.?\s*"
+    r"\d+\s*(?:[.:)]|$)"
 )
 
 
@@ -149,6 +157,7 @@ def _figure_alt(
     region=None,
     fallback="",
     skip_ids=frozenset(),
+    pattern=CAPTION_RE,
 ):
     """Alt text for a figure: the first foreign text block after the image
     is its caption when it opens with a caption pattern ('Fig. 1',
@@ -174,20 +183,23 @@ def _figure_alt(
         """The block's escaped text if it is a caption in the figure's
         column band, else None."""
         t = _block_text(b)
-        if not CAPTION_RE.match(t):
+        if not pattern.match(t):
             return None
         if not img_cols & _overlap_cols(b["bbox"], edges, page_width):
             return None
         return html.escape(t[:200], quote=True)
 
-    def _scan(seq, gap_of):
-        """Caption text if the first foreign text block in ``seq`` is one —
-        the scan ends at that block either way. ``gap_of`` measures its
-        distance from the figure edge facing the scan direction."""
+    def _scan(seq, gap_of, out_of_band):
+        """Caption text if the first in-band foreign text block in ``seq``
+        is one — the scan ends at that block either way. ``gap_of``
+        measures its distance from the figure edge facing the scan
+        direction; ``out_of_band`` marks blocks lying wholly on the far
+        side of the figure, which column-major order can interleave with
+        the real caption — they are skipped, not adopted or terminal."""
         for b in seq:
             if b["type"] != 0:
                 break
-            if id(b) in skip_ids:
+            if id(b) in skip_ids or out_of_band(b):
                 continue
             if gap_of(b) > 120:
                 break
@@ -199,12 +211,16 @@ def _figure_alt(
         # below a table is likelier the *next* table's legend — so the
         # preceding block is tried before the following one
         alt = _scan(
-            reversed(ordered[:b_i]), lambda b: bbox[1] - b["bbox"][3]
+            reversed(ordered[:b_i]),
+            lambda b: bbox[1] - b["bbox"][3],
+            lambda b: b["bbox"][1] >= bbox[3],
         )
         if alt is not None:
             return alt
     return _scan(
-        iter(ordered[b_i + 1 :]), lambda b: b["bbox"][1] - bbox[3]
+        iter(ordered[b_i + 1 :]),
+        lambda b: b["bbox"][1] - bbox[3],
+        lambda b: b["bbox"][3] <= bbox[1],
     ) or fallback
 
 
@@ -291,7 +307,13 @@ def _render_page(page, page_index: int, state: PipelineState):
                         media_type=f"image/{'jpeg' if ext in ('jpg', 'jpeg') else ext}",
                         content=data,
                     )
-                alt = _figure_alt(ordered, b_i, edges, page.rect.width)
+                alt = _figure_alt(
+                    ordered,
+                    b_i,
+                    edges,
+                    page.rect.width,
+                    pattern=FIGURE_CAPTION_RE,
+                )
                 frags.append(
                     f'<p class="fig"><img src="{state.images[digest].file_name}"'
                     f' alt="{alt}"/></p>'

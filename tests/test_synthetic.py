@@ -299,6 +299,81 @@ def test_rotated_table_alt_from_caption_above(tmp_path):
     assert any('alt="Table 3. Legend above."' in h for h in htmls.values())
 
 
+def test_table_alt_skips_above_region_foreign_caption(tmp_path):
+    """Column-major order emits a later column's top-of-column blocks
+    after the member cells — a caption lying wholly above the region
+    must be skipped, not adopted."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 90, 290, 160), "Left column opens the page.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 180, 290, 260), "More left column body text.", fontsize=BODY
+    )
+    # cells on both sides of the gutter: the region covers both bands
+    for i, x in enumerate((200, 300, 400)):
+        p.insert_textbox(
+            fitz.Rect(x, 380, x + 15, 500), f"r1c{i} r2c{i} r3c{i}", fontsize=BODY
+        )
+    # right column: a figure caption at the top (~290pt above the region)…
+    p.insert_textbox(
+        fitz.Rect(340, 90, 560, 130), "Figure 4. A foreign caption.", fontsize=BODY
+    )
+    # …and the table's own legend below the region's bottom (~60pt)
+    p.insert_textbox(
+        fitz.Rect(340, 560, 560, 600), "Table 9. Real results.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(340, 640, 560, 720), "Right column body text.", fontsize=BODY
+    )
+    pdf = tmp_path / "spantheft.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "spantheft.epub"
+    convert(pdf, out)
+    htmls = doc_html(out)
+    assert any('alt="Table 9. Real results."' in h for h in htmls.values())
+    assert not any('alt="Figure 4' in h for h in htmls.values())
+
+
+def test_figure_alt_never_borrows_table_caption(tmp_path):
+    """A 'Table N.' block after an image belongs to a text-flowed table
+    (legend above), not to the figure — images match figure labels only."""
+    data = _noise_png()
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_image(fitz.Rect(80, 300, 260, 420), stream=data)
+    p.insert_textbox(
+        fitz.Rect(72, 440, 540, 480), "Table 4. Paired results.", fontsize=BODY
+    )
+    pdf = tmp_path / "figtable.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "figtable.epub"
+    convert(pdf, out)
+    figs = "\n".join(h for h in doc_html(out).values() if "<img" in h)
+    assert 'alt="Table 4' not in figs and 'alt=""' in figs
+
+
+def test_figure_alt_ignores_prose_citation(tmp_path):
+    """'Figure N shows…' is a citation, not a caption — the digits must be
+    followed by '.', ':', ')' or end-of-text."""
+    data = _noise_png()
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_image(fitz.Rect(80, 300, 260, 420), stream=data)
+    p.insert_textbox(
+        fitz.Rect(72, 440, 540, 500),
+        "Figure 9 shows the outcome clearly.",
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "prosecap.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "prosecap.epub"
+    convert(pdf, out)
+    figs = "\n".join(h for h in doc_html(out).values() if "<img" in h)
+    assert 'alt="Figure 9' not in figs and 'alt=""' in figs
+
+
 def test_nested_toc_h2_under_h1(tmp_path):
     doc = fitz.open()
     p = _page(doc)
