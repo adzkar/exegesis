@@ -975,7 +975,9 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
         # an unnumbered block is a column/page-split continuation of the
         # previous note unless it opens a new note itself (correspondence
         # and acknowledgment openers — the same pattern that marks the
-        # note zone on the page)
+        # note zone on the page). A real continuation that happens to open
+        # with such a phrase splits off as an unnumbered entry instead —
+        # rare, and safer than fusing two genuine notes.
         frag_text = re.sub(r"<[^>]+>", "", frag).lstrip("*†‡§ ")
         if (
             num is None
