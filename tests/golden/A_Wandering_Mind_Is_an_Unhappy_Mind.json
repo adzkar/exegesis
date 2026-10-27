@@ -7,12 +7,7 @@
           "p",
           "BREVIA",
           6
-        ]
-      ]
-    },
-    {
-      "file": "chap_2.xhtml",
-      "frags": [
+        ],
         [
           "h1",
           "A Wandering Mind Is an Unhappy Mind",
@@ -81,7 +76,7 @@
       ]
     },
     {
-      "file": "chap_3.xhtml",
+      "file": "chap_2.xhtml",
       "frags": [
         [
           "h2",
@@ -206,7 +201,7 @@
       ]
     },
     {
-      "file": "chap_4.xhtml",
+      "file": "chap_3.xhtml",
       "frags": [
         [
           "h2",
@@ -237,7 +232,7 @@
     }
   ],
   "stats": {
-    "chapters": 5,
+    "chapters": 4,
     "footnotes": 1,
     "headings": 3,
     "images": 1,

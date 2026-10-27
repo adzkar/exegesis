@@ -458,6 +458,35 @@ def test_keep_headers_furniture_in_table_region(tmp_path):
     assert "42" in chapter_text(out)
 
 
+def test_keep_headers_head_no_degenerate_chapter(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 30, 300, 48), "www.journal.org", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 120, 540, 160), "A Paper Title", fontsize=17,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 200, 540, 400),
+        " ".join(["Body text fills the column."] * 10),
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "headchap.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "headchap.epub"
+    m.convert(pdf, out, drop_edges=False)
+    chaps = {
+        n: h for n, h in doc_html(out).items() if n.startswith("chap_")
+    }
+    # the kept head folds into the title chapter rather than forming a
+    # degenerate "Section 1" containing only the furniture paragraph
+    assert len(chaps) == 1
+    chap = next(iter(chaps.values()))
+    assert "www.journal.org" in chap and "A Paper Title" in chap
+
+
 def test_keep_headers_furniture_not_blockquote_neighbor(tmp_path):
     doc = fitz.open()
     p = _page(doc)

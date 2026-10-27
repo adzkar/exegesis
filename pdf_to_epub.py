@@ -937,8 +937,8 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
             if pi % PAGES_PER_FALLBACK_CHAPTER == 0
             and (i == 0 or flat[i - 1][0] != pi)
         ]
-    if not boundaries or boundaries[0] != 0:
-        boundaries.insert(0, 0)
+    if not boundaries:
+        boundaries = [0]
 
     if title is None:
         title = meta.get("title") or ""
@@ -982,12 +982,16 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
 
     chapters = []
     for idx, start in enumerate(boundaries):
+        # frags before the first heading fold into chapter 1 — a kept
+        # running head on the title page must not form a degenerate
+        # leading chapter that pushes the title into chap_2
+        real_start = 0 if idx == 0 else start
         end = boundaries[idx + 1] if idx + 1 < len(boundaries) else len(flat)
-        content = "\n".join(f for _, f in flat[start:end])
+        content = "\n".join(f for _, f in flat[real_start:end])
         heading = next(
             (
                 re.sub(r"<[^>]+>", "", f)
-                for _, f in flat[start:end]
+                for _, f in flat[real_start:end]
                 if f.startswith("<h")
             ),
             None,
@@ -1002,7 +1006,7 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
             f"<html><body>{content.strip() or '<p></p>'}</body></html>"
         )
         book.add_item(chap)
-        chapters.append((chap, start))
+        chapters.append((chap, real_start))
 
     note_entries = []
     seen_fn = set()

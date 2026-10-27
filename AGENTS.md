@@ -40,8 +40,9 @@ chapters.
   `Supporting Online Material`…) at block start emit h2, but respect the
   demotion — a trailing `Funding NIH grant…` is a plausible note tail,
   not a section head. All-caps short labels in the top 12% emit
-  `<p class="label">` instead. Chapters split at heading fragments — each
-  begins exactly at its heading.
+  `<p class="label">` instead. Chapters split at heading fragments; frags
+  before the first heading fold into chapter 1 rather than forming a
+  degenerate leading chapter.
 - **Bylines** — blocks ≥1.15× body, or the block right after an h1 when it
   looks like a name list; merge into one `<p class="byline">` with short
   single-line followers. A trailing drop-cap letter moves into the body
