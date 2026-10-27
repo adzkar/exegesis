@@ -433,7 +433,7 @@ def _is_furniture(block, rect, text):
     """Edge furniture by shape or content: narrow+tall margin strips in
     the outer 10% margins, or pattern furniture/page numbers in the outer
     7% edge."""
-    x0, y0, x1, y1 = block["bbox"]
+    _, y0, _, y1 = block["bbox"]
     return _is_margin_strip(block, rect) or (
         (y0 > rect.height * 0.93 or y1 < rect.height * 0.07)
         and (FURNITURE_RE.search(text) or re.fullmatch(r"\d{1,4}", text))
@@ -459,7 +459,7 @@ def _ordered_blocks(page, boilerplate, edges, drop_furniture=True):
     items = []
     furniture_items = []
     for block in page.get_text("dict")["blocks"]:
-        x0, y0, x1, y1 = block["bbox"]
+        _, y0, _, y1 = block["bbox"]
         if block["type"] == 0:
             text = _block_text(block)
             if not text:
@@ -705,9 +705,9 @@ def _render_page(page, page_index, state):
         # bold-only candidates carry no size signal: they must sit
         # outside the edge zones AND introduce following *body* text in
         # their column — a trailing bold line at a section/page end is
-        # far more often a note than a heading. The scan is page-local:
-        # a bold line that ends the page can't see its next-page follower
-        # and stays demoted.
+        # far more often a note than a heading. The scan is column- and
+        # page-local: a bold line ending a column or page can't see its
+        # next-column/next-page follower and stays demoted.
         in_edge = (
             block["bbox"][1] < page.rect.height * 0.12
             or block["bbox"][3] > page.rect.height * 0.88
@@ -833,11 +833,10 @@ def _render_page(page, page_index, state):
         ):
             flush_par()
         for li, line in enumerate(_block_lines(block)):
-            if li == 0:
-                # named labels intentionally override the bold-only
-                # demotion — a trailing "References" is almost always the
-                # section it names; its body usually just starts on the
-                # next page, invisible to the page-local follower scan
+            # labels respect the bold-only demotion — "Funding NIH grant…"
+            # tails are plausible notes, not section heads; a page-final
+            # "References" stays demoted when its body isn't visible
+            if li == 0 and not demoted:
                 m = _section_label(_line_text(line).strip())
                 if m:
                     emit_heading(2, m[0])
@@ -903,9 +902,7 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
         "page_frags": [[] for _ in range(doc.page_count)],
         "heading_seq": 0,
         "drop_edges": drop_edges,
-        "boilerplate": (
-            _boilerplate_signatures(doc) if doc.page_count > 3 else set()
-        ),
+        "boilerplate": _boilerplate_signatures(doc),
     }
 
     for i, page in enumerate(doc):

@@ -29,10 +29,13 @@ def test_two_column_reading_order(tmp_path):
     right_b = "Final right column sentence closes the paper."
     for _ in range(2):
         p = _page(doc)
-        p.insert_textbox(fitz.Rect(72, 80, 290, 200), left_a, fontsize=BODY)
-        p.insert_textbox(fitz.Rect(72, 320, 290, 440), left_b, fontsize=BODY)
-        p.insert_textbox(fitz.Rect(340, 80, 560, 200), right_a, fontsize=BODY)
-        p.insert_textbox(fitz.Rect(340, 320, 560, 440), right_b, fontsize=BODY)
+        # keep column text below the top edge zone — identical text
+        # repeated near the top of every page reads as a running head and
+        # is dropped as signature boilerplate
+        p.insert_textbox(fitz.Rect(72, 180, 290, 300), left_a, fontsize=BODY)
+        p.insert_textbox(fitz.Rect(72, 340, 290, 460), left_b, fontsize=BODY)
+        p.insert_textbox(fitz.Rect(340, 180, 560, 300), right_a, fontsize=BODY)
+        p.insert_textbox(fitz.Rect(340, 340, 560, 460), right_b, fontsize=BODY)
     pdf = tmp_path / "twocol.pdf"
     _save(doc, pdf)
     out = tmp_path / "twocol.epub"
@@ -197,6 +200,31 @@ def test_demoted_bold_tail_lines_stay_demoted(tmp_path):
     chaps = [h for n, h in doc_html(out).items() if n.startswith("chap_")]
     assert not any("<h2" in h or "<h1" in h for h in chaps)
     assert "Closing bold remark" in chapter_text(out)
+
+
+def test_label_respects_bold_demotion(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 300),
+        " ".join(["Body text fills the column above."] * 10),
+        fontsize=BODY,
+    )
+    # a trailing bold "Funding …" tail is a note, not a section head —
+    # demotion must suppress the label path too
+    p.insert_textbox(
+        fitz.Rect(72, 550, 540, 570),
+        "Funding NIH grant R01-GM123456",
+        fontsize=10.6,
+        fontname="hebo",
+    )
+    pdf = tmp_path / "funding.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "funding.epub"
+    m.convert(pdf, out)
+    chaps = [h for n, h in doc_html(out).items() if n.startswith("chap_")]
+    assert not any("<h2" in h or "<h1" in h for h in chaps)
+    assert "Funding NIH grant" in chapter_text(out)
 
 
 def test_mixed_block_bold_band_line_demoted(tmp_path):
@@ -379,6 +407,29 @@ def test_keep_headers_signature_head_no_abstract(tmp_path):
     pdf = tmp_path / "sighead.pdf"
     _save(doc, pdf)
     out = tmp_path / "sighead.epub"
+    m.convert(pdf, out, drop_edges=False)
+    htmls = doc_html(out)
+    assert not any("<h2" in h and "Abstract" in h for h in htmls.values())
+    assert "Journal of Studies" in chapter_text(out)
+
+
+def test_keep_headers_signature_head_flagged_short_doc(tmp_path):
+    doc = fitz.open()
+    for _ in range(3):
+        p = _page(doc)
+        # three pages: enough for the signature layer to recognize a
+        # repeated running head even though page_count <= 3
+        p.insert_textbox(
+            fitz.Rect(200, 40, 400, 65), "Journal of Studies", fontsize=9
+        )
+        p.insert_textbox(
+            fitz.Rect(72, 100, 540, 400),
+            " ".join(["Body text fills the single column."] * 8),
+            fontsize=BODY,
+        )
+    pdf = tmp_path / "sighead3.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "sighead3.epub"
     m.convert(pdf, out, drop_edges=False)
     htmls = doc_html(out)
     assert not any("<h2" in h and "Abstract" in h for h in htmls.values())
