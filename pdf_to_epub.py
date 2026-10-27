@@ -475,6 +475,32 @@ def _ordered_blocks(page, boilerplate, edges):
     return ordered
 
 
+def _rotate_clip(rect, rot, mb):
+    """Map a rect found in rotated (displayed) space back into mediabox
+    coordinates for ``page.get_pixmap(clip=...)``.
+
+    ``get_pixmap`` interprets the clip in the page's unrotated mediabox
+    space, so a table region located on the displayed page must be pushed
+    back through the page's own ``/Rotate``. For 90 the displayed x axis
+    runs along the mediabox y axis while displayed y maps to ``width - x``;
+    270 is the mirror image; 180 flips both axes. 0 returns the rect.
+    """
+    if rot == 90:
+        return fitz.Rect(
+            rect.y0, mb.width - rect.x1, rect.y1, mb.width - rect.x0
+        )
+    if rot == 270:
+        return fitz.Rect(
+            mb.height - rect.y1, rect.x0, mb.height - rect.y0, rect.x1
+        )
+    if rot == 180:
+        return fitz.Rect(
+            mb.width - rect.x1, mb.height - rect.y1,
+            mb.width - rect.x0, mb.height - rect.y0,
+        )
+    return rect
+
+
 def _line_html(line, body_size):
     """Render a line's spans to HTML: sup markers link to notes, font-name
     bold/italic suffixes become <b>/<i>."""
@@ -588,23 +614,7 @@ def _render_page(page, page_index, state):
                     min(mb.width, tbl.x1 + 8),
                     min(mb.height, tbl.y1 + 20),
                 )
-                rot = page.rotation
-                if rot == 90:
-                    clip = fitz.Rect(
-                        tbl.y0, mb.width - tbl.x1, tbl.y1, mb.width - tbl.x0
-                    )
-                elif rot == 270:
-                    clip = fitz.Rect(
-                        mb.height - tbl.y1, tbl.x0,
-                        mb.height - tbl.y0, tbl.x1,
-                    )
-                elif rot == 180:
-                    clip = fitz.Rect(
-                        mb.width - tbl.x1, mb.height - tbl.y1,
-                        mb.width - tbl.x0, mb.height - tbl.y0,
-                    )
-                else:
-                    clip = tbl
+                clip = _rotate_clip(tbl, page.rotation, mb)
                 pix = page.get_pixmap(clip=clip, matrix=fitz.Matrix(2, 2))
                 data = pix.tobytes("png")
                 digest = hashlib.sha1(data).hexdigest()[:16]

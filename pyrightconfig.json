@@ -1,0 +1,6 @@
+{
+  "typeCheckingMode": "standard",
+  "executionEnvironments": [
+    { "root": ".", "extraPaths": ["tests"] }
+  ]
+}

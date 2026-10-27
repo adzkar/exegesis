@@ -1,0 +1,265 @@
+{
+  "spine": [
+    {
+      "file": "chap_1.xhtml",
+      "frags": [
+        [
+          "p",
+          "BREVIA",
+          6
+        ]
+      ]
+    },
+    {
+      "file": "chap_2.xhtml",
+      "frags": [
+        [
+          "h1",
+          "A Wandering Mind Is an Unhappy Mind",
+          35
+        ],
+        [
+          "p",
+          "Matthew A. Killingsworth* and Daniel T. Gilbert",
+          47
+        ],
+        [
+          "p",
+          "Unlike other animals, human beings spend a lot of time think",
+          732
+        ],
+        [
+          "p",
+          "Laboratory experiments have revealed a great deal about the ",
+          728
+        ],
+        [
+          "p",
+          "We solved this problem by developing a Web application for t",
+          729
+        ],
+        [
+          "p",
+          "To find out how often people\u2019s minds wander, what topics the",
+          819
+        ],
+        [
+          "p",
+          "First, people\u2019s minds wandered frequently, regardless of wha",
+          540
+        ],
+        [
+          "p",
+          "Second, multilevel regression revealed that people were less",
+          195
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Fig. 1. Mean happiness reported during each activity (top) a",
+          454
+        ],
+        [
+          "p",
+          "including the least enjoyable. Although people\u2019s minds were ",
+          720
+        ],
+        [
+          "p",
+          "Third, what people were thinking was a better predictor of t",
+          562
+        ],
+        [
+          "p",
+          "In conclusion, a human mind is a wandering mind, and a wande",
+          198
+        ]
+      ]
+    },
+    {
+      "file": "chap_3.xhtml",
+      "frags": [
+        [
+          "h2",
+          "References and Notes",
+          20
+        ],
+        [
+          "p",
+          "1. M. E. Raichle et al., Proc. Natl. Acad. Sci. U.S.A. 98, 6",
+          62
+        ],
+        [
+          "p",
+          "(2001).",
+          7
+        ],
+        [
+          "p",
+          "2. K. Christoff, A. M. Gordon, J. Smallwood, R. Smith,",
+          54
+        ],
+        [
+          "p",
+          "J. W. Schooler, Proc. Natl. Acad. Sci. U.S.A. 106, 8719 (200",
+          63
+        ],
+        [
+          "p",
+          "3. R. L. Buckner, J. R. Andrews-Hanna, D. L. Schacter,",
+          54
+        ],
+        [
+          "p",
+          "Ann. N. Y. Acad. Sci. 1124, 1 (2008).",
+          37
+        ],
+        [
+          "p",
+          "4. J. Smallwood, J. W. Schooler, Psychol. Bull. 132, 946 (20",
+          64
+        ],
+        [
+          "p",
+          "5. M. F. Mason et al., Science 315, 393 (2007).",
+          47
+        ],
+        [
+          "p",
+          "6. J. Smallwood, E. Beach, J. W. Schooler, T. C. Handy,",
+          55
+        ],
+        [
+          "p",
+          "J. Cogn. Neurosci. 20, 458 (2008).",
+          34
+        ],
+        [
+          "p",
+          "7. R. L. Buckner, D. C. Carroll, Trends Cogn. Sci. 11, 49 (2",
+          65
+        ],
+        [
+          "p",
+          "8. J. C. McVay, M. J. Kane, T. R. Kwapil, Psychon. Bull. Rev",
+          61
+        ],
+        [
+          "p",
+          "16, 857 (2009).",
+          15
+        ],
+        [
+          "p",
+          "9. M. J. Kane et al., Psychol. Sci. 18, 614 (2007).",
+          51
+        ],
+        [
+          "p",
+          "10. D. Kahneman, A. B. Krueger, D. A. Schkade, N. Schwarz,",
+          58
+        ],
+        [
+          "p",
+          "A. A. Stone, Science 306, 1776 (2004).",
+          38
+        ],
+        [
+          "p",
+          "11. A. B. Krueger, D. A. Schkade, J. Public Econ. 92, 1833 (",
+          66
+        ],
+        [
+          "p",
+          "12. Materials and methods are available as supporting",
+          53
+        ],
+        [
+          "p",
+          "material on Science Online.",
+          27
+        ],
+        [
+          "p",
+          "13. J. Smallwood, A. Fitzgerald, L. K. Miles, L. H. Phillips",
+          61
+        ],
+        [
+          "p",
+          "Emotion 9, 271 (2009).",
+          22
+        ],
+        [
+          "p",
+          "14. We thank V. Pitiyanuvath for engineering www.",
+          49
+        ],
+        [
+          "p",
+          "trackyourhappiness.org and R. Hackman, A. Jenkins, W. Mendes",
+          108
+        ]
+      ]
+    },
+    {
+      "file": "chap_4.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Supporting Online Material",
+          26
+        ],
+        [
+          "p",
+          "www.sciencemag.org/cgi/content/full/330/6006/932/DC1 Materia",
+          204
+        ]
+      ]
+    },
+    {
+      "file": "notes.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Notes",
+          5
+        ],
+        [
+          "p",
+          "*To whom correspondence should be addressed. E-mail: mkillin",
+          77
+        ]
+      ]
+    }
+  ],
+  "stats": {
+    "chapters": 5,
+    "footnotes": 1,
+    "headings": 3,
+    "images": 1,
+    "pages": 1,
+    "title": "A Wandering Mind Is an Unhappy Mind"
+  },
+  "toc": [
+    [
+      1,
+      "A Wandering Mind Is an Unhappy Mind"
+    ],
+    [
+      1,
+      "References and Notes"
+    ],
+    [
+      1,
+      "Supporting Online Material"
+    ],
+    [
+      1,
+      "Notes"
+    ]
+  ]
+}
