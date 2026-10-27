@@ -53,9 +53,10 @@ chapters.
   its column edge AND vertically isolated (>0.7× line-height gaps on both
   sides) becomes `<blockquote>` (quotes, verse).
 - **Tables** — rotated/landscape tables (≥3 tall-narrow blocks sharing a
-  y-band) are rasterized and embedded as PNGs. The clip is padded in
-  mediabox (unrotated) space and mapped through the page's own `/Rotate`
-  (90/180/270) so the render comes out upright and uncropped. Horizontal
+  y-band) are rasterized and embedded as PNGs. Block bboxes arrive in
+  mediabox (unrotated) space; the padded clip is mapped into displayed
+  space via `page.rotation_matrix`, because `get_pixmap` clips in rotated
+  coordinates — the render comes out upright and uncropped. Horizontal
   tables are not yet detected — their cells currently flow as text.
 - **Abstract** — first small-font inset block in the top half of pages 0–1
   injects an `Abstract` h2.
