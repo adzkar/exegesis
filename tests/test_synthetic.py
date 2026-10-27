@@ -240,6 +240,26 @@ def test_nested_toc_h2_under_h1(tmp_path):
     assert levels[texts.index("First Section")] == 2
 
 
+def test_childless_h1_toc_has_no_empty_ol(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 60, 540, 100), "Title With No Sections", fontsize=18
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 140, 540, 300), "Body text, no headings.", fontsize=BODY
+    )
+    pdf = tmp_path / "titleonly.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "titleonly.epub"
+    convert(pdf, out)
+    # a childless h1 must be a bare <li><a/></li> — epubcheck rejects <ol/>
+    nav = doc_html(out)["nav.xhtml"]
+    assert "<ol/>" not in nav and "<ol></ol>" not in nav
+    snap = snapshot_epub(out)
+    assert any("Title With No Sections" in t for _lv, t in snap["toc"])
+
+
 def _noise_png(size=120):
     """A noisy pixmap whose PNG encoding exceeds MIN_IMAGE_BYTES."""
     pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, size, size))

@@ -217,8 +217,12 @@ def convert(
         book.add_item(notes)
         chapters.append((notes, len(flat)))
         toc.append(epub.Link("notes.xhtml", "Notes", "notes"))
+    # a section tuple always renders a nested <ol>, so a childless h1
+    # must degrade to a bare Link or nav.xhtml gets an invalid empty <ol/>
     book.toc = [
-        (entry[0], tuple(entry[1])) if isinstance(entry, list) else entry
+        (entry[0], tuple(entry[1]))
+        if isinstance(entry, list) and entry[1]
+        else (entry[0] if isinstance(entry, list) else entry)
         for entry in toc
     ]
     for item in state.images.values():
