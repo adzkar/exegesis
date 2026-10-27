@@ -31,10 +31,14 @@ chapters.
   ≥0.9× outside edge zones (papers whose headings share the body font) that
   also precedes body-flow text in its column — footnote-zone, rasterized
   table, and kept-furniture blocks don't count (a trailing bold line is
-  usually a note, not a heading). Lines opening with footnote markers
+  usually a note, not a heading). The same edge+follower check gates a
+  bold line inside a mixed-weight block, and the follower scan is
+  page-local — a bold line that ends a page can't see its next-page
+  follower and stays demoted. Lines opening with footnote markers
   (`*†‡§`) are never headings.
   Sentence-like text with periods is rejected. Named labels (`References`,
-  `Supporting Online Material`…) at block start also emit h2. All-caps
+  `Supporting Online Material`…) at block start intentionally override
+  the demotion and emit h2 — the label is itself the signal. All-caps
   short labels in the top 12% emit `<p class="label">` instead. Chapters
   split at heading fragments — each begins exactly at its heading.
 - **Bylines** — blocks ≥1.15× body, or the block right after an h1 when it
@@ -49,8 +53,9 @@ chapters.
   repeated running heads flag the same way: such blocks skip the
   spans/cut/column machinery entirely (emitted at the page's top/bottom
   edge), render verbatim as their own paragraphs, and never feed any
-  classifier — headings, abstract, bylines, footnotes, followers, or
-  table seeds.
+  classifier — headings, abstract, bylines, footnotes, followers,
+  blockquote isolation, or table regions (a kept block inside a table's
+  bbox still emits verbatim rather than being rasterized away).
 - **Footnotes** — superscript-digit starts in the lower half, OR an unnumbered
   smaller-than-body block below a >2×line-height gap in the bottom 40%,
   OR a bottom-55% block opening with an acknowledgment/correspondence
