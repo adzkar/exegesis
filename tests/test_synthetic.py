@@ -94,6 +94,37 @@ def test_keep_headers_preserves_furniture(tmp_path):
     )
 
 
+def test_keep_headers_wide_footer_keeps_column_order(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    left_a = "The left column opens here with a complete sentence."
+    left_b = "More left text follows, still in the first column."
+    right_a = "The right column reads only after the left ends."
+    right_b = "Final right column sentence closes the paper."
+    p.insert_textbox(fitz.Rect(72, 80, 290, 200), left_a, fontsize=BODY)
+    p.insert_textbox(fitz.Rect(72, 320, 290, 440), left_b, fontsize=BODY)
+    p.insert_textbox(fitz.Rect(340, 80, 560, 200), right_a, fontsize=BODY)
+    p.insert_textbox(fitz.Rect(340, 320, 560, 440), right_b, fontsize=BODY)
+    # a full-width furniture footer crosses the gutter (its glyph extent,
+    # not the box) — kept verbatim, but it must not become a span whose
+    # `cut` collapses the page into interleaved (y0, x0) order
+    p.insert_textbox(
+        fitz.Rect(72, 745, 560, 765),
+        "www.journal.org VOL 340 ISSN 1234-5678 downloaded from journal.org"
+        " archive 10 Oct 2026",
+        fontsize=9,
+    )
+    pdf = tmp_path / "widefooter.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "widefooter.epub"
+    m.convert(pdf, out, drop_edges=False)
+    text = chapter_text(out)
+    assert text.index("left column") < text.index("first column")
+    assert text.index("first column") < text.index("right column")
+    assert text.index("right column") < text.index("closes the paper")
+    assert "journal.org" in text
+
+
 def test_bold_marker_tail_line_not_heading(tmp_path):
     doc = fitz.open()
     p = _page(doc)

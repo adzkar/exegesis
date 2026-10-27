@@ -17,10 +17,10 @@ reordered into reading order, rendered to HTML fragments, then chunked into
 chapters.
 
 - **Column order** — column edges are x0 clusters found on ≥50% of pages
-  (doc-wide voting kills phantom edges from bylines/headings). Blocks
-  crossing a gutter are spans; each column emits its own sequence of
-  non-spans + covering spans in y order, columns left to right. Works for
-  1/2/3-column layouts.
+  (doc-wide voting kills phantom edges from bylines/headings; furniture-
+  shaped blocks don't vote). Blocks crossing a gutter are spans; each
+  column emits its own sequence of non-spans + covering spans in y order,
+  columns left to right. Works for 1/2/3-column layouts.
 - **Paragraphs** — blocks merge into the open paragraph unless the first line
   is indented (>4pt) or the previous line ends with terminal punctuation.
   Open paragraphs carry across columns and page breaks; a lone drop-cap
@@ -45,9 +45,10 @@ chapters.
   edge zones, and pattern furniture (`VOL`, `www.`, `ISSN`, `doi`, `©`,
   dates) in the outer 7% edge (works on 1-page docs). Narrow+tall blocks in
   outer 10% margins (rotated sidebars) are dropped. `--keep-headers` keeps
-  all of it flagged `is_furniture`: such blocks render verbatim as their
-  own paragraphs and never feed any classifier — headings, abstract,
-  bylines, footnotes, followers, or table seeds.
+  all of it flagged `is_furniture`: such blocks skip the spans/cut/column
+  machinery entirely (emitted at the page's top/bottom edge), render
+  verbatim as their own paragraphs, and never feed any classifier —
+  headings, abstract, bylines, footnotes, followers, or table seeds.
 - **Footnotes** — superscript-digit starts in the lower half, OR an unnumbered
   smaller-than-body block below a >2×line-height gap in the bottom 40%,
   OR a bottom-55% block opening with an acknowledgment/correspondence

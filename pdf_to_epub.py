@@ -374,7 +374,14 @@ def _doc_column_edges(doc):
     """
     votes = []
     for page in doc:
-        items = page.get_text("dict")["blocks"]
+        # furniture shapes can't form column edges — a sidebar recurring at
+        # the same x on every page is the classic phantom-edge generator
+        items = [
+            b
+            for b in page.get_text("dict")["blocks"]
+            if b["type"] == 0
+            and not _is_furniture(b, page.rect, _block_text(b))
+        ]
         for e in _column_edges(items):
             for v in votes:
                 if abs(v[0] - e) < 15:
@@ -422,6 +429,17 @@ def _is_margin_strip(block, rect):
     )
 
 
+def _is_furniture(block, rect, text):
+    """Edge furniture by shape or content: narrow+tall margin strips in
+    the outer 10% margins, or pattern furniture/page numbers in the outer
+    7% edge."""
+    x0, y0, x1, y1 = block["bbox"]
+    return _is_margin_strip(block, rect) or (
+        (y0 > rect.height * 0.93 or y1 < rect.height * 0.07)
+        and (FURNITURE_RE.search(text) or re.fullmatch(r"\d{1,4}", text))
+    )
+
+
 def _ordered_blocks(page, boilerplate, edges, drop_furniture=True):
     """Return page blocks in reading order for any column layout.
 
@@ -432,11 +450,15 @@ def _ordered_blocks(page, boilerplate, edges, drop_furniture=True):
     Text blocks whose signature is in ``boilerplate`` are dropped.
     Margin strips, pattern furniture, and page numbers are dropped when
     ``drop_furniture`` is true; when false (``--keep-headers``) they are
-    kept but flagged ``is_furniture`` so they render verbatim without ever
-    reaching heading/abstract/byline/footnote/follower logic.
+    kept but flagged ``is_furniture``, held in a side list, and emitted
+    at the page's top/bottom edge — they render verbatim without reaching
+    any classifier or perturbing the spans/cut/column machinery (a
+    gutter-crossing footer would otherwise collapse the page into
+    interleaved top-zone order).
     """
     rect = page.rect
     items = []
+    furniture_items = []
     for block in page.get_text("dict")["blocks"]:
         x0, y0, x1, y1 = block["bbox"]
         if block["type"] == 0:
@@ -448,17 +470,12 @@ def _ordered_blocks(page, boilerplate, edges, drop_furniture=True):
             )
             if near_edge and _signature(text) in boilerplate:
                 continue
-            furniture = _is_margin_strip(block, rect) or (
-                (y0 > rect.height * 0.93 or y1 < rect.height * 0.07)
-                and (
-                    FURNITURE_RE.search(text)
-                    or re.fullmatch(r"\d{1,4}", text)
-                )
-            )
-            if furniture and drop_furniture:
-                continue
-            if furniture:
+            if _is_furniture(block, rect, text):
+                if drop_furniture:
+                    continue
                 block["is_furniture"] = True
+                furniture_items.append(block)
+                continue
         items.append(block)
 
     key = lambda b: (b["bbox"][1], b["bbox"][0])
@@ -491,7 +508,17 @@ def _ordered_blocks(page, boilerplate, edges, drop_furniture=True):
                 continue
             emitted.add(id(b))
             ordered.append(b)
-    return ordered
+    # kept furniture slots at the page edge it belongs to — running heads
+    # before the content, footers/sidebars after it
+    top_f = sorted(
+        (b for b in furniture_items if b["bbox"][1] < rect.height * 0.5),
+        key=key,
+    )
+    bottom_f = sorted(
+        (b for b in furniture_items if b["bbox"][1] >= rect.height * 0.5),
+        key=key,
+    )
+    return top_f + ordered + bottom_f
 
 
 def _rotate_clip(rect, matrix):
