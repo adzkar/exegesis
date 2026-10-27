@@ -475,6 +475,19 @@ def _ordered_blocks(page, boilerplate, edges):
     return ordered
 
 
+def _rotate_clip(rect, matrix):
+    """Map a mediabox-space rect into the displayed space that
+    ``page.get_pixmap(clip=...)`` expects; pass ``page.rotation_matrix``.
+
+    ``get_text`` reports block bboxes in the page's unrotated mediabox
+    coordinates, while ``get_pixmap`` interprets the clip in the rotated
+    (displayed) coordinate system — on a ``/Rotate`` page the same table
+    region sits somewhere else. ``rotation_matrix`` is exactly this map
+    (the identity on unrotated pages).
+    """
+    return rect * matrix
+
+
 def _line_html(line, body_size):
     """Render a line's spans to HTML: sup markers link to notes, font-name
     bold/italic suffixes become <b>/<i>."""
@@ -588,23 +601,7 @@ def _render_page(page, page_index, state):
                     min(mb.width, tbl.x1 + 8),
                     min(mb.height, tbl.y1 + 20),
                 )
-                rot = page.rotation
-                if rot == 90:
-                    clip = fitz.Rect(
-                        tbl.y0, mb.width - tbl.x1, tbl.y1, mb.width - tbl.x0
-                    )
-                elif rot == 270:
-                    clip = fitz.Rect(
-                        mb.height - tbl.y1, tbl.x0,
-                        mb.height - tbl.y0, tbl.x1,
-                    )
-                elif rot == 180:
-                    clip = fitz.Rect(
-                        mb.width - tbl.x1, mb.height - tbl.y1,
-                        mb.width - tbl.x0, mb.height - tbl.y0,
-                    )
-                else:
-                    clip = tbl
+                clip = _rotate_clip(tbl, page.rotation_matrix)
                 pix = page.get_pixmap(clip=clip, matrix=fitz.Matrix(2, 2))
                 data = pix.tobytes("png")
                 digest = hashlib.sha1(data).hexdigest()[:16]
