@@ -475,30 +475,17 @@ def _ordered_blocks(page, boilerplate, edges):
     return ordered
 
 
-def _rotate_clip(rect, rot, mb):
-    """Map a rect found in rotated (displayed) space back into mediabox
-    coordinates for ``page.get_pixmap(clip=...)``.
+def _rotate_clip(rect, matrix):
+    """Map a mediabox-space rect into the displayed space that
+    ``page.get_pixmap(clip=...)`` expects; pass ``page.rotation_matrix``.
 
-    ``get_pixmap`` interprets the clip in the page's unrotated mediabox
-    space, so a table region located on the displayed page must be pushed
-    back through the page's own ``/Rotate``. For 90 the displayed x axis
-    runs along the mediabox y axis while displayed y maps to ``width - x``;
-    270 is the mirror image; 180 flips both axes. 0 returns the rect.
+    ``get_text`` reports block bboxes in the page's unrotated mediabox
+    coordinates, while ``get_pixmap`` interprets the clip in the rotated
+    (displayed) coordinate system — on a ``/Rotate`` page the same table
+    region sits somewhere else. ``rotation_matrix`` is exactly this map
+    (the identity on unrotated pages).
     """
-    if rot == 90:
-        return fitz.Rect(
-            rect.y0, mb.width - rect.x1, rect.y1, mb.width - rect.x0
-        )
-    if rot == 270:
-        return fitz.Rect(
-            mb.height - rect.y1, rect.x0, mb.height - rect.y0, rect.x1
-        )
-    if rot == 180:
-        return fitz.Rect(
-            mb.width - rect.x1, mb.height - rect.y1,
-            mb.width - rect.x0, mb.height - rect.y0,
-        )
-    return rect
+    return rect * matrix
 
 
 def _line_html(line, body_size):
@@ -614,7 +601,7 @@ def _render_page(page, page_index, state):
                     min(mb.width, tbl.x1 + 8),
                     min(mb.height, tbl.y1 + 20),
                 )
-                clip = _rotate_clip(tbl, page.rotation, mb)
+                clip = _rotate_clip(tbl, page.rotation_matrix)
                 pix = page.get_pixmap(clip=clip, matrix=fitz.Matrix(2, 2))
                 data = pix.tobytes("png")
                 digest = hashlib.sha1(data).hexdigest()[:16]
