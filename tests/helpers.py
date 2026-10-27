@@ -136,8 +136,7 @@ def spine_files(zf):
         manifest[ref.get("idref")]
         for ref in opf.find(f"{OPF_NS}spine") or []
     ]
-    base = opf_path.rsplit("/", 1)[0]
-    return [f"{base}/{h}" for h in spine]
+    return [_resolve(opf_path, h) for h in spine]
 
 
 def snapshot_epub(path) -> dict[str, Any]:
@@ -178,20 +177,30 @@ def doc_html(path):
     return out
 
 
+def _norm_text(xhtml):
+    """Collapse an XHTML doc to whitespace-normalized plain text."""
+    return " ".join(re.sub(r"<[^>]+>", " ", xhtml).split())
+
+
 def doc_texts(path):
     """Map basename -> normalized text for every chapter/notes doc."""
     return {
-        name: " ".join(re.sub(r"<[^>]+>", " ", html).split())
-        for name, html in doc_html(path).items()
+        name: _norm_text(html) for name, html in doc_html(path).items()
     }
 
 
 def chapter_text(path):
-    """All chapter docs' text concatenated in spine order."""
-    texts = doc_texts(path)
-    return "\n".join(
-        t for name, t in sorted(texts.items()) if name.startswith("chap_")
-    )
+    """All chapter docs' text concatenated in true spine order.
+
+    Walks the OPF spine rather than sorting filenames — lexicographic order
+    would place ``chap_10`` before ``chap_2``.
+    """
+    with zipfile.ZipFile(path) as zf:
+        return "\n".join(
+            _norm_text(zf.read(name).decode("utf8"))
+            for name in spine_files(zf)
+            if name.rsplit("/", 1)[-1].startswith("chap_")
+        )
 
 
 def lint_epub(path):
