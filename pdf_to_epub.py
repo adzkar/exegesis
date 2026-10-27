@@ -38,6 +38,9 @@ NOTE_START_RE = re.compile(
     r"the author[s]? (?:thank|acknowledge|wish)|to whom correspondence)"
 )
 LIST_ITEM_RE = re.compile(r"^\d{1,2}[.)]\s+\S")
+# Language is assumed English throughout: NOTE_START_RE, SECTION_LABEL_RE
+# and FURNITURE_RE all match English-only patterns.
+BOOK_LANG = "en"
 
 
 def _block_lines(block):
@@ -115,12 +118,16 @@ def _join_lines(parts):
     return " ".join(out)
 
 
-def _body_font_size(doc):
-    """Return (modal body span size, median line height) across the document."""
+def _body_font_size(pages):
+    """Return (modal body span size, median line height) across the document.
+
+    ``pages`` is a list of ``(fitz.Page, page.get_text("dict"))`` pairs so
+    the extraction cost is paid once in ``convert``.
+    """
     sizes = Counter()
     heights = []
-    for page in doc:
-        for block in page.get_text("dict")["blocks"]:
+    for _page, pdict in pages:
+        for block in pdict["blocks"]:
             if block["type"] != 0:
                 continue
             for line in _block_lines(block):
@@ -325,17 +332,18 @@ def _signature(text):
     return re.sub(r"[^a-z]+", "", text.lower())
 
 
-def _boilerplate_signatures(doc):
+def _boilerplate_signatures(pages):
     """Find normalized texts that recur near page edges (headers/footers).
 
     A short text block sitting in the top or bottom ``EDGE_ZONE`` of at least
     ``BOILERPLATE_COVERAGE`` of pages is treated as a running header/footer.
+    ``pages`` is a list of ``(fitz.Page, page.get_text("dict"))`` pairs.
     """
     counts = Counter()
-    for page in doc:
+    for page, pdict in pages:
         height = page.rect.height
         seen = set()
-        for block in page.get_text("dict")["blocks"]:
+        for block in pdict["blocks"]:
             if block["type"] != 0:
                 continue
             _, y0, _, y1 = block["bbox"]
@@ -344,7 +352,7 @@ def _boilerplate_signatures(doc):
                 if 3 <= len(sig) <= 80:
                     seen.add(sig)
         counts.update(seen)
-    threshold = max(2, int(doc.page_count * BOILERPLATE_COVERAGE))
+    threshold = max(2, int(len(pages) * BOILERPLATE_COVERAGE))
     return {sig for sig, n in counts.items() if n >= threshold}
 
 
@@ -364,17 +372,18 @@ def _column_edges(items):
     return [median(c) for c in clusters if len(c) >= 2] or [0.0]
 
 
-def _doc_column_edges(doc):
+def _doc_column_edges(pages):
     """Column edges for the document: edges found on ≥half of all pages.
 
     Per-page clustering produces phantom edges from bylines, headings, and
     other spanning elements; real columns repeat on most pages, so only
     edges that recur survive. Prevents mid-page splits that corrupt both
     ordering and footnote-gap detection.
+    ``pages`` is a list of ``(fitz.Page, page.get_text("dict"))`` pairs.
     """
     votes = []
-    for page in doc:
-        items = page.get_text("dict")["blocks"]
+    for _page, pdict in pages:
+        items = pdict["blocks"]
         for e in _column_edges(items):
             for v in votes:
                 if abs(v[0] - e) < 15:
@@ -383,7 +392,7 @@ def _doc_column_edges(doc):
             else:
                 votes.append([e, 1])
     votes.sort(key=lambda v: -v[1])
-    needed = max(1, doc.page_count // 2)
+    needed = max(1, len(pages) // 2)
     edges = sorted(v[0] for v in votes if v[1] >= needed)
     return edges or [0.0]
 
@@ -411,8 +420,11 @@ def _covered_cols(block, edges, page_width):
     ]
 
 
-def _ordered_blocks(page, boilerplate, edges, drop_furniture=True):
+def _ordered_blocks(page, blocks, boilerplate, edges, drop_furniture=True):
     """Return page blocks in reading order for any column layout.
+
+    ``blocks`` is the page's pre-extracted ``get_text("dict")["blocks"]``;
+    ``page`` supplies only geometry (rect).
 
     Blocks above the first spanning element come first (page header zone).
     Each column then emits its own sequence — non-spanning blocks plus the
@@ -425,7 +437,7 @@ def _ordered_blocks(page, boilerplate, edges, drop_furniture=True):
     """
     rect = page.rect
     items = []
-    for block in page.get_text("dict")["blocks"]:
+    for block in blocks:
         x0, y0, x1, y1 = block["bbox"]
         if block["type"] == 0:
             text = _block_text(block)
@@ -463,7 +475,12 @@ def _ordered_blocks(page, boilerplate, edges, drop_furniture=True):
         if cut is not None
         else []
     )
-    nonspans = [b for b in nonspans if b not in top_zone] if top_zone else nonspans
+    top_ids = {id(b) for b in top_zone}
+    nonspans = (
+        [b for b in nonspans if id(b) not in top_ids]
+        if top_zone
+        else nonspans
+    )
 
     cols = {i: [] for i in range(len(edges))}
     for b in nonspans:
@@ -520,7 +537,7 @@ def _line_html(line, body_size):
         text = html.escape(s["text"])
         if s["size"] < body_size * 0.75 and s["text"].strip():
             inner = html.escape(s["text"].strip())
-            if s["text"].strip().isdigit() and len(inner) <= 2:
+            if s["text"].strip().isdigit() and len(inner) <= 4:
                 parts.append(f'<sup><a href="notes.xhtml#fn{inner}">{inner}</a></sup>')
             else:
                 parts.append(f"<sup>{inner}</sup>")
@@ -559,7 +576,11 @@ def _render_page(page, page_index, state):
     body_size = state["body_size"]
     edges = state["edges"]
     ordered = _ordered_blocks(
-        page, state["boilerplate"], edges, state["drop_edges"]
+        page,
+        state["page_items"][page_index],
+        state["boilerplate"],
+        edges,
+        state["drop_edges"],
     )
     foot_tops = _footnote_tops(
         ordered, edges, body_size, page.rect.height, state["line_h"]
@@ -801,12 +822,15 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
     """Convert ``pdf_path`` to an EPUB at ``out_path``; returns a stats dict."""
     doc = fitz.open(pdf_path)
     meta = doc.metadata or {}
+    # single extraction pass: every analysis/render step reads these dicts
+    pages = [(page, page.get_text("dict")) for page in doc]
 
-    body_size, line_h = _body_font_size(doc)
+    body_size, line_h = _body_font_size(pages)
     state = {
         "body_size": body_size,
         "line_h": line_h,
-        "edges": _doc_column_edges(doc),
+        "page_items": [pdict["blocks"] for _p, pdict in pages],
+        "edges": _doc_column_edges(pages),
         "abstract_done": False,
         "after_h1": False,
         "byline_text": None,
@@ -820,11 +844,13 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
         "heading_seq": 0,
         "drop_edges": drop_edges,
         "boilerplate": (
-            _boilerplate_signatures(doc) if drop_edges and doc.page_count > 3 else set()
+            _boilerplate_signatures(pages)
+            if drop_edges and doc.page_count > 3
+            else set()
         ),
     }
 
-    for i, page in enumerate(doc):
+    for i, (page, _pdict) in enumerate(pages):
         _render_page(page, i, state)
     if state["par"]:
         state["page_frags"][state["par_page"]].append(
@@ -881,7 +907,7 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
     book = epub.EpubBook()
     book.set_identifier(hashlib.sha1(str(pdf_path).encode()).hexdigest()[:16])
     book.set_title(title)
-    book.set_language("en")
+    book.set_language(BOOK_LANG)
     book.add_author(author)
 
     css = epub.EpubItem(
@@ -914,7 +940,7 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
         chap = epub.EpubHtml(
             title=heading or f"Section {idx + 1}",
             file_name=f"chap_{idx + 1}.xhtml",
-            lang="en",
+            lang=BOOK_LANG,
         )
         chap.add_item(css)
         chap.content = (
@@ -929,7 +955,16 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
         frag = re.sub(
             r"^<sup><a[^>]*>(\d+)</a></sup>", r"<sup>\1</sup>", frag
         )
-        if num is None and note_entries:
+        # an unnumbered block is a column/page-split continuation of the
+        # previous note unless it opens a new note itself (correspondence
+        # and acknowledgment openers — the same pattern that marks the
+        # note zone on the page)
+        frag_text = re.sub(r"<[^>]+>", "", frag).lstrip("*†‡§ ")
+        if (
+            num is None
+            and note_entries
+            and not NOTE_START_RE.match(frag_text)
+        ):
             note_entries[-1] = note_entries[-1][:-4] + " " + frag + "</p>"
         elif num is not None and num not in seen_fn:
             seen_fn.add(num)
@@ -950,7 +985,9 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
             epub.Link(f"{chapters[chap_idx][0].file_name}#{anchor}", text, anchor)
         )
     if note_entries:
-        notes = epub.EpubHtml(title="Notes", file_name="notes.xhtml", lang="en")
+        notes = epub.EpubHtml(
+            title="Notes", file_name="notes.xhtml", lang=BOOK_LANG
+        )
         notes.content = (
             "<html><body><h1>Notes</h1>" + "".join(note_entries) + "</body></html>"
         )
