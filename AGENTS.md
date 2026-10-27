@@ -53,7 +53,9 @@ chapters.
   its column edge AND vertically isolated (>0.7× line-height gaps on both
   sides) becomes `<blockquote>` (quotes, verse).
 - **Tables** — rotated/landscape tables (≥3 tall-narrow blocks sharing a
-  y-band) are rasterized and embedded as PNGs. The clip is padded in
+  y-band) are rasterized and embedded as PNGs. Margin-strip-shaped blocks
+  never seed a region, so sidebar furniture kept under `--keep-headers`
+  can't be rasterized into a false table. The clip is padded in
   mediabox (unrotated) space and mapped through the page's own `/Rotate`
   (90/180/270) so the render comes out upright and uncropped. Horizontal
   tables are not yet detected — their cells currently flow as text.

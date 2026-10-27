@@ -109,6 +109,29 @@ def test_bold_marker_tail_line_not_heading(tmp_path):
     assert not any("<h2" in h and "indicates" in h for h in htmls.values())
 
 
+def test_keep_headers_margin_strips_not_rasterized(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 400),
+        " ".join(["Body text fills the single column."] * 8),
+        fontsize=BODY,
+    )
+    # three rotated margin strips share a y-band — kept verbatim under
+    # --keep-headers, but they must never seed a rotated-table region
+    for i, x in enumerate((565, 580, 595)):
+        p.insert_text(
+            fitz.Point(x, 350), f"JOURNAL SIDEBAR {i}", fontsize=9, rotate=90
+        )
+    pdf = tmp_path / "sidebars.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "sidebars.epub"
+    m.convert(pdf, out, drop_edges=False)
+    with zipfile.ZipFile(out) as zf:
+        assert not [n for n in zf.namelist() if "table_" in n]
+    assert "JOURNAL SIDEBAR" in chapter_text(out)
+
+
 def test_heading_becomes_h1_and_toc(tmp_path):
     doc = fitz.open()
     p = _page(doc)

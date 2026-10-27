@@ -411,6 +411,17 @@ def _covered_cols(block, edges, page_width):
     ]
 
 
+def _is_margin_strip(block, rect):
+    """Narrow+tall block in the outer 10% margins — rotated sidebar
+    furniture (journal titles running down the page edge)."""
+    x0, y0, x1, y1 = block["bbox"]
+    return (
+        x1 - x0 < 25
+        and y1 - y0 > 4 * (x1 - x0)
+        and (x0 > rect.width * 0.9 or x1 < rect.width * 0.1)
+    )
+
+
 def _ordered_blocks(page, boilerplate, edges, drop_furniture=True):
     """Return page blocks in reading order for any column layout.
 
@@ -436,11 +447,7 @@ def _ordered_blocks(page, boilerplate, edges, drop_furniture=True):
             )
             if near_edge and _signature(text) in boilerplate:
                 continue
-            if drop_furniture and (
-                x1 - x0 < 25
-                and y1 - y0 > 4 * (x1 - x0)
-                and (x0 > rect.width * 0.9 or x1 < rect.width * 0.1)
-            ):
+            if drop_furniture and _is_margin_strip(block, rect):
                 continue
             if (
                 drop_furniture
@@ -566,7 +573,11 @@ def _render_page(page, page_index, state):
     )
     frags = state["page_frags"][page_index]
 
-    tbl = _rotated_table_region(ordered)
+    # margin strips never seed a table region — under --keep-headers they
+    # stay in the flow, so this filter doubles as a false-positive shield
+    tbl = _rotated_table_region(
+        [b for b in ordered if not _is_margin_strip(b, page.rect)]
+    )
     tbl_ids = (
         {id(b) for b in ordered if fitz.Rect(b["bbox"]).intersects(tbl)}
         if tbl is not None
