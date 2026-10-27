@@ -336,6 +336,30 @@ def test_keep_headers_strip_does_not_inject_abstract(tmp_path):
     assert "JOURNAL OF EXAMPLES" in chapter_text(out)
 
 
+def test_keep_headers_signature_head_no_abstract(tmp_path):
+    doc = fitz.open()
+    for _ in range(5):
+        p = _page(doc)
+        # a running head repeated on every page is signature boilerplate —
+        # kept verbatim under --keep-headers, but flagged like any other
+        # furniture so it can't reach the abstract/heading/follower logic
+        p.insert_textbox(
+            fitz.Rect(200, 40, 400, 65), "Journal of Studies", fontsize=9
+        )
+        p.insert_textbox(
+            fitz.Rect(72, 100, 540, 400),
+            " ".join(["Body text fills the single column."] * 8),
+            fontsize=BODY,
+        )
+    pdf = tmp_path / "sighead.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "sighead.epub"
+    m.convert(pdf, out, drop_edges=False)
+    htmls = doc_html(out)
+    assert not any("<h2" in h and "Abstract" in h for h in htmls.values())
+    assert "Journal of Studies" in chapter_text(out)
+
+
 def test_keep_headers_furniture_not_a_follower(tmp_path):
     doc = fitz.open()
     p = _page(doc)

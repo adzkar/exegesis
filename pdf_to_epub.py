@@ -447,14 +447,13 @@ def _ordered_blocks(page, boilerplate, edges, drop_furniture=True):
     Each column then emits its own sequence — non-spanning blocks plus the
     spanning elements that cover it, in y order — columns left to right.
     A span covering several columns emits at its first encounter only.
-    Text blocks whose signature is in ``boilerplate`` are dropped.
-    Margin strips, pattern furniture, and page numbers are dropped when
-    ``drop_furniture`` is true; when false (``--keep-headers``) they are
-    kept but flagged ``is_furniture``, held in a side list, and emitted
-    at the page's top/bottom edge — they render verbatim without reaching
-    any classifier or perturbing the spans/cut/column machinery (a
-    gutter-crossing footer would otherwise collapse the page into
-    interleaved top-zone order).
+    Text blocks whose signature is in ``boilerplate``, margin strips,
+    pattern furniture, and page numbers are dropped when ``drop_furniture``
+    is true; when false (``--keep-headers``) they are kept but flagged
+    ``is_furniture``, held in a side list, and emitted at the page's
+    top/bottom edge — they render verbatim without reaching any classifier
+    or perturbing the spans/cut/column machinery (a gutter-crossing footer
+    would otherwise collapse the page into interleaved top-zone order).
     """
     rect = page.rect
     items = []
@@ -468,9 +467,8 @@ def _ordered_blocks(page, boilerplate, edges, drop_furniture=True):
             near_edge = y1 < rect.height * EDGE_ZONE or y0 > rect.height * (
                 1 - EDGE_ZONE
             )
-            if near_edge and _signature(text) in boilerplate:
-                continue
-            if _is_furniture(block, rect, text):
+            sig_furniture = near_edge and _signature(text) in boilerplate
+            if sig_furniture or _is_furniture(block, rect, text):
                 if drop_furniture:
                     continue
                 block["is_furniture"] = True
@@ -869,7 +867,7 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
         "heading_seq": 0,
         "drop_edges": drop_edges,
         "boilerplate": (
-            _boilerplate_signatures(doc) if drop_edges and doc.page_count > 3 else set()
+            _boilerplate_signatures(doc) if doc.page_count > 3 else set()
         ),
     }
 

@@ -45,10 +45,12 @@ chapters.
   edge zones, and pattern furniture (`VOL`, `www.`, `ISSN`, `doi`, `©`,
   dates) in the outer 7% edge (works on 1-page docs). Narrow+tall blocks in
   outer 10% margins (rotated sidebars) are dropped. `--keep-headers` keeps
-  all of it flagged `is_furniture`: such blocks skip the spans/cut/column
-  machinery entirely (emitted at the page's top/bottom edge), render
-  verbatim as their own paragraphs, and never feed any classifier —
-  headings, abstract, bylines, footnotes, followers, or table seeds.
+  all of it flagged `is_furniture` — the signature set is still built so
+  repeated running heads flag the same way: such blocks skip the
+  spans/cut/column machinery entirely (emitted at the page's top/bottom
+  edge), render verbatim as their own paragraphs, and never feed any
+  classifier — headings, abstract, bylines, footnotes, followers, or
+  table seeds.
 - **Footnotes** — superscript-digit starts in the lower half, OR an unnumbered
   smaller-than-body block below a >2×line-height gap in the bottom 40%,
   OR a bottom-55% block opening with an acknowledgment/correspondence
