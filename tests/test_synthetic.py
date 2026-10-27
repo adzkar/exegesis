@@ -64,6 +64,51 @@ def test_furniture_and_page_number_stripped(tmp_path):
     assert "7" not in text
 
 
+def test_keep_headers_preserves_furniture(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 300),
+        "Body text of a single column document with several sentences.",
+        fontsize=BODY,
+    )
+    p.insert_textbox(fitz.Rect(72, 760, 540, 780), "www.journal.org VOL 340", fontsize=9)
+    p.insert_textbox(fitz.Rect(300, 20, 330, 45), "7", fontsize=9)
+    pdf = tmp_path / "keephdr.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "keephdr.epub"
+    m.convert(pdf, out, drop_edges=False)
+    # furniture is retained verbatim — the footer may land in notes.xhtml
+    # because footnote-zone detection is independent of header stripping
+    text = " ".join(doc_texts(out).values())
+    assert "journal.org" in text
+    assert "VOL 340" in text
+    assert "7" in text
+
+
+def test_bold_marker_tail_line_not_heading(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 400),
+        " ".join(["Reference entries fill the column above."] * 10),
+        fontsize=BODY,
+    )
+    # a bold footnote-marker line trailing the section must not promote
+    p.insert_textbox(
+        fitz.Rect(72, 600, 540, 640),
+        "*indicates the marked entries",
+        fontsize=BODY,
+        fontname="hebo",
+    )
+    pdf = tmp_path / "markerh2.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "markerh2.epub"
+    m.convert(pdf, out)
+    htmls = doc_html(out)
+    assert not any("<h2" in h and "indicates" in h for h in htmls.values())
+
+
 def test_heading_becomes_h1_and_toc(tmp_path):
     doc = fitz.open()
     p = _page(doc)

@@ -176,9 +176,11 @@ def _valid_title(t):
 
 
 def _looks_like_heading(text):
-    """True if the string is plausible heading text (no sentence periods)."""
+    """True if the string is plausible heading text (no sentence periods,
+    no footnote-marker opener — headings never start with *†‡§)."""
     return (
         MIN_HEADING_CHARS <= len(text) <= MAX_HEADING_CHARS
+        and text[:1] not in "*†‡§"
         and not re.search(r"\.", text[:-1])
         and not text.rstrip().endswith(".")
     )
@@ -409,14 +411,17 @@ def _covered_cols(block, edges, page_width):
     ]
 
 
-def _ordered_blocks(page, boilerplate, edges):
+def _ordered_blocks(page, boilerplate, edges, drop_furniture=True):
     """Return page blocks in reading order for any column layout.
 
     Blocks above the first spanning element come first (page header zone).
     Each column then emits its own sequence — non-spanning blocks plus the
     spanning elements that cover it, in y order — columns left to right.
     A span covering several columns emits at its first encounter only.
-    Text blocks whose signature is in ``boilerplate`` are dropped.
+    Text blocks whose signature is in ``boilerplate`` are dropped. When
+    ``drop_furniture`` is false, the pattern/margin/digit drops are skipped
+    so ``--keep-headers`` preserves running heads, page numbers, and
+    margin strips verbatim.
     """
     rect = page.rect
     items = []
@@ -431,15 +436,21 @@ def _ordered_blocks(page, boilerplate, edges):
             )
             if near_edge and _signature(text) in boilerplate:
                 continue
-            if (
+            if drop_furniture and (
                 x1 - x0 < 25
                 and y1 - y0 > 4 * (x1 - x0)
                 and (x0 > rect.width * 0.9 or x1 < rect.width * 0.1)
             ):
                 continue
-            if y0 > rect.height * 0.93 or y1 < rect.height * 0.07:
-                if FURNITURE_RE.search(text) or re.fullmatch(r"\d{1,4}", text):
-                    continue
+            if (
+                drop_furniture
+                and (y0 > rect.height * 0.93 or y1 < rect.height * 0.07)
+                and (
+                    FURNITURE_RE.search(text)
+                    or re.fullmatch(r"\d{1,4}", text)
+                )
+            ):
+                continue
         items.append(block)
 
     key = lambda b: (b["bbox"][1], b["bbox"][0])
@@ -547,7 +558,9 @@ def _render_page(page, page_index, state):
     """
     body_size = state["body_size"]
     edges = state["edges"]
-    ordered = _ordered_blocks(page, state["boilerplate"], edges)
+    ordered = _ordered_blocks(
+        page, state["boilerplate"], edges, state["drop_edges"]
+    )
     foot_tops = _footnote_tops(
         ordered, edges, body_size, page.rect.height, state["line_h"]
     )
@@ -648,12 +661,26 @@ def _render_page(page, page_index, state):
         if (
             level == 2
             and _line_max_size(_block_lines(block)[0]) < body_size * 1.08
-            and (
+        ):
+            # bold-only candidates carry no size signal: they must sit
+            # outside the edge zones AND introduce following text in their
+            # column — a trailing bold line at a section/page end is far
+            # more often a note than a heading.
+            in_edge = (
                 block["bbox"][1] < page.rect.height * 0.12
                 or block["bbox"][3] > page.rect.height * 0.88
             )
-        ):
-            level = None
+            follower = next(
+                (
+                    b
+                    for b in ordered[b_i + 1 :]
+                    if b["type"] == 0
+                    and col in _covered_cols(b, edges, page.rect.width)
+                ),
+                None,
+            )
+            if in_edge or follower is None:
+                level = None
         if level == 2 and page_index == 0 and not state["headings"]:
             if _line_max_size(_block_lines(block)[0]) >= body_size * 1.3:
                 level = 1
@@ -744,7 +771,13 @@ def _render_page(page, page_index, state):
                     if m[1]:
                         state["par"].append(html.escape(m[1]))
                     continue
-            line_level = _heading_level(line, body_size)
+            # blocks opening with a footnote marker are note material —
+            # none of their lines may classify as headings
+            line_level = (
+                _heading_level(line, body_size)
+                if btext[:1] not in "*†‡§"
+                else None
+            )
             if line_level:
                 emit_heading(line_level, _line_text(line).strip())
                 continue
@@ -785,6 +818,7 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
         "par_page": 0,
         "page_frags": [[] for _ in range(doc.page_count)],
         "heading_seq": 0,
+        "drop_edges": drop_edges,
         "boilerplate": (
             _boilerplate_signatures(doc) if drop_edges and doc.page_count > 3 else set()
         ),

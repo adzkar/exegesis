@@ -572,21 +572,11 @@
           "h2",
           "References",
           10
-        ]
-      ]
-    },
-    {
-      "file": "chap_26.xhtml",
-      "frags": [
-        [
-          "h2",
-          "*indicates the article was one of the studies included in ou",
-          79
         ],
         [
           "p",
-          "Aldao, A. (2013). The future of emotion regulation research:",
-          3344
+          "*indicates the article was one of the studies included in ou",
+          3424
         ],
         [
           "p",
@@ -677,9 +667,9 @@
     }
   ],
   "stats": {
-    "chapters": 27,
+    "chapters": 26,
     "footnotes": 1,
-    "headings": 25,
+    "headings": 24,
     "images": 5,
     "pages": 21,
     "title": "Regulating Emotionality to Manage Adversity: A Systematic Review of the Relation Between Emotion Regulation and Psychological Resilience"
@@ -780,10 +770,6 @@
     [
       1,
       "References"
-    ],
-    [
-      1,
-      "*indicates the article was one of the studies included in our systematic review"
     ],
     [
       1,
