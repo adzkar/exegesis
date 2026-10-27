@@ -244,6 +244,38 @@ def test_rotated_table_alt_from_caption(tmp_path):
     assert any('alt="Table 1. Landscape results."' in h for h in htmls.values())
 
 
+def test_rotated_table_alt_gap_from_region_bottom(tmp_path):
+    """The caption gap measures from the table region's bottom, not the
+    first cell's — a short leading cell must not push the caption away."""
+    doc = fitz.open()
+    p = _page(doc)
+    # earliest cell in reading order (min y0, min x0) renders to y1~=428…
+    p.insert_textbox(
+        fitz.Rect(180, 340, 195, 470), "r1c0 r2c0 r3c0", fontsize=BODY
+    )
+    # …while the rest of the region renders down to y1~=497
+    for i, x in enumerate((220, 260, 300, 340)):
+        p.insert_textbox(
+            fitz.Rect(x, 380, x + 15, 620),
+            f"r1c{i} r2c{i} r3c{i} r4c{i}",
+            fontsize=BODY,
+        )
+    # caption top is ~140pt below the first cell's bottom but only ~73pt
+    # below the region's true bottom
+    p.insert_textbox(
+        fitz.Rect(72, 570, 540, 610), "Table 2. Deep landscape.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 640, 540, 720), "Body text resumes below.", fontsize=BODY
+    )
+    pdf = tmp_path / "rtabledeep.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "rtabledeep.epub"
+    convert(pdf, out)
+    htmls = doc_html(out)
+    assert any('alt="Table 2. Deep landscape."' in h for h in htmls.values())
+
+
 def test_nested_toc_h2_under_h1(tmp_path):
     doc = fitz.open()
     p = _page(doc)

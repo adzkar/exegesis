@@ -141,7 +141,13 @@ def _line_html(line, body_size):
 
 
 def _figure_alt(
-    ordered, b_i, edges, page_width, fallback="", skip_ids=frozenset()
+    ordered,
+    b_i,
+    edges,
+    page_width,
+    region=None,
+    fallback="",
+    skip_ids=frozenset(),
 ):
     """Alt text for a figure: the first foreign text block after the image
     is its caption when it opens with a caption pattern ('Fig. 1',
@@ -151,17 +157,21 @@ def _figure_alt(
     Stopping at the first non-caption text block keeps an uncaptioned
     figure from inheriting a later figure's caption, and the shared-column
     requirement keeps a two-column page's image from stealing the adjacent
-    column's 'Table 3.' caption. ``skip_ids`` lets the rotated-table call
-    step over its own cells — the loop still ends at the first foreign
-    text block, so caption reach does not depend on cell count.
+    column's 'Table 3.' caption. ``region`` is the figure's true extent —
+    the rotated table's region, since an arbitrary member cell would skew
+    both the gap origin and the column band; it defaults to the block at
+    ``b_i``. ``skip_ids`` lets the rotated-table call step over its own
+    cells — the loop still ends at the first foreign text block, so
+    caption reach does not depend on cell count.
     """
-    img_cols = set(_covered_cols(ordered[b_i], edges, page_width))
+    bbox = region if region is not None else ordered[b_i]["bbox"]
+    img_cols = set(_covered_cols({"bbox": bbox}, edges, page_width))
     for b in ordered[b_i + 1 :]:
         if b["type"] != 0:
             break
         if id(b) in skip_ids:
             continue
-        if b["bbox"][1] - ordered[b_i]["bbox"][3] > 120:
+        if b["bbox"][1] - bbox[3] > 120:
             break
         t = _block_text(b)
         if CAPTION_RE.match(t) and img_cols & set(
@@ -268,6 +278,15 @@ def _render_page(page, page_index: int, state: PipelineState):
                 assert tbl is not None
                 tbl_done = True
                 flush_par()
+                alt = _figure_alt(
+                    ordered,
+                    b_i,
+                    edges,
+                    page.rect.width,
+                    region=tbl,
+                    fallback="table",
+                    skip_ids=tbl_ids,
+                )
                 mb = page.mediabox
                 tbl = fitz.Rect(
                     max(0, tbl.x0 - 8), max(0, tbl.y0 - 20),
@@ -284,14 +303,6 @@ def _render_page(page, page_index: int, state: PipelineState):
                         media_type="image/png",
                         content=data,
                     )
-                alt = _figure_alt(
-                    ordered,
-                    b_i,
-                    edges,
-                    page.rect.width,
-                    fallback="table",
-                    skip_ids=tbl_ids,
-                )
                 frags.append(
                     f'<p class="fig"><img src="{state.images[digest].file_name}"'
                     f' alt="{alt}"/></p>'
