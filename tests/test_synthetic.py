@@ -221,6 +221,29 @@ def test_tall_narrow_region_rasterized(tmp_path):
     assert "r1c0" not in chapter_text(out)
 
 
+def test_rotated_table_alt_from_caption(tmp_path):
+    """A caption below a wide rotated table is found no matter how many
+    cell blocks intervene — the alt scan steps over member cells."""
+    doc = fitz.open()
+    p = _page(doc)
+    for i, x in enumerate((180, 220, 260, 300, 340)):
+        p.insert_textbox(
+            fitz.Rect(x, 380, x + 15, 520), f"r1c{i} r2c{i} r3c{i}", fontsize=BODY
+        )
+    p.insert_textbox(
+        fitz.Rect(72, 545, 540, 585), "Table 1. Landscape results.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 620, 540, 700), "Body text resumes below.", fontsize=BODY
+    )
+    pdf = tmp_path / "rtablecap.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "rtablecap.epub"
+    convert(pdf, out)
+    htmls = doc_html(out)
+    assert any('alt="Table 1. Landscape results."' in h for h in htmls.values())
+
+
 def test_nested_toc_h2_under_h1(tmp_path):
     doc = fitz.open()
     p = _page(doc)

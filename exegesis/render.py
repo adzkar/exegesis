@@ -152,10 +152,11 @@ def _figure_alt(
     figure from inheriting a later figure's caption, and the shared-column
     requirement keeps a two-column page's image from stealing the adjacent
     column's 'Table 3.' caption. ``skip_ids`` lets the rotated-table call
-    step over its own cells without ending the search.
+    step over its own cells — the loop still ends at the first foreign
+    text block, so caption reach does not depend on cell count.
     """
     img_cols = set(_covered_cols(ordered[b_i], edges, page_width))
-    for b in ordered[b_i + 1 : b_i + 4]:
+    for b in ordered[b_i + 1 :]:
         if b["type"] != 0:
             break
         if id(b) in skip_ids:
