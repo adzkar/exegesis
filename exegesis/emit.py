@@ -225,6 +225,12 @@ def convert(
         else (entry[0] if isinstance(entry, list) else entry)
         for entry in toc
     ]
+    if not book.toc:
+        # a headingless, noteless document would emit a bare <ol/> and an
+        # empty navMap — both invalid — so seed one entry at chapter one
+        book.toc = [
+            epub.Link(chapters[0][0].file_name, title or "Start", "start")
+        ]
     for item in state.images.values():
         book.add_item(item)
     book.spine = ["nav"] + [c for c, _ in chapters]

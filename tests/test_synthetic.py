@@ -416,6 +416,27 @@ def test_figure_alt_ignores_gutter_bleed_caption(tmp_path):
     assert 'alt="Table 3' not in figs and 'alt=""' in figs
 
 
+def test_headingless_doc_still_gets_a_toc_entry(tmp_path):
+    """No headings and no notes must not leave an empty nav <ol/> or
+    navMap — one entry is seeded pointing at the first chapter."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 300),
+        "Plain body text with no headings or notes at all.",
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "plain.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "plain.epub"
+    convert(pdf, out)
+    nav = doc_html(out)["nav.xhtml"]
+    assert "<ol/>" not in nav and "<a " in nav
+    with zipfile.ZipFile(out) as zf:
+        ncx = [n for n in zf.namelist() if n.endswith(".ncx")][0]
+        assert "<navPoint" in zf.read(ncx).decode("utf8")
+
+
 def test_paragraph_merges_across_page_break(tmp_path):
     doc = fitz.open()
     p = _page(doc)
