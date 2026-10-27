@@ -676,6 +676,7 @@ def _render_page(page, page_index, state):
             continue
 
         level = _standalone_heading_level(block, body_size)
+        demoted = False
         if (
             level == 2
             and _line_max_size(_block_lines(block)[0]) < body_size * 1.08
@@ -700,6 +701,7 @@ def _render_page(page, page_index, state):
             )
             if in_edge or follower is None:
                 level = None
+                demoted = True
         if level == 2 and page_index == 0 and not state["headings"]:
             if _line_max_size(_block_lines(block)[0]) >= body_size * 1.3:
                 level = 1
@@ -790,11 +792,12 @@ def _render_page(page, page_index, state):
                     if m[1]:
                         state["par"].append(html.escape(m[1]))
                     continue
-            # blocks opening with a footnote marker are note material —
-            # none of their lines may classify as headings
+            # blocks opening with a footnote marker are note material, and
+            # blocks demoted by the bold-only gate stay demoted — neither
+            # may classify lines as headings
             line_level = (
                 _heading_level(line, body_size)
-                if btext[:1] not in "*†‡§"
+                if not demoted and btext[:1] not in "*†‡§"
                 else None
             )
             if line_level:

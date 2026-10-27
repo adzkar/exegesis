@@ -142,6 +142,57 @@ def test_bold_tail_line_without_follower_not_heading(tmp_path):
     assert "Closing bold remark" in chapter_text(out)
 
 
+def test_demoted_bold_tail_lines_stay_demoted(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 400),
+        " ".join(["Body text fills the column above."] * 10),
+        fontsize=BODY,
+    )
+    # 10.6pt sits in the [1.05, 1.08) band: the block-level gate demotes it
+    # (no follower), but the per-line check would re-promote it — the
+    # demotion must hold for every line of the block
+    p.insert_textbox(
+        fitz.Rect(72, 550, 540, 590),
+        "Closing bold remark",
+        fontsize=10.6,
+        fontname="hebo",
+    )
+    pdf = tmp_path / "demoted.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "demoted.epub"
+    m.convert(pdf, out)
+    chaps = [h for n, h in doc_html(out).items() if n.startswith("chap_")]
+    assert not any("<h2" in h or "<h1" in h for h in chaps)
+    assert "Closing bold remark" in chapter_text(out)
+
+
+def test_demoted_multiline_bold_block_no_line_headings(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 400),
+        " ".join(["Body text fills the column above."] * 10),
+        fontsize=BODY,
+    )
+    # two-line all-bold trailing block: demoted once, but each line used to
+    # re-emit its own h2 + chapter split
+    p.insert_textbox(
+        fitz.Rect(72, 550, 152, 600),
+        "Closing bold remark",
+        fontsize=10.6,
+        fontname="hebo",
+    )
+    pdf = tmp_path / "demotedmulti.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "demotedmulti.epub"
+    m.convert(pdf, out)
+    chaps = [h for n, h in doc_html(out).items() if n.startswith("chap_")]
+    assert not any("<h2" in h or "<h1" in h for h in chaps)
+    assert "Closing bold remark" in chapter_text(out)
+
+
 def test_bold_line_followed_only_by_notes_not_heading(tmp_path):
     doc = fitz.open()
     p = _page(doc)
