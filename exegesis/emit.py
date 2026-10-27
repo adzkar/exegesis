@@ -192,13 +192,21 @@ def convert(
         m = re.search(r'id="(h\d+)"', f)
         if m:
             anchor_pos[m.group(1)] = i
-    book.toc = []
+    # nested TOC: each h1 opens a section list that absorbs following h2s;
+    # an h2 before the first h1 stays top-level
+    toc = []
     for level, text, anchor, _page_i in state.headings:
         pos = anchor_pos.get(anchor, 0)
         chap_idx = max(j for j, (_, s) in enumerate(chapters) if s <= pos)
-        book.toc.append(
-            epub.Link(f"{chapters[chap_idx][0].file_name}#{anchor}", text, anchor)
+        link = epub.Link(
+            f"{chapters[chap_idx][0].file_name}#{anchor}", text, anchor
         )
+        if level == 1:
+            toc.append([link, []])
+        elif toc and isinstance(toc[-1], list):
+            toc[-1][1].append(link)
+        else:
+            toc.append(link)
     if note_entries:
         notes = epub.EpubHtml(
             title="Notes", file_name="notes.xhtml", lang=BOOK_LANG
@@ -208,7 +216,11 @@ def convert(
         )
         book.add_item(notes)
         chapters.append((notes, len(flat)))
-        book.toc.append(epub.Link("notes.xhtml", "Notes", "notes"))
+        toc.append(epub.Link("notes.xhtml", "Notes", "notes"))
+    book.toc = [
+        (entry[0], tuple(entry[1])) if isinstance(entry, list) else entry
+        for entry in toc
+    ]
     for item in state.images.values():
         book.add_item(item)
     book.spine = ["nav"] + [c for c, _ in chapters]

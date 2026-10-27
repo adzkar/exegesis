@@ -34,6 +34,10 @@ from .text import (
     _span_is_italic,
 )
 
+CAPTION_RE = re.compile(
+    r"(?i)^\s*(fig\.?|figure|table|plate|scheme|chart)\s*\.?\s*\d"
+)
+
 
 def _section_label(text):
     """Leading section label if a text starts with a known heading phrase.
@@ -136,6 +140,18 @@ def _line_html(line, body_size):
     return "".join(parts)
 
 
+def _figure_alt(ordered, b_i, fallback=""):
+    """Alt text for a figure: the first following block that opens with a
+    caption pattern ('Fig. 1', 'Table 2'…) gives the image a real label."""
+    for b in ordered[b_i + 1 : b_i + 4]:
+        if b["type"] != 0 or b["bbox"][1] - ordered[b_i]["bbox"][3] > 120:
+            break
+        t = _block_text(b)
+        if CAPTION_RE.match(t):
+            return html.escape(t[:200], quote=True)
+    return fallback
+
+
 def _footnote_text(block, body_size):
     """Render a footnote block's text; returns (marker_number, html)."""
     pieces = [_line_html(l, body_size) for l in _block_lines(block)]
@@ -220,7 +236,8 @@ def _render_page(page, page_index: int, state: PipelineState):
                         content=data,
                     )
                 frags.append(
-                    f'<p class="fig"><img src="{state.images[digest].file_name}" alt=""/></p>'
+                    f'<p class="fig"><img src="{state.images[digest].file_name}"'
+                    f' alt="{_figure_alt(ordered, b_i)}"/></p>'
                 )
             continue
 
@@ -247,7 +264,8 @@ def _render_page(page, page_index: int, state: PipelineState):
                         content=data,
                     )
                 frags.append(
-                    f'<p class="fig"><img src="{state.images[digest].file_name}" alt="table"/></p>'
+                    f'<p class="fig"><img src="{state.images[digest].file_name}"'
+                    f' alt="{_figure_alt(ordered, b_i, "table")}"/></p>'
                 )
             continue
 

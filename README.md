@@ -60,6 +60,8 @@ See the [pipeline diagram](docs/pipeline.md) for a visual walkthrough and
 
 - **No OCR.** Scanned PDFs without a text layer produce image-only output —
   an OCR pass (e.g. tesseract) would be needed as a separate step.
+- **English-oriented heuristics** — furniture, note-opener, and section-label
+  patterns are English regexes; the EPUB `lang` is fixed to `en`.
 - Complex layouts (dense figures, equations, tables) may read imperfectly.
 - Degraded PDFs with jittery fonts or OCR-layer artifacts can yield imperfect
   heading detection; source artifacts are reproduced faithfully.

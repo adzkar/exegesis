@@ -221,6 +221,54 @@ def test_tall_narrow_region_rasterized(tmp_path):
     assert "r1c0" not in chapter_text(out)
 
 
+def test_nested_toc_h2_under_h1(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(fitz.Rect(72, 60, 540, 100), "The Paper Title", fontsize=18)
+    p.insert_textbox(fitz.Rect(72, 140, 540, 170), "First Section", fontsize=13)
+    p.insert_textbox(
+        fitz.Rect(72, 200, 540, 400), "Body text under the section.", fontsize=BODY
+    )
+    pdf = tmp_path / "nestedtoc.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "nestedtoc.epub"
+    convert(pdf, out)
+    snap = snapshot_epub(out)
+    texts = [t for _lv, t in snap["toc"]]
+    levels = [lv for lv, _t in snap["toc"]]
+    assert "The Paper Title" in texts and "First Section" in texts
+    assert levels[texts.index("First Section")] == 2
+
+
+def _noise_png(size=120):
+    """A noisy pixmap whose PNG encoding exceeds MIN_IMAGE_BYTES."""
+    pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, size, size))
+    for x in range(size):
+        for y in range(size):
+            pix.set_pixel(x, y, ((x * y) % 256, (x * 3 + y) % 256, (x + y * 7) % 256))
+    return pix.tobytes("png")
+
+
+def test_figure_alt_from_caption(tmp_path):
+    data = _noise_png()
+    assert len(data) > 2048, "noise fixture must clear MIN_IMAGE_BYTES"
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 160), "The findings are shown below.", fontsize=BODY
+    )
+    p.insert_image(fitz.Rect(200, 200, 400, 400), stream=data)
+    p.insert_textbox(
+        fitz.Rect(72, 420, 540, 470), "Figure 1. A noise gradient.", fontsize=BODY
+    )
+    pdf = tmp_path / "figcap.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "figcap.epub"
+    convert(pdf, out)
+    htmls = doc_html(out)
+    assert any('alt="Figure 1. A noise gradient."' in h for h in htmls.values())
+
+
 def test_paragraph_merges_across_page_break(tmp_path):
     doc = fitz.open()
     p = _page(doc)
