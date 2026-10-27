@@ -199,6 +199,31 @@ def test_demoted_bold_tail_lines_stay_demoted(tmp_path):
     assert "Closing bold remark" in chapter_text(out)
 
 
+def test_mixed_block_bold_band_line_demoted(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 300),
+        " ".join(["Body text fills the column above."] * 10),
+        fontsize=BODY,
+    )
+    # a mixed-weight block never classifies at block level, but its bold
+    # [1.05,1.08)x line still needs a body follower — this one has none
+    p.insert_text(
+        fitz.Point(72, 512), "Tail remark", fontsize=10.6, fontname="hebo"
+    )
+    p.insert_text(
+        fitz.Point(72, 525), "and a trailing sentence.", fontsize=BODY
+    )
+    pdf = tmp_path / "mixtail.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "mixtail.epub"
+    m.convert(pdf, out)
+    chaps = [h for n, h in doc_html(out).items() if n.startswith("chap_")]
+    assert not any("<h2" in h or "<h1" in h for h in chaps)
+    assert "Tail remark" in chapter_text(out)
+
+
 def test_demoted_multiline_bold_block_no_line_headings(tmp_path):
     doc = fitz.open()
     p = _page(doc)
@@ -358,6 +383,55 @@ def test_keep_headers_signature_head_no_abstract(tmp_path):
     htmls = doc_html(out)
     assert not any("<h2" in h and "Abstract" in h for h in htmls.values())
     assert "Journal of Studies" in chapter_text(out)
+
+
+def test_keep_headers_furniture_in_table_region(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    # three tall-narrow columns sharing a y-band seed a rotated-table
+    # region; the kept page number falls inside it
+    for x in (100, 180, 260):
+        p.insert_textbox(
+            fitz.Rect(x, 20, x + 40, 580),
+            " ".join(["col word"] * 40),
+            fontsize=BODY,
+        )
+    p.insert_text(fitz.Point(150, 45), "42", fontsize=BODY)
+    pdf = tmp_path / "tblfurn.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tblfurn.epub"
+    m.convert(pdf, out, drop_edges=False)
+    # the table still rasterizes, but the kept page number must emit
+    # verbatim rather than being consumed into the PNG
+    assert 'alt="table"' in "".join(doc_html(out).values())
+    assert "42" in chapter_text(out)
+
+
+def test_keep_headers_furniture_not_blockquote_neighbor(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 30, 300, 48), "www.journal.org", fontsize=BODY
+    )
+    # indented long block — isolated enough to look quotable only if the
+    # kept header counts as its neighbor
+    p.insert_textbox(
+        fitz.Rect(100, 200, 540, 260),
+        " ".join(["An indented remark that reads like a quote."] * 3),
+        fontsize=BODY,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 420, 540, 500),
+        " ".join(["Normal body text resumes here."] * 8),
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "bqfurn.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "bqfurn.epub"
+    m.convert(pdf, out, drop_edges=False)
+    html = "".join(doc_html(out).values())
+    assert "<blockquote>" not in html
+    assert "www.journal.org" in chapter_text(out)
 
 
 def test_keep_headers_furniture_not_a_follower(tmp_path):

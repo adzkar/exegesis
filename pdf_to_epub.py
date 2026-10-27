@@ -591,7 +591,7 @@ def _render_page(page, page_index, state):
 
     tbl = _rotated_table_region(body_blocks)
     tbl_ids = (
-        {id(b) for b in ordered if fitz.Rect(b["bbox"]).intersects(tbl)}
+        {id(b) for b in body_blocks if fitz.Rect(b["bbox"]).intersects(tbl)}
         if tbl is not None
         else set()
     )
@@ -702,19 +702,20 @@ def _render_page(page, page_index, state):
 
         level = _standalone_heading_level(block, body_size)
         demoted = False
-        if (
-            level == 2
-            and _line_max_size(_block_lines(block)[0]) < body_size * 1.08
-        ):
-            # bold-only candidates carry no size signal: they must sit
-            # outside the edge zones AND introduce following *body* text in
-            # their column — a trailing bold line at a section/page end is
-            # far more often a note than a heading.
-            in_edge = (
-                block["bbox"][1] < page.rect.height * 0.12
-                or block["bbox"][3] > page.rect.height * 0.88
-            )
-            follower = next(
+        # bold-only candidates carry no size signal: they must sit
+        # outside the edge zones AND introduce following *body* text in
+        # their column — a trailing bold line at a section/page end is
+        # far more often a note than a heading. The scan is page-local:
+        # a bold line that ends the page can't see its next-page follower
+        # and stays demoted.
+        in_edge = (
+            block["bbox"][1] < page.rect.height * 0.12
+            or block["bbox"][3] > page.rect.height * 0.88
+        )
+        follower = (
+            None
+            if in_edge
+            else next(
                 (
                     b
                     for b in ordered[b_i + 1 :]
@@ -724,9 +725,15 @@ def _render_page(page, page_index, state):
                 ),
                 None,
             )
-            if in_edge or follower is None:
-                level = None
-                demoted = True
+        )
+        bold_h2_ok = follower is not None
+        if (
+            level == 2
+            and _line_max_size(_block_lines(block)[0]) < body_size * 1.08
+            and not bold_h2_ok
+        ):
+            level = None
+            demoted = True
         if level == 2 and page_index == 0 and not state["headings"]:
             if _line_max_size(_block_lines(block)[0]) >= body_size * 1.3:
                 level = 1
@@ -779,8 +786,24 @@ def _render_page(page, page_index, state):
             and med <= body_size * 1.05
             and len(btext) > 60
         ):
-            prev = ordered[b_i - 1] if b_i > 0 else None
-            nxt = ordered[b_i + 1] if b_i + 1 < len(ordered) else None
+            # isolation is measured against body blocks — kept furniture
+            # sits at the page edges and must not count as a neighbor
+            prev = next(
+                (
+                    b
+                    for b in reversed(ordered[:b_i])
+                    if not b.get("is_furniture")
+                ),
+                None,
+            )
+            nxt = next(
+                (
+                    b
+                    for b in ordered[b_i + 1 :]
+                    if not b.get("is_furniture")
+                ),
+                None,
+            )
             isolated = (
                 prev is not None
                 and prev["type"] == 0
@@ -811,6 +834,10 @@ def _render_page(page, page_index, state):
             flush_par()
         for li, line in enumerate(_block_lines(block)):
             if li == 0:
+                # named labels intentionally override the bold-only
+                # demotion — a trailing "References" is almost always the
+                # section it names; its body usually just starts on the
+                # next page, invisible to the page-local follower scan
                 m = _section_label(_line_text(line).strip())
                 if m:
                     emit_heading(2, m[0])
@@ -825,6 +852,16 @@ def _render_page(page, page_index, state):
                 if not demoted and btext[:1] not in "*†‡§"
                 else None
             )
+            # a line-level h2 promoted by the bold-only band (size <
+            # 1.08×body is unreachable via the size path) needs the same
+            # edge/follower check as a block-level candidate — a bold line
+            # inside a mixed-weight block is just as often a note
+            if (
+                line_level == 2
+                and _line_max_size(line) < body_size * 1.08
+                and not bold_h2_ok
+            ):
+                line_level = None
             if line_level:
                 emit_heading(line_level, _line_text(line).strip())
                 continue
