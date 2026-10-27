@@ -866,8 +866,12 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
         ),
     }
 
-    for i, (page, _pdict) in enumerate(pages):
+    for i, (page, pdict) in enumerate(pages):
         _render_page(page, i, state)
+        # release the rendered page's dict early — embedded image bytes in
+        # it dominate the resident set on image-heavy documents
+        pdict.clear()
+        state["page_items"][i] = []
     if state["par"]:
         state["page_frags"][state["par_page"]].append(
             f"<p>{_join_lines(state['par'])}</p>"
