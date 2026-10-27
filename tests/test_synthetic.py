@@ -221,6 +221,31 @@ def test_tall_narrow_region_rasterized(tmp_path):
     assert "r1c0" not in chapter_text(out)
 
 
+def test_note_interior_sup_link_validated(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 400),
+        " ".join(["Body paragraph text fills the upper page."] * 8),
+        fontsize=BODY,
+    )
+    # one note-zone block, two lines: the second is a raised 4-digit token
+    # (e.g. a superscripted year) with no matching note — it must not emit
+    # a dead #fn2010 anchor inside notes.xhtml
+    p.insert_textbox(
+        fitz.Rect(72, 650, 200, 665), "Supported by grant", fontsize=8.5
+    )
+    p.insert_text((176, 660), "2010", fontsize=6)
+    pdf = tmp_path / "notesup.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "notesup.epub"
+    m.convert(pdf, out)
+    assert lint_epub(out) == []
+    notes = doc_html(out)["notes.xhtml"]
+    assert "#fn2010" not in notes
+    assert "<sup>2010</sup>" in notes
+
+
 def test_paragraph_merges_across_page_break(tmp_path):
     doc = fitz.open()
     p = _page(doc)

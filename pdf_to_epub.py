@@ -38,6 +38,9 @@ NOTE_START_RE = re.compile(
     r"the author[s]? (?:thank|acknowledge|wish)|to whom correspondence)"
 )
 LIST_ITEM_RE = re.compile(r"^\d{1,2}[.)]\s+\S")
+FN_LINK_RE = re.compile(
+    r'<sup><a href="notes\.xhtml#fn(\d+)">(\d+)</a></sup>'
+)
 # Language is assumed English throughout: NOTE_START_RE, SECTION_LABEL_RE
 # and FURNITURE_RE all match English-only patterns.
 BOOK_LANG = "en"
@@ -558,6 +561,19 @@ def _footnote_text(block, body_size):
     )
 
 
+def _strip_dead_fn_links(frag, fn_nums):
+    """Unlink sup-markers whose ``#fnN`` target has no note entry — links to
+    real notes survive; other raised digits (years, cross-refs) revert to
+    plain superscripts. Applied to body fragments and, inside notes.xhtml
+    itself, to everything past a note's leading marker."""
+    return FN_LINK_RE.sub(
+        lambda m: m.group(0)
+        if int(m.group(1)) in fn_nums
+        else f"<sup>{m.group(2)}</sup>",
+        frag,
+    )
+
+
 def _render_page(page, page_index, state):
     """Render one page to HTML fragments; collect headings, images, footnotes.
 
@@ -859,13 +875,7 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
     fn_nums = {n for n, _ in state["footnotes"] if n is not None}
     for frags in state["page_frags"]:
         for k, frag in enumerate(frags):
-            frags[k] = re.sub(
-                r'<sup><a href="notes.xhtml#fn(\d+)">(\d+)</a></sup>',
-                lambda m: m.group(0)
-                if int(m.group(1)) in fn_nums
-                else f"<sup>{m.group(2)}</sup>",
-                frag,
-            )
+            frags[k] = _strip_dead_fn_links(frag, fn_nums)
 
     flat = [
         (pi, frag)
@@ -955,6 +965,9 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
         frag = re.sub(
             r"^<sup><a[^>]*>(\d+)</a></sup>", r"<sup>\1</sup>", frag
         )
+        # note bodies get the same dead-anchor validation as body text —
+        # a raised digit mid-note (e.g. a superscripted year) is not a link
+        frag = _strip_dead_fn_links(frag, fn_nums)
         # an unnumbered block is a column/page-split continuation of the
         # previous note unless it opens a new note itself (correspondence
         # and acknowledgment openers — the same pattern that marks the
