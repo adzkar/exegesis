@@ -29,9 +29,10 @@ chapters.
   ≥1.6×, or the first page-0 heading ≥1.3× (promoted so title → byline
   position detection fires); h2: standalone ≥1.08× OR all-bold line/block
   ≥0.9× outside edge zones (papers whose headings share the body font) that
-  also precedes body-flow text in its column — footnote-zone and rasterized
-  table blocks don't count (a trailing bold line is usually a note, not a
-  heading). Lines opening with footnote markers (`*†‡§`) are never headings.
+  also precedes body-flow text in its column — footnote-zone, rasterized
+  table, and kept-furniture blocks don't count (a trailing bold line is
+  usually a note, not a heading). Lines opening with footnote markers
+  (`*†‡§`) are never headings.
   Sentence-like text with periods is rejected. Named labels (`References`,
   `Supporting Online Material`…) at block start also emit h2. All-caps
   short labels in the top 12% emit `<p class="label">` instead. Chapters
@@ -43,7 +44,10 @@ chapters.
 - **Headers/footers** — two layers: signatures repeated on ≥40% of pages in
   edge zones, and pattern furniture (`VOL`, `www.`, `ISSN`, `doi`, `©`,
   dates) in the outer 7% edge (works on 1-page docs). Narrow+tall blocks in
-  outer 10% margins (rotated sidebars) are dropped.
+  outer 10% margins (rotated sidebars) are dropped. `--keep-headers` keeps
+  all of it flagged `is_furniture`: such blocks render verbatim as their
+  own paragraphs and never feed any classifier — headings, abstract,
+  bylines, footnotes, followers, or table seeds.
 - **Footnotes** — superscript-digit starts in the lower half, OR an unnumbered
   smaller-than-body block below a >2×line-height gap in the bottom 40%,
   OR a bottom-55% block opening with an acknowledgment/correspondence
@@ -56,9 +60,9 @@ chapters.
   its column edge AND vertically isolated (>0.7× line-height gaps on both
   sides) becomes `<blockquote>` (quotes, verse).
 - **Tables** — rotated/landscape tables (≥3 tall-narrow blocks sharing a
-  y-band) are rasterized and embedded as PNGs. Margin-strip-shaped blocks
-  never seed a region, so sidebar furniture kept under `--keep-headers`
-  can't be rasterized into a false table. Block bboxes arrive in
+  y-band) are rasterized and embedded as PNGs. `is_furniture`-flagged
+  blocks never seed a region, so sidebar furniture kept under
+  `--keep-headers` can't be rasterized into a false table. Block bboxes arrive in
   mediabox (unrotated) space; the padded clip is mapped into displayed
   space via `page.rotation_matrix`, because `get_pixmap` clips in rotated
   coordinates — the render comes out upright and uncropped. Horizontal

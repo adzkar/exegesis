@@ -429,10 +429,11 @@ def _ordered_blocks(page, boilerplate, edges, drop_furniture=True):
     Each column then emits its own sequence — non-spanning blocks plus the
     spanning elements that cover it, in y order — columns left to right.
     A span covering several columns emits at its first encounter only.
-    Text blocks whose signature is in ``boilerplate`` are dropped. When
-    ``drop_furniture`` is false, the pattern/margin/digit drops are skipped
-    so ``--keep-headers`` preserves running heads, page numbers, and
-    margin strips verbatim.
+    Text blocks whose signature is in ``boilerplate`` are dropped.
+    Margin strips, pattern furniture, and page numbers are dropped when
+    ``drop_furniture`` is true; when false (``--keep-headers``) they are
+    kept but flagged ``is_furniture`` so they render verbatim without ever
+    reaching heading/abstract/byline/footnote/follower logic.
     """
     rect = page.rect
     items = []
@@ -447,17 +448,17 @@ def _ordered_blocks(page, boilerplate, edges, drop_furniture=True):
             )
             if near_edge and _signature(text) in boilerplate:
                 continue
-            if drop_furniture and _is_margin_strip(block, rect):
-                continue
-            if (
-                drop_furniture
-                and (y0 > rect.height * 0.93 or y1 < rect.height * 0.07)
+            furniture = _is_margin_strip(block, rect) or (
+                (y0 > rect.height * 0.93 or y1 < rect.height * 0.07)
                 and (
                     FURNITURE_RE.search(text)
                     or re.fullmatch(r"\d{1,4}", text)
                 )
-            ):
+            )
+            if furniture and drop_furniture:
                 continue
+            if furniture:
+                block["is_furniture"] = True
         items.append(block)
 
     key = lambda b: (b["bbox"][1], b["bbox"][0])
@@ -555,29 +556,32 @@ def _render_page(page, page_index, state):
     ordered = _ordered_blocks(
         page, state["boilerplate"], edges, state["drop_edges"]
     )
+    # kept furniture is render-only: it never feeds footnote-zone detection
+    # or rotated-table candidate sets
+    body_blocks = [b for b in ordered if not b.get("is_furniture")]
     foot_tops = _footnote_tops(
-        ordered, edges, body_size, page.rect.height, state["line_h"]
+        body_blocks, edges, body_size, page.rect.height, state["line_h"]
     )
     frags = state["page_frags"][page_index]
 
-    # margin strips never seed a table region — under --keep-headers they
-    # stay in the flow, so this filter doubles as a false-positive shield
-    tbl = _rotated_table_region(
-        [b for b in ordered if not _is_margin_strip(b, page.rect)]
-    )
+    tbl = _rotated_table_region(body_blocks)
     tbl_ids = (
         {id(b) for b in ordered if fitz.Rect(b["bbox"]).intersects(tbl)}
         if tbl is not None
         else set()
     )
-    # ids of text blocks leaving the body flow — rasterized table cells and
-    # footnote-region blocks — which can't count as a bold-only h2's follower
+    # ids of blocks that leave (or never enter) the body flow — rasterized
+    # table cells, footnote-region blocks, kept furniture — none of them can
+    # count as a bold-only h2's follower
     nonbody_ids = tbl_ids | {
         id(b)
         for b in ordered
-        if b["type"] == 0
-        and (fc := _assign_column(b, edges)) in foot_tops
-        and b["bbox"][1] >= foot_tops[fc] - 5
+        if b.get("is_furniture")
+        or (
+            b["type"] == 0
+            and (fc := _assign_column(b, edges)) in foot_tops
+            and b["bbox"][1] >= foot_tops[fc] - 5
+        )
     }
     tbl_done = False
 
@@ -647,6 +651,13 @@ def _render_page(page, page_index, state):
                 frags.append(
                     f'<p class="fig"><img src="{state["images"][digest].file_name}" alt="table"/></p>'
                 )
+            continue
+
+        if block.get("is_furniture"):
+            # kept furniture emits verbatim as its own paragraph — it must
+            # not merge with the open paragraph or reach any classifier
+            flush_par()
+            frags.append(f"<p>{html.escape(_block_text(block))}</p>")
             continue
 
         col = _assign_column(block, edges)

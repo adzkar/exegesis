@@ -79,12 +79,19 @@ def test_keep_headers_preserves_furniture(tmp_path):
     _save(doc, pdf)
     out = tmp_path / "keephdr.epub"
     m.convert(pdf, out, drop_edges=False)
-    # furniture is retained verbatim — the footer may land in notes.xhtml
-    # because footnote-zone detection is independent of header stripping
+    # furniture is retained verbatim as standalone paragraphs — it never
+    # merges into body paragraphs or lands in notes.xhtml
     text = " ".join(doc_texts(out).values())
     assert "journal.org" in text
     assert "VOL 340" in text
     assert "7" in text
+    htmls = doc_html(out)
+    assert any("<p>7</p>" in h for h in htmls.values())
+    assert any(
+        "<p>www.journal.org VOL 340</p>" in h
+        for n, h in htmls.items()
+        if n.startswith("chap_")
+    )
 
 
 def test_bold_marker_tail_line_not_heading(tmp_path):
@@ -222,6 +229,59 @@ def test_keep_headers_margin_strips_not_rasterized(tmp_path):
     with zipfile.ZipFile(out) as zf:
         assert not [n for n in zf.namelist() if "table_" in n]
     assert "JOURNAL SIDEBAR" in chapter_text(out)
+
+
+def test_keep_headers_strip_does_not_inject_abstract(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 400),
+        " ".join(["Body text fills the single column."] * 8),
+        fontsize=BODY,
+    )
+    # a small-font sidebar in the top half of page 0 satisfies the abstract
+    # heuristic's inset+size+position checks — kept furniture must never
+    # reach it
+    p.insert_text(
+        fitz.Point(585, 350), "JOURNAL OF EXAMPLES", fontsize=9, rotate=90
+    )
+    pdf = tmp_path / "sidebarabstract.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "sidebarabstract.epub"
+    m.convert(pdf, out, drop_edges=False)
+    htmls = doc_html(out)
+    assert not any("<h2" in h and "Abstract" in h for h in htmls.values())
+    assert "JOURNAL OF EXAMPLES" in chapter_text(out)
+
+
+def test_keep_headers_furniture_not_a_follower(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 300),
+        " ".join(["Reference entries fill the column above."] * 10),
+        fontsize=BODY,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 340, 540, 380),
+        "Section tail remark",
+        fontsize=BODY,
+        fontname="hebo",
+    )
+    # the bold line's only follower is a kept margin strip (below the 60%
+    # footnote-gap line, no note opener) — furniture can't qualify it
+    p.insert_text(
+        fitz.Point(585, 520), "JOURNAL SIDEBAR", fontsize=9, rotate=90
+    )
+    pdf = tmp_path / "furnfollower.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "furnfollower.epub"
+    m.convert(pdf, out, drop_edges=False)
+    htmls = doc_html(out)
+    assert not any("<h2" in h and "Section tail" in h for h in htmls.values())
+    text = chapter_text(out)
+    assert "Section tail remark" in text
+    assert "JOURNAL SIDEBAR" in text
 
 
 def test_heading_becomes_h1_and_toc(tmp_path):
