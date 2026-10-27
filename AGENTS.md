@@ -45,9 +45,10 @@ chapters.
   smaller-than-body block below a >2×line-height gap in the bottom 40%,
   OR a bottom-55% block opening with an acknowledgment/correspondence
   pattern (`Preparation of`, `Requests for reprints`, `supported by`…).
-  Removed from the body flow into a `Notes` chapter; in-body superscripts
-  link to `#fnN` (dead links are stripped). Pure-digit blocks in the outer
-  7% edge (page numbers) are dropped.
+  Removed from the body flow into a `Notes` chapter; superscripts link to
+  `#fnN` and dead links are stripped in body and notes alike (a note's own
+  leading marker is always unlinked). Pure-digit blocks in the outer 7%
+  edge (page numbers) are dropped.
 - **Lists & quotes** — lines starting `N.`/`N)` become `p.listitem`
   paragraphs (absorbing continuation lines); a block indented >12pt from
   its column edge AND vertically isolated (>0.7× line-height gaps on both
