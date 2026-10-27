@@ -1,6 +1,8 @@
 # Conversion Pipeline
 
-How `pdf_to_epub.py` turns a PDF into a structured EPUB.
+How the `exegesis` package turns a PDF into a structured EPUB —
+`analyze` → `order` → `render` → `emit`, driven by the `pdf_to_epub.py`
+CLI shim.
 
 ```mermaid
 flowchart TD
