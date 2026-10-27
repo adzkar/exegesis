@@ -133,6 +133,24 @@ def _covered_cols(block, edges, page_width):
     ]
 
 
+def _overlap_cols(bbox, edges, page_width, tol=12):
+    """Columns a rect genuinely occupies: its home column (the edge nearest
+    x0) plus any column overlapped by at least ``tol`` points.
+
+    ``_covered_cols`` counts any pixel of overlap, so a block bleeding a
+    point across the modal gutter claims both columns — fine for ordering
+    but too eager for identity tests like caption attribution, where a
+    jittery OCR-layer bbox must not borrow the adjacent column.
+    """
+    x0, _, x1, _ = bbox
+    bounds = list(edges) + [page_width]
+    cols = {_assign_column({"bbox": bbox}, edges)}
+    for i in range(len(edges)):
+        if min(x1, bounds[i + 1]) - max(x0, bounds[i]) >= tol:
+            cols.add(i)
+    return cols
+
+
 def _rotated_table_region(blocks):
     """Bbox of a rotated (landscape) table: ≥3 tall-narrow text blocks sharing
     a common y-point, i.e. rotated text columns standing side by side."""

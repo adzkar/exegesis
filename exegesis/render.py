@@ -12,6 +12,7 @@ from .analyze import (
     _assign_column,
     _covered_cols,
     _footnote_tops,
+    _overlap_cols,
     _rotate_clip,
     _rotated_table_region,
     _sup_marker,
@@ -162,10 +163,12 @@ def _figure_alt(
     both the gap origin and the column band; it defaults to the block at
     ``b_i``. ``skip_ids`` lets the rotated-table call step over its own
     cells — the loop still ends at the first foreign text block, so
-    caption reach does not depend on cell count.
+    caption reach does not depend on cell count. Column sharing uses
+    ``_overlap_cols`` rather than ``_covered_cols`` — a block bleeding a
+    point across the gutter must not claim both bands.
     """
     bbox = region if region is not None else ordered[b_i]["bbox"]
-    img_cols = set(_covered_cols({"bbox": bbox}, edges, page_width))
+    img_cols = _overlap_cols(bbox, edges, page_width)
     for b in ordered[b_i + 1 :]:
         if b["type"] != 0:
             break
@@ -174,8 +177,8 @@ def _figure_alt(
         if b["bbox"][1] - bbox[3] > 120:
             break
         t = _block_text(b)
-        if CAPTION_RE.match(t) and img_cols & set(
-            _covered_cols(b, edges, page_width)
+        if CAPTION_RE.match(t) and img_cols & _overlap_cols(
+            b["bbox"], edges, page_width
         ):
             return html.escape(t[:200], quote=True)
         break

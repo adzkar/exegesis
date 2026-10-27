@@ -385,6 +385,37 @@ def test_figure_alt_never_from_a_foreign_caption(tmp_path):
     assert figs.count('alt=""') == 2
 
 
+def test_figure_alt_ignores_gutter_bleed_caption(tmp_path):
+    """A foreign caption bleeding a few points across the column edge must
+    not satisfy the shared-column check — jitter can't claim both bands."""
+    data = _noise_png()
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 90, 290, 160), "Left column opens the page.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 180, 290, 260), "More left column body text.", fontsize=BODY
+    )
+    p.insert_image(fitz.Rect(80, 400, 260, 520), stream=data)
+    # right-column caption starting 5pt left of the gutter edge: any-pixel
+    # coverage counts both columns, genuine occupancy counts only its home
+    p.insert_textbox(
+        fitz.Rect(335, 90, 560, 130), "Table 3. Foreign results.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(340, 160, 560, 240),
+        "Right column body text follows.",
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "bleedcap.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "bleedcap.epub"
+    convert(pdf, out)
+    figs = "\n".join(h for h in doc_html(out).values() if "<img" in h)
+    assert 'alt="Table 3' not in figs and 'alt=""' in figs
+
+
 def test_paragraph_merges_across_page_break(tmp_path):
     doc = fitz.open()
     p = _page(doc)
