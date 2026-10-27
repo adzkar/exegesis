@@ -5,7 +5,7 @@ import zipfile
 import fitz
 from helpers import chapter_text, doc_html, doc_texts, lint_epub, snapshot_epub
 
-import pdf_to_epub as m
+from exegesis import convert
 
 W, H = 612, 792
 BODY = 10
@@ -35,7 +35,7 @@ def test_two_column_reading_order(tmp_path):
     pdf = tmp_path / "twocol.pdf"
     _save(doc, pdf)
     out = tmp_path / "twocol.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     assert lint_epub(out) == []
     text = chapter_text(out)
     assert "left column" in text and "right column" in text
@@ -56,7 +56,7 @@ def test_furniture_and_page_number_stripped(tmp_path):
     pdf = tmp_path / "furniture.pdf"
     _save(doc, pdf)
     out = tmp_path / "furniture.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     text = chapter_text(out)
     assert "journal.org" not in text
     assert "single column document" in text
@@ -77,7 +77,7 @@ def test_keep_headers_preserves_furniture(tmp_path):
     pdf = tmp_path / "keephdr.pdf"
     _save(doc, pdf)
     out = tmp_path / "keephdr.epub"
-    m.convert(pdf, out, drop_edges=False)
+    convert(pdf, out, drop_edges=False)
     # furniture is retained verbatim — the footer may land in notes.xhtml
     # because footnote-zone detection is independent of header stripping
     text = " ".join(doc_texts(out).values())
@@ -104,7 +104,7 @@ def test_bold_marker_tail_line_not_heading(tmp_path):
     pdf = tmp_path / "markerh2.pdf"
     _save(doc, pdf)
     out = tmp_path / "markerh2.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     htmls = doc_html(out)
     assert not any("<h2" in h and "indicates" in h for h in htmls.values())
 
@@ -121,7 +121,7 @@ def test_heading_becomes_h1_and_toc(tmp_path):
     pdf = tmp_path / "heading.pdf"
     _save(doc, pdf)
     out = tmp_path / "heading.epub"
-    stats = m.convert(pdf, out)
+    stats = convert(pdf, out)
     assert int(stats["headings"]) >= 1
     snap = snapshot_epub(out)
     texts = [t for _lv, t in snap["toc"]]
@@ -149,7 +149,7 @@ def test_bold_body_size_line_becomes_h2(tmp_path):
     pdf = tmp_path / "boldh2.pdf"
     _save(doc, pdf)
     out = tmp_path / "boldh2.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     htmls = doc_html(out)
     assert any("<h2" in h and "Bold Section" in h for h in htmls.values())
 
@@ -166,7 +166,7 @@ def test_italic_font_marks_up(tmp_path):
     pdf = tmp_path / "italic.pdf"
     _save(doc, pdf)
     out = tmp_path / "italic.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     htmls = doc_html(out)
     assert any("<i>" in h and "italics" in h for h in htmls.values())
 
@@ -187,7 +187,7 @@ def test_unnumbered_note_moves_to_notes(tmp_path):
     pdf = tmp_path / "note.pdf"
     _save(doc, pdf)
     out = tmp_path / "note.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     texts = doc_texts(out)
     assert "notes.xhtml" in texts
     assert "reprints" in texts["notes.xhtml"]
@@ -214,7 +214,7 @@ def test_tall_narrow_region_rasterized(tmp_path):
     pdf = tmp_path / "rtable.pdf"
     _save(doc, pdf)
     out = tmp_path / "rtable.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     with zipfile.ZipFile(out) as zf:
         tables = [n for n in zf.namelist() if "table_" in n]
     assert tables, "expected a rasterized table image"
@@ -238,6 +238,6 @@ def test_paragraph_merges_across_page_break(tmp_path):
     pdf = tmp_path / "merge.pdf"
     _save(doc, pdf)
     out = tmp_path / "merge.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     text = chapter_text(out)
     assert "page bottom and the sentence continues at the top" in text
