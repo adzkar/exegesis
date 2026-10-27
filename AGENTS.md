@@ -28,7 +28,10 @@ chapters.
 - **Headings/TOC** — h1: single-line ≥1.6× body, multi-line block all-lines
   ≥1.6×, or the first page-0 heading ≥1.3× (promoted so title → byline
   position detection fires); h2: standalone ≥1.08× OR all-bold line/block
-  ≥0.9× outside edge zones (papers whose headings share the body font).
+  ≥0.9× outside edge zones (papers whose headings share the body font) that
+  also precedes body-flow text in its column — footnote-zone and rasterized
+  table blocks don't count (a trailing bold line is usually a note, not a
+  heading). Lines opening with footnote markers (`*†‡§`) are never headings.
   Sentence-like text with periods is rejected. Named labels (`References`,
   `Supporting Online Material`…) at block start also emit h2. All-caps
   short labels in the top 12% emit `<p class="label">` instead. Chapters

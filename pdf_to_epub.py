@@ -583,6 +583,15 @@ def _render_page(page, page_index, state):
         if tbl is not None
         else set()
     )
+    # ids of text blocks leaving the body flow — rasterized table cells and
+    # footnote-region blocks — which can't count as a bold-only h2's follower
+    nonbody_ids = tbl_ids | {
+        id(b)
+        for b in ordered
+        if b["type"] == 0
+        and (fc := _assign_column(b, edges)) in foot_tops
+        and b["bbox"][1] >= foot_tops[fc] - 5
+    }
     tbl_done = False
 
     def flush_par():
@@ -674,9 +683,9 @@ def _render_page(page, page_index, state):
             and _line_max_size(_block_lines(block)[0]) < body_size * 1.08
         ):
             # bold-only candidates carry no size signal: they must sit
-            # outside the edge zones AND introduce following text in their
-            # column — a trailing bold line at a section/page end is far
-            # more often a note than a heading.
+            # outside the edge zones AND introduce following *body* text in
+            # their column — a trailing bold line at a section/page end is
+            # far more often a note than a heading.
             in_edge = (
                 block["bbox"][1] < page.rect.height * 0.12
                 or block["bbox"][3] > page.rect.height * 0.88
@@ -686,6 +695,7 @@ def _render_page(page, page_index, state):
                     b
                     for b in ordered[b_i + 1 :]
                     if b["type"] == 0
+                    and id(b) not in nonbody_ids
                     and col in _covered_cols(b, edges, page.rect.width)
                 ),
                 None,

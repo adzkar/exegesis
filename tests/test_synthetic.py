@@ -109,6 +109,97 @@ def test_bold_marker_tail_line_not_heading(tmp_path):
     assert not any("<h2" in h and "indicates" in h for h in htmls.values())
 
 
+def test_bold_tail_line_without_follower_not_heading(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 400),
+        " ".join(["Body text fills the column above."] * 10),
+        fontsize=BODY,
+    )
+    # last block of its column and outside the edge zones: a bold line that
+    # introduces nothing must not promote to h2
+    p.insert_textbox(
+        fitz.Rect(72, 550, 540, 590),
+        "Closing bold remark",
+        fontsize=BODY,
+        fontname="hebo",
+    )
+    pdf = tmp_path / "tailline.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tailline.epub"
+    m.convert(pdf, out)
+    htmls = doc_html(out)
+    assert not any("<h2" in h and "Closing bold" in h for h in htmls.values())
+    assert "Closing bold remark" in chapter_text(out)
+
+
+def test_bold_line_followed_only_by_notes_not_heading(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 300),
+        " ".join(["Reference entries fill the column above."] * 10),
+        fontsize=BODY,
+    )
+    # the bold line's only follower is the footnote zone — note blocks leave
+    # the body flow, so they can't qualify it as a section heading
+    p.insert_textbox(
+        fitz.Rect(72, 400, 540, 440),
+        "Section tail remark",
+        fontsize=BODY,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 650, 540, 720),
+        "Requests for reprints should be addressed to the author.",
+        fontsize=8.5,
+    )
+    pdf = tmp_path / "notetail.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "notetail.epub"
+    m.convert(pdf, out)
+    htmls = doc_html(out)
+    texts = doc_texts(out)
+    assert not any("<h2" in h and "Section tail" in h for h in htmls.values())
+    assert "Section tail remark" in chapter_text(out)
+    assert "reprints" in texts["notes.xhtml"]
+
+
+def test_bold_line_followed_only_by_table_not_heading(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 200),
+        "Body text above the section tail.",
+        fontsize=BODY,
+    )
+    # only followers are rasterized table cells — they leave the body flow,
+    # so a trailing bold line still must not promote to h2
+    p.insert_textbox(
+        fitz.Rect(72, 230, 540, 260),
+        "Introduces a table",
+        fontsize=BODY,
+        fontname="hebo",
+    )
+    for i, x in enumerate((200, 260, 320)):
+        p.insert_textbox(
+            fitz.Rect(x, 400, x + 15, 520),
+            f"r1c{i} r2c{i} r3c{i}",
+            fontsize=BODY,
+        )
+    pdf = tmp_path / "tabletail.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tabletail.epub"
+    m.convert(pdf, out)
+    with zipfile.ZipFile(out) as zf:
+        assert [n for n in zf.namelist() if "table_" in n], "expected table image"
+    htmls = doc_html(out)
+    assert not any(
+        "<h2" in h and "Introduces a table" in h for h in htmls.values()
+    )
+
+
 def test_keep_headers_margin_strips_not_rasterized(tmp_path):
     doc = fitz.open()
     p = _page(doc)
