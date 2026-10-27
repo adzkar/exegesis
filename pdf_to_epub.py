@@ -838,7 +838,9 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
     """Convert ``pdf_path`` to an EPUB at ``out_path``; returns a stats dict."""
     doc = fitz.open(pdf_path)
     meta = doc.metadata or {}
-    # single extraction pass: every analysis/render step reads these dicts
+    # single extraction pass: every analysis/render step reads these dicts.
+    # All pages are materialized upfront, so peak memory spans the whole
+    # document — bounding it would need a second extraction pass per page.
     pages = [(page, page.get_text("dict")) for page in doc]
 
     body_size, line_h = _body_font_size(pages)
@@ -869,7 +871,9 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
     for i, (page, pdict) in enumerate(pages):
         _render_page(page, i, state)
         # release the rendered page's dict early — embedded image bytes in
-        # it dominate the resident set on image-heavy documents
+        # it dominate the resident set on image-heavy documents. This trims
+        # the loop's tail residency, not the peak: dicts for unrendered
+        # pages stay alive until their turn.
         pdict.clear()
         state["page_items"][i] = []
     if state["par"]:
