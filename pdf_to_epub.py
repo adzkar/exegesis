@@ -38,6 +38,12 @@ NOTE_START_RE = re.compile(
     r"the author[s]? (?:thank|acknowledge|wish)|to whom correspondence)"
 )
 LIST_ITEM_RE = re.compile(r"^\d{1,2}[.)]\s+\S")
+FN_LINK_RE = re.compile(
+    r'<sup><a href="notes\.xhtml#fn(\d+)">(\d+)</a></sup>'
+)
+# Language is assumed English throughout: NOTE_START_RE, SECTION_LABEL_RE
+# and FURNITURE_RE all match English-only patterns.
+BOOK_LANG = "en"
 
 
 def _block_lines(block):
@@ -115,12 +121,16 @@ def _join_lines(parts):
     return " ".join(out)
 
 
-def _body_font_size(doc):
-    """Return (modal body span size, median line height) across the document."""
+def _body_font_size(pages):
+    """Return (modal body span size, median line height) across the document.
+
+    ``pages`` is a list of ``(fitz.Page, page.get_text("dict"))`` pairs so
+    the extraction cost is paid once in ``convert``.
+    """
     sizes = Counter()
     heights = []
-    for page in doc:
-        for block in page.get_text("dict")["blocks"]:
+    for _page, pdict in pages:
+        for block in pdict["blocks"]:
             if block["type"] != 0:
                 continue
             for line in _block_lines(block):
@@ -176,9 +186,11 @@ def _valid_title(t):
 
 
 def _looks_like_heading(text):
-    """True if the string is plausible heading text (no sentence periods)."""
+    """True if the string is plausible heading text (no sentence periods,
+    no footnote-marker opener — headings never start with *†‡§)."""
     return (
         MIN_HEADING_CHARS <= len(text) <= MAX_HEADING_CHARS
+        and text[:1] not in "*†‡§"
         and not re.search(r"\.", text[:-1])
         and not text.rstrip().endswith(".")
     )
@@ -323,17 +335,18 @@ def _signature(text):
     return re.sub(r"[^a-z]+", "", text.lower())
 
 
-def _boilerplate_signatures(doc):
+def _boilerplate_signatures(pages):
     """Find normalized texts that recur near page edges (headers/footers).
 
     A short text block sitting in the top or bottom ``EDGE_ZONE`` of at least
     ``BOILERPLATE_COVERAGE`` of pages is treated as a running header/footer.
+    ``pages`` is a list of ``(fitz.Page, page.get_text("dict"))`` pairs.
     """
     counts = Counter()
-    for page in doc:
+    for page, pdict in pages:
         height = page.rect.height
         seen = set()
-        for block in page.get_text("dict")["blocks"]:
+        for block in pdict["blocks"]:
             if block["type"] != 0:
                 continue
             _, y0, _, y1 = block["bbox"]
@@ -342,7 +355,7 @@ def _boilerplate_signatures(doc):
                 if 3 <= len(sig) <= 80:
                     seen.add(sig)
         counts.update(seen)
-    threshold = max(2, int(doc.page_count * BOILERPLATE_COVERAGE))
+    threshold = max(2, int(len(pages) * BOILERPLATE_COVERAGE))
     return {sig for sig, n in counts.items() if n >= threshold}
 
 
@@ -362,17 +375,29 @@ def _column_edges(items):
     return [median(c) for c in clusters if len(c) >= 2] or [0.0]
 
 
-def _doc_column_edges(doc):
+def _doc_column_edges(pages, boilerplate=frozenset()):
     """Column edges for the document: edges found on ≥half of all pages.
 
     Per-page clustering produces phantom edges from bylines, headings, and
     other spanning elements; real columns repeat on most pages, so only
     edges that recur survive. Prevents mid-page splits that corrupt both
     ordering and footnote-gap detection.
+    ``pages`` is a list of ``(fitz.Page, page.get_text("dict"))`` pairs.
     """
     votes = []
-    for page in doc:
-        items = page.get_text("dict")["blocks"]
+    for page, pdict in pages:
+        # furniture shapes can't form column edges — a sidebar or running
+        # head recurring at the same x on every page is the classic
+        # phantom-edge generator
+        items = [
+            b
+            for b in pdict["blocks"]
+            if b["type"] == 0
+            and not _is_furniture(b, page.rect, _block_text(b))
+            and not _is_signature_furniture(
+                b, page.rect.height, boilerplate
+            )
+        ]
         for e in _column_edges(items):
             for v in votes:
                 if abs(v[0] - e) < 15:
@@ -381,7 +406,7 @@ def _doc_column_edges(doc):
             else:
                 votes.append([e, 1])
     votes.sort(key=lambda v: -v[1])
-    needed = max(1, doc.page_count // 2)
+    needed = max(1, len(pages) // 2)
     edges = sorted(v[0] for v in votes if v[1] >= needed)
     return edges or [0.0]
 
@@ -409,37 +434,71 @@ def _covered_cols(block, edges, page_width):
     ]
 
 
-def _ordered_blocks(page, boilerplate, edges):
+def _is_margin_strip(block, rect):
+    """Narrow+tall block in the outer 10% margins — rotated sidebar
+    furniture (journal titles running down the page edge)."""
+    x0, y0, x1, y1 = block["bbox"]
+    return (
+        x1 - x0 < 25
+        and y1 - y0 > 4 * (x1 - x0)
+        and (x0 > rect.width * 0.9 or x1 < rect.width * 0.1)
+    )
+
+
+def _is_furniture(block, rect, text):
+    """Edge furniture by shape or content: narrow+tall margin strips in
+    the outer 10% margins, or pattern furniture/page numbers in the outer
+    7% edge."""
+    _, y0, _, y1 = block["bbox"]
+    return _is_margin_strip(block, rect) or (
+        (y0 > rect.height * 0.93 or y1 < rect.height * 0.07)
+        and (FURNITURE_RE.search(text) or re.fullmatch(r"\d{1,4}", text))
+    )
+
+
+def _is_signature_furniture(block, height, boilerplate):
+    """Edge-zone text whose normalized signature repeats across pages —
+    a running head/footer detected by recurrence rather than content."""
+    _, y0, _, y1 = block["bbox"]
+    near_edge = y1 < height * EDGE_ZONE or y0 > height * (1 - EDGE_ZONE)
+    return near_edge and _signature(_block_text(block)) in boilerplate
+
+
+def _ordered_blocks(page, blocks, boilerplate, edges, drop_furniture=True):
     """Return page blocks in reading order for any column layout.
+
+    ``blocks`` is the page's pre-extracted ``get_text("dict")["blocks"]``;
+    ``page`` supplies only geometry (rect).
 
     Blocks above the first spanning element come first (page header zone).
     Each column then emits its own sequence — non-spanning blocks plus the
     spanning elements that cover it, in y order — columns left to right.
     A span covering several columns emits at its first encounter only.
-    Text blocks whose signature is in ``boilerplate`` are dropped.
+    Text blocks whose signature is in ``boilerplate``, margin strips,
+    pattern furniture, and page numbers are dropped when ``drop_furniture``
+    is true; when false (``--keep-headers``) they are kept but flagged
+    ``is_furniture``, held in a side list, and emitted at the page's
+    top/bottom edge — they render verbatim without reaching any classifier
+    or perturbing the spans/cut/column machinery (a gutter-crossing footer
+    would otherwise collapse the page into interleaved top-zone order).
     """
     rect = page.rect
     items = []
-    for block in page.get_text("dict")["blocks"]:
-        x0, y0, x1, y1 = block["bbox"]
+    furniture_items = []
+    for block in blocks:
         if block["type"] == 0:
             text = _block_text(block)
             if not text:
                 continue
-            near_edge = y1 < rect.height * EDGE_ZONE or y0 > rect.height * (
-                1 - EDGE_ZONE
+            sig_furniture = _is_signature_furniture(
+                block, rect.height, boilerplate
             )
-            if near_edge and _signature(text) in boilerplate:
-                continue
-            if (
-                x1 - x0 < 25
-                and y1 - y0 > 4 * (x1 - x0)
-                and (x0 > rect.width * 0.9 or x1 < rect.width * 0.1)
-            ):
-                continue
-            if y0 > rect.height * 0.93 or y1 < rect.height * 0.07:
-                if FURNITURE_RE.search(text) or re.fullmatch(r"\d{1,4}", text):
+            if sig_furniture or _is_furniture(block, rect, text):
+                if drop_furniture:
                     continue
+                block["is_furniture"] = True
+                furniture_items.append(block)
+                continue
         items.append(block)
 
     key = lambda b: (b["bbox"][1], b["bbox"][0])
@@ -452,7 +511,12 @@ def _ordered_blocks(page, boilerplate, edges):
         if cut is not None
         else []
     )
-    nonspans = [b for b in nonspans if b not in top_zone] if top_zone else nonspans
+    top_ids = {id(b) for b in top_zone}
+    nonspans = (
+        [b for b in nonspans if id(b) not in top_ids]
+        if top_zone
+        else nonspans
+    )
 
     cols = {i: [] for i in range(len(edges))}
     for b in nonspans:
@@ -472,7 +536,17 @@ def _ordered_blocks(page, boilerplate, edges):
                 continue
             emitted.add(id(b))
             ordered.append(b)
-    return ordered
+    # kept furniture slots at the page edge it belongs to — running heads
+    # before the content, footers/sidebars after it
+    top_f = sorted(
+        (b for b in furniture_items if b["bbox"][1] < rect.height * 0.5),
+        key=key,
+    )
+    bottom_f = sorted(
+        (b for b in furniture_items if b["bbox"][1] >= rect.height * 0.5),
+        key=key,
+    )
+    return top_f + ordered + bottom_f
 
 
 def _rotate_clip(rect, matrix):
@@ -496,7 +570,7 @@ def _line_html(line, body_size):
         text = html.escape(s["text"])
         if s["size"] < body_size * 0.75 and s["text"].strip():
             inner = html.escape(s["text"].strip())
-            if s["text"].strip().isdigit() and len(inner) <= 2:
+            if s["text"].strip().isdigit() and len(inner) <= 4:
                 parts.append(f'<sup><a href="notes.xhtml#fn{inner}">{inner}</a></sup>')
             else:
                 parts.append(f"<sup>{inner}</sup>")
@@ -517,6 +591,19 @@ def _footnote_text(block, body_size):
     )
 
 
+def _strip_dead_fn_links(frag, fn_nums):
+    """Unlink sup-markers whose ``#fnN`` target has no note entry — links to
+    real notes survive; other raised digits (years, cross-refs) revert to
+    plain superscripts. Applied to body fragments and, inside notes.xhtml
+    itself, to everything past a note's leading marker."""
+    return FN_LINK_RE.sub(
+        lambda m: m.group(0)
+        if int(m.group(1)) in fn_nums
+        else f"<sup>{m.group(2)}</sup>",
+        frag,
+    )
+
+
 def _render_page(page, page_index, state):
     """Render one page to HTML fragments; collect headings, images, footnotes.
 
@@ -534,18 +621,40 @@ def _render_page(page, page_index, state):
     """
     body_size = state["body_size"]
     edges = state["edges"]
-    ordered = _ordered_blocks(page, state["boilerplate"], edges)
+    ordered = _ordered_blocks(
+        page,
+        state["page_items"][page_index],
+        state["boilerplate"],
+        edges,
+        state["drop_edges"],
+    )
+    # kept furniture is render-only: it never feeds footnote-zone detection
+    # or rotated-table candidate sets
+    body_blocks = [b for b in ordered if not b.get("is_furniture")]
     foot_tops = _footnote_tops(
-        ordered, edges, body_size, page.rect.height, state["line_h"]
+        body_blocks, edges, body_size, page.rect.height, state["line_h"]
     )
     frags = state["page_frags"][page_index]
 
-    tbl = _rotated_table_region(ordered)
+    tbl = _rotated_table_region(body_blocks)
     tbl_ids = (
-        {id(b) for b in ordered if fitz.Rect(b["bbox"]).intersects(tbl)}
+        {id(b) for b in body_blocks if fitz.Rect(b["bbox"]).intersects(tbl)}
         if tbl is not None
         else set()
     )
+    # ids of blocks that leave (or never enter) the body flow — rasterized
+    # table cells, footnote-region blocks, kept furniture — none of them can
+    # count as a bold-only h2's follower
+    nonbody_ids = tbl_ids | {
+        id(b)
+        for b in ordered
+        if b.get("is_furniture")
+        or (
+            b["type"] == 0
+            and (fc := _assign_column(b, edges)) in foot_tops
+            and b["bbox"][1] >= foot_tops[fc] - 5
+        )
+    }
     tbl_done = False
 
     def flush_par():
@@ -616,6 +725,18 @@ def _render_page(page, page_index, state):
                 )
             continue
 
+        if block.get("is_furniture"):
+            # kept furniture emits verbatim as its own paragraph — it must
+            # not merge with the open paragraph or reach any classifier.
+            # Only a same-page paragraph is flushed: a paragraph carried
+            # from the previous page must stay open so its continuation
+            # merges and lands on the start page (flushing here would
+            # split it mid-sentence around every running head)
+            if state["par_page"] == page_index:
+                flush_par()
+            frags.append(f"<p>{html.escape(_block_text(block))}</p>")
+            continue
+
         col = _assign_column(block, edges)
         if col in foot_tops and block["bbox"][1] >= foot_tops[col] - 5:
             state["footnotes"].append(_footnote_text(block, body_size))
@@ -632,15 +753,40 @@ def _render_page(page, page_index, state):
             continue
 
         level = _standalone_heading_level(block, body_size)
+        demoted = False
+        # bold-only candidates carry no size signal: they must sit
+        # outside the edge zones AND introduce following *body* text in
+        # their column — a trailing bold line at a section/page end is
+        # far more often a note than a heading (a block that is itself a
+        # heading doesn't count either). The scan is column- and
+        # page-local: a bold line ending a column or page can't see its
+        # next-column/next-page follower and stays demoted.
+        in_edge = (
+            block["bbox"][1] < page.rect.height * 0.12
+            or block["bbox"][3] > page.rect.height * 0.88
+        )
+        follower = None
+        if not in_edge:
+            for b in ordered[b_i + 1 :]:
+                if (
+                    b["type"] != 0
+                    or id(b) in nonbody_ids
+                    or col not in _covered_cols(b, edges, page.rect.width)
+                ):
+                    continue
+                # the first body-flow block in the column decides: a
+                # heading ends the section, so the tail precedes no body
+                if _standalone_heading_level(b, body_size) is None:
+                    follower = b
+                break
+        bold_h2_ok = follower is not None
         if (
             level == 2
             and _line_max_size(_block_lines(block)[0]) < body_size * 1.08
-            and (
-                block["bbox"][1] < page.rect.height * 0.12
-                or block["bbox"][3] > page.rect.height * 0.88
-            )
+            and not bold_h2_ok
         ):
             level = None
+            demoted = True
         if level == 2 and page_index == 0 and not state["headings"]:
             if _line_max_size(_block_lines(block)[0]) >= body_size * 1.3:
                 level = 1
@@ -693,8 +839,24 @@ def _render_page(page, page_index, state):
             and med <= body_size * 1.05
             and len(btext) > 60
         ):
-            prev = ordered[b_i - 1] if b_i > 0 else None
-            nxt = ordered[b_i + 1] if b_i + 1 < len(ordered) else None
+            # isolation is measured against body blocks — kept furniture
+            # sits at the page edges and must not count as a neighbor
+            prev = next(
+                (
+                    b
+                    for b in reversed(ordered[:b_i])
+                    if not b.get("is_furniture")
+                ),
+                None,
+            )
+            nxt = next(
+                (
+                    b
+                    for b in ordered[b_i + 1 :]
+                    if not b.get("is_furniture")
+                ),
+                None,
+            )
             isolated = (
                 prev is not None
                 and prev["type"] == 0
@@ -724,14 +886,35 @@ def _render_page(page, page_index, state):
         ):
             flush_par()
         for li, line in enumerate(_block_lines(block)):
-            if li == 0:
+            # labels respect the bold-only demotion — "Funding NIH grant…"
+            # tails are plausible notes, not section heads; a page-final
+            # "References" stays demoted when its body isn't visible
+            if li == 0 and not demoted:
                 m = _section_label(_line_text(line).strip())
                 if m:
                     emit_heading(2, m[0])
                     if m[1]:
                         state["par"].append(html.escape(m[1]))
                     continue
-            line_level = _heading_level(line, body_size)
+            # blocks opening with a footnote marker are note material —
+            # none of their lines may classify as headings. A demoted
+            # block's *size-signaled* lines may still emit; only its
+            # bold-band lines are silenced by the gate below
+            line_level = (
+                _heading_level(line, body_size)
+                if btext[:1] not in "*†‡§"
+                else None
+            )
+            # a line-level h2 promoted by the bold-only band (size <
+            # 1.08×body is unreachable via the size path) needs the same
+            # edge/follower check as a block-level candidate — a bold line
+            # inside a mixed-weight block is just as often a note
+            if (
+                line_level == 2
+                and _line_max_size(line) < body_size * 1.08
+                and not bold_h2_ok
+            ):
+                line_level = None
             if line_level:
                 emit_heading(line_level, _line_text(line).strip())
                 continue
@@ -755,12 +938,18 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
     """Convert ``pdf_path`` to an EPUB at ``out_path``; returns a stats dict."""
     doc = fitz.open(pdf_path)
     meta = doc.metadata or {}
+    # single extraction pass: every analysis/render step reads these dicts.
+    # All pages are materialized upfront, so peak memory spans the whole
+    # document — bounding it would need a second extraction pass per page.
+    pages = [(page, page.get_text("dict")) for page in doc]
 
-    body_size, line_h = _body_font_size(doc)
+    body_size, line_h = _body_font_size(pages)
+    boilerplate = _boilerplate_signatures(pages)
     state = {
         "body_size": body_size,
         "line_h": line_h,
-        "edges": _doc_column_edges(doc),
+        "page_items": [pdict["blocks"] for _p, pdict in pages],
+        "edges": _doc_column_edges(pages, boilerplate),
         "abstract_done": False,
         "after_h1": False,
         "byline_text": None,
@@ -772,13 +961,18 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
         "par_page": 0,
         "page_frags": [[] for _ in range(doc.page_count)],
         "heading_seq": 0,
-        "boilerplate": (
-            _boilerplate_signatures(doc) if drop_edges and doc.page_count > 3 else set()
-        ),
+        "drop_edges": drop_edges,
+        "boilerplate": boilerplate,
     }
 
-    for i, page in enumerate(doc):
+    for i, (page, pdict) in enumerate(pages):
         _render_page(page, i, state)
+        # release the rendered page's dict early — embedded image bytes in
+        # it dominate the resident set on image-heavy documents. This trims
+        # the loop's tail residency, not the peak: dicts for unrendered
+        # pages stay alive until their turn.
+        pdict.clear()
+        state["page_items"][i] = []
     if state["par"]:
         state["page_frags"][state["par_page"]].append(
             f"<p>{_join_lines(state['par'])}</p>"
@@ -786,13 +980,7 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
     fn_nums = {n for n, _ in state["footnotes"] if n is not None}
     for frags in state["page_frags"]:
         for k, frag in enumerate(frags):
-            frags[k] = re.sub(
-                r'<sup><a href="notes.xhtml#fn(\d+)">(\d+)</a></sup>',
-                lambda m: m.group(0)
-                if int(m.group(1)) in fn_nums
-                else f"<sup>{m.group(2)}</sup>",
-                frag,
-            )
+            frags[k] = _strip_dead_fn_links(frag, fn_nums)
 
     flat = [
         (pi, frag)
@@ -809,8 +997,8 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
             if pi % PAGES_PER_FALLBACK_CHAPTER == 0
             and (i == 0 or flat[i - 1][0] != pi)
         ]
-    if not boundaries or boundaries[0] != 0:
-        boundaries.insert(0, 0)
+    if not boundaries:
+        boundaries = [0]
 
     if title is None:
         title = meta.get("title") or ""
@@ -834,7 +1022,7 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
     book = epub.EpubBook()
     book.set_identifier(hashlib.sha1(str(pdf_path).encode()).hexdigest()[:16])
     book.set_title(title)
-    book.set_language("en")
+    book.set_language(BOOK_LANG)
     book.add_author(author)
 
     css = epub.EpubItem(
@@ -854,12 +1042,16 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
 
     chapters = []
     for idx, start in enumerate(boundaries):
+        # frags before the first heading fold into chapter 1 — a kept
+        # running head on the title page must not form a degenerate
+        # leading chapter that pushes the title into chap_2
+        real_start = 0 if idx == 0 else start
         end = boundaries[idx + 1] if idx + 1 < len(boundaries) else len(flat)
-        content = "\n".join(f for _, f in flat[start:end])
+        content = "\n".join(f for _, f in flat[real_start:end])
         heading = next(
             (
                 re.sub(r"<[^>]+>", "", f)
-                for _, f in flat[start:end]
+                for _, f in flat[real_start:end]
                 if f.startswith("<h")
             ),
             None,
@@ -867,14 +1059,14 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
         chap = epub.EpubHtml(
             title=heading or f"Section {idx + 1}",
             file_name=f"chap_{idx + 1}.xhtml",
-            lang="en",
+            lang=BOOK_LANG,
         )
         chap.add_item(css)
         chap.content = (
             f"<html><body>{content.strip() or '<p></p>'}</body></html>"
         )
         book.add_item(chap)
-        chapters.append((chap, start))
+        chapters.append((chap, real_start))
 
     note_entries = []
     seen_fn = set()
@@ -882,7 +1074,21 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
         frag = re.sub(
             r"^<sup><a[^>]*>(\d+)</a></sup>", r"<sup>\1</sup>", frag
         )
-        if num is None and note_entries:
+        # note bodies get the same dead-anchor validation as body text —
+        # a raised digit mid-note (e.g. a superscripted year) is not a link
+        frag = _strip_dead_fn_links(frag, fn_nums)
+        # an unnumbered block is a column/page-split continuation of the
+        # previous note unless it opens a new note itself (correspondence
+        # and acknowledgment openers — the same pattern that marks the
+        # note zone on the page). A real continuation that happens to open
+        # with such a phrase splits off as an unnumbered entry instead —
+        # rare, and safer than fusing two genuine notes.
+        frag_text = re.sub(r"<[^>]+>", "", frag).lstrip("*†‡§ ")
+        if (
+            num is None
+            and note_entries
+            and not NOTE_START_RE.match(frag_text)
+        ):
             note_entries[-1] = note_entries[-1][:-4] + " " + frag + "</p>"
         elif num is not None and num not in seen_fn:
             seen_fn.add(num)
@@ -903,7 +1109,9 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
             epub.Link(f"{chapters[chap_idx][0].file_name}#{anchor}", text, anchor)
         )
     if note_entries:
-        notes = epub.EpubHtml(title="Notes", file_name="notes.xhtml", lang="en")
+        notes = epub.EpubHtml(
+            title="Notes", file_name="notes.xhtml", lang=BOOK_LANG
+        )
         notes.content = (
             "<html><body><h1>Notes</h1>" + "".join(note_entries) + "</body></html>"
         )

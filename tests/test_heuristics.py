@@ -203,6 +203,20 @@ def test_footnote_tops_gap_detection():
     assert tops == {0: 600}
 
 
+def test_strip_dead_fn_links():
+    live = '<sup><a href="notes.xhtml#fn3">3</a></sup>'
+    dead = '<sup><a href="notes.xhtml#fn2010">2010</a></sup>'
+    assert m._strip_dead_fn_links(live, {3}) == live
+    assert m._strip_dead_fn_links(dead, {3}) == "<sup>2010</sup>"
+    frag = f"see {live} and also {dead} done"
+    assert (
+        m._strip_dead_fn_links(frag, {3})
+        == f"see {live} and also <sup>2010</sup> done"
+    )
+    # a 4-digit marker keeps linking only when its note exists
+    assert m._strip_dead_fn_links(dead, {2010}) == dead
+
+
 # --- style helpers ------------------------------------------------------
 
 def test_span_bold_flags_and_names():

@@ -27,12 +27,7 @@
           "p",
           "Keywords Emotion regulation \u00b7 Psychological resilience \u00b7 Adv",
           66
-        ]
-      ]
-    },
-    {
-      "file": "chap_2.xhtml",
-      "frags": [
+        ],
         [
           "h2",
           "Introduction",
@@ -91,7 +86,7 @@
       ]
     },
     {
-      "file": "chap_3.xhtml",
+      "file": "chap_2.xhtml",
       "frags": [
         [
           "h2",
@@ -101,7 +96,7 @@
       ]
     },
     {
-      "file": "chap_4.xhtml",
+      "file": "chap_3.xhtml",
       "frags": [
         [
           "h2",
@@ -116,7 +111,7 @@
       ]
     },
     {
-      "file": "chap_5.xhtml",
+      "file": "chap_4.xhtml",
       "frags": [
         [
           "h2",
@@ -191,7 +186,7 @@
       ]
     },
     {
-      "file": "chap_6.xhtml",
+      "file": "chap_5.xhtml",
       "frags": [
         [
           "h2",
@@ -201,7 +196,7 @@
       ]
     },
     {
-      "file": "chap_7.xhtml",
+      "file": "chap_6.xhtml",
       "frags": [
         [
           "h2",
@@ -216,7 +211,7 @@
       ]
     },
     {
-      "file": "chap_8.xhtml",
+      "file": "chap_7.xhtml",
       "frags": [
         [
           "h2",
@@ -231,7 +226,7 @@
       ]
     },
     {
-      "file": "chap_9.xhtml",
+      "file": "chap_8.xhtml",
       "frags": [
         [
           "h2",
@@ -256,7 +251,7 @@
       ]
     },
     {
-      "file": "chap_10.xhtml",
+      "file": "chap_9.xhtml",
       "frags": [
         [
           "h2",
@@ -281,7 +276,7 @@
       ]
     },
     {
-      "file": "chap_11.xhtml",
+      "file": "chap_10.xhtml",
       "frags": [
         [
           "h2",
@@ -296,7 +291,7 @@
       ]
     },
     {
-      "file": "chap_12.xhtml",
+      "file": "chap_11.xhtml",
       "frags": [
         [
           "h2",
@@ -321,7 +316,7 @@
       ]
     },
     {
-      "file": "chap_13.xhtml",
+      "file": "chap_12.xhtml",
       "frags": [
         [
           "h2",
@@ -336,7 +331,7 @@
       ]
     },
     {
-      "file": "chap_14.xhtml",
+      "file": "chap_13.xhtml",
       "frags": [
         [
           "h2",
@@ -356,7 +351,7 @@
       ]
     },
     {
-      "file": "chap_15.xhtml",
+      "file": "chap_14.xhtml",
       "frags": [
         [
           "h2",
@@ -376,7 +371,7 @@
       ]
     },
     {
-      "file": "chap_16.xhtml",
+      "file": "chap_15.xhtml",
       "frags": [
         [
           "h2",
@@ -411,7 +406,7 @@
       ]
     },
     {
-      "file": "chap_17.xhtml",
+      "file": "chap_16.xhtml",
       "frags": [
         [
           "h2",
@@ -426,7 +421,7 @@
       ]
     },
     {
-      "file": "chap_18.xhtml",
+      "file": "chap_17.xhtml",
       "frags": [
         [
           "h2",
@@ -441,7 +436,7 @@
       ]
     },
     {
-      "file": "chap_19.xhtml",
+      "file": "chap_18.xhtml",
       "frags": [
         [
           "h2",
@@ -461,7 +456,7 @@
       ]
     },
     {
-      "file": "chap_20.xhtml",
+      "file": "chap_19.xhtml",
       "frags": [
         [
           "h2",
@@ -496,7 +491,7 @@
       ]
     },
     {
-      "file": "chap_21.xhtml",
+      "file": "chap_20.xhtml",
       "frags": [
         [
           "h2",
@@ -511,7 +506,7 @@
       ]
     },
     {
-      "file": "chap_22.xhtml",
+      "file": "chap_21.xhtml",
       "frags": [
         [
           "h2",
@@ -526,7 +521,7 @@
       ]
     },
     {
-      "file": "chap_23.xhtml",
+      "file": "chap_22.xhtml",
       "frags": [
         [
           "h2",
@@ -541,7 +536,7 @@
       ]
     },
     {
-      "file": "chap_24.xhtml",
+      "file": "chap_23.xhtml",
       "frags": [
         [
           "h2",
@@ -566,27 +561,17 @@
       ]
     },
     {
-      "file": "chap_25.xhtml",
+      "file": "chap_24.xhtml",
       "frags": [
         [
           "h2",
           "References",
           10
-        ]
-      ]
-    },
-    {
-      "file": "chap_26.xhtml",
-      "frags": [
-        [
-          "h2",
-          "*indicates the article was one of the studies included in ou",
-          79
         ],
         [
           "p",
-          "Aldao, A. (2013). The future of emotion regulation research:",
-          3344
+          "*indicates the article was one of the studies included in ou",
+          3424
         ],
         [
           "p",
@@ -677,9 +662,9 @@
     }
   ],
   "stats": {
-    "chapters": 27,
+    "chapters": 25,
     "footnotes": 1,
-    "headings": 25,
+    "headings": 24,
     "images": 5,
     "pages": 21,
     "title": "Regulating Emotionality to Manage Adversity: A Systematic Review of the Relation Between Emotion Regulation and Psychological Resilience"
@@ -780,10 +765,6 @@
     [
       1,
       "References"
-    ],
-    [
-      1,
-      "*indicates the article was one of the studies included in our systematic review"
     ],
     [
       1,

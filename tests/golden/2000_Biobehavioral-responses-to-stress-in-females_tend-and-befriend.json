@@ -12,12 +12,7 @@
           "p",
           "0033-295X/0\u211600 DOI:10.1037//0033-295X.107.3.411",
           47
-        ]
-      ]
-    },
-    {
-      "file": "chap_2.xhtml",
-      "frags": [
+        ],
         [
           "h1",
           "Tend-and-Befriend, Not Fight-or-Flight",
@@ -31,7 +26,7 @@
       ]
     },
     {
-      "file": "chap_3.xhtml",
+      "file": "chap_2.xhtml",
       "frags": [
         [
           "h2",
@@ -51,7 +46,7 @@
       ]
     },
     {
-      "file": "chap_4.xhtml",
+      "file": "chap_3.xhtml",
       "frags": [
         [
           "h2",
@@ -81,7 +76,7 @@
       ]
     },
     {
-      "file": "chap_5.xhtml",
+      "file": "chap_4.xhtml",
       "frags": [
         [
           "h2",
@@ -121,7 +116,7 @@
       ]
     },
     {
-      "file": "chap_6.xhtml",
+      "file": "chap_5.xhtml",
       "frags": [
         [
           "h2",
@@ -141,7 +136,7 @@
       ]
     },
     {
-      "file": "chap_7.xhtml",
+      "file": "chap_6.xhtml",
       "frags": [
         [
           "h2",
@@ -181,7 +176,7 @@
       ]
     },
     {
-      "file": "chap_8.xhtml",
+      "file": "chap_7.xhtml",
       "frags": [
         [
           "h2",
@@ -221,7 +216,7 @@
       ]
     },
     {
-      "file": "chap_9.xhtml",
+      "file": "chap_8.xhtml",
       "frags": [
         [
           "h2",
@@ -291,7 +286,7 @@
       ]
     },
     {
-      "file": "chap_10.xhtml",
+      "file": "chap_9.xhtml",
       "frags": [
         [
           "h2",
@@ -426,7 +421,7 @@
       ]
     },
     {
-      "file": "chap_11.xhtml",
+      "file": "chap_10.xhtml",
       "frags": [
         [
           "h2",
@@ -471,7 +466,7 @@
       ]
     },
     {
-      "file": "chap_12.xhtml",
+      "file": "chap_11.xhtml",
       "frags": [
         [
           "h2",
@@ -496,7 +491,7 @@
       ]
     },
     {
-      "file": "chap_13.xhtml",
+      "file": "chap_12.xhtml",
       "frags": [
         [
           "h2",
@@ -541,7 +536,7 @@
       ]
     },
     {
-      "file": "chap_14.xhtml",
+      "file": "chap_13.xhtml",
       "frags": [
         [
           "h2",
@@ -1691,7 +1686,12 @@
         [
           "p",
           "Shelley E. Taylor, Laura Cousino Klein, Brian P. Lewis. Tara",
-          1490
+          1236
+        ],
+        [
+          "p",
+          "Correspondence concerning this article should be addressed t",
+          253
         ],
         [
           "p",
@@ -1787,7 +1787,7 @@
     }
   ],
   "stats": {
-    "chapters": 15,
+    "chapters": 14,
     "footnotes": 29,
     "headings": 13,
     "images": 0,
