@@ -1,9 +1,10 @@
 """Golden-snapshot corpus tests over the real sample papers.
 
 Skipped when a corpus PDF is absent (they're gitignored). Regenerate
-snapshots after an intentional heuristic change:
+snapshots after an intentional heuristic change — ``-m ""`` clears the
+default ``not slow`` filter so the slow corpus case regenerates too:
 
-    pytest --update-golden
+    pytest --update-golden -m ""
 """
 import difflib
 import json
@@ -59,5 +60,5 @@ def test_corpus_golden(pdf_name, tmp_path, update_golden):
         )
         pytest.fail(
             f"golden mismatch for {pdf_name} "
-            f"(run pytest --update-golden to accept):\n{diff[:8000]}"
+            f'(run pytest --update-golden -m "" to accept):\n{diff[:8000]}'
         )

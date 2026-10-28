@@ -23,10 +23,10 @@ reordered into reading order, rendered to HTML fragments, then chunked into
 chapters.
 
 - **Column order** — column edges are x0 clusters found on ≥50% of pages
-  (doc-wide voting kills phantom edges from bylines/headings). Blocks
-  crossing a gutter are spans; each column emits its own sequence of
-  non-spans + covering spans in y order, columns left to right. Works for
-  1/2/3-column layouts.
+  (doc-wide voting kills phantom edges from bylines/headings; furniture-
+  shaped blocks don't vote). Blocks crossing a gutter are spans; each
+  column emits its own sequence of non-spans + covering spans in y order,
+  columns left to right. Works for 1/2/3-column layouts.
 - **Paragraphs** — blocks merge into the open paragraph unless the first line
   is indented (>4pt) or the previous line ends with terminal punctuation.
   Open paragraphs carry across columns and page breaks; a lone drop-cap
@@ -34,11 +34,24 @@ chapters.
 - **Headings/TOC** — h1: single-line ≥1.6× body, multi-line block all-lines
   ≥1.6×, or the first page-0 heading ≥1.3× (promoted so title → byline
   position detection fires); h2: standalone ≥1.08× OR all-bold line/block
-  ≥0.9× outside edge zones (papers whose headings share the body font).
+  ≥0.9× outside edge zones (papers whose headings share the body font) that
+  also precedes body-flow text in its column — footnote-zone, rasterized
+  table, and kept-furniture blocks don't count (a trailing bold line is
+  usually a note, not a heading); a block that is itself a heading
+  terminates the scan — a tail before a new section precedes no body.
+  The same edge+follower check gates a bold line inside a mixed-weight
+  block, and the follower scan is column- and page-local — a bold line
+  ending a column or page can't see its next-column/next-page follower
+  and stays demoted (a demoted block's size-signaled ≥1.3× lines may
+  still emit; only its bold-band lines are silenced). Lines opening
+  with footnote markers (`*†‡§`) are never headings.
   Sentence-like text with periods is rejected. Named labels (`References`,
-  `Supporting Online Material`…) at block start also emit h2. All-caps
-  short labels in the top 12% emit `<p class="label">` instead. Chapters
-  split at heading fragments — each begins exactly at its heading.
+  `Supporting Online Material`…) at block start emit h2, but respect the
+  demotion — a trailing `Funding NIH grant…` is a plausible note tail,
+  not a section head. All-caps short labels in the top 12% emit
+  `<p class="label">` instead. Chapters split at heading fragments; frags
+  before the first heading fold into chapter 1 rather than forming a
+  degenerate leading chapter.
 - **Bylines** — blocks ≥1.15× body, or the block right after an h1 when it
   looks like a name list; merge into one `<p class="byline">` with short
   single-line followers. A trailing drop-cap letter moves into the body
@@ -46,22 +59,33 @@ chapters.
 - **Headers/footers** — two layers: signatures repeated on ≥40% of pages in
   edge zones, and pattern furniture (`VOL`, `www.`, `ISSN`, `doi`, `©`,
   dates) in the outer 7% edge (works on 1-page docs). Narrow+tall blocks in
-  outer 10% margins (rotated sidebars) are dropped.
+  outer 10% margins (rotated sidebars) are dropped. `--keep-headers` keeps
+  all of it flagged `is_furniture` — the signature set is built on any
+  doc length so repeated running heads flag the same way: such blocks
+  skip the spans/cut/column machinery entirely (emitted at the page's
+  top/bottom edge), render verbatim as their own paragraphs, and never
+  feed any classifier — headings, abstract, bylines, footnotes, followers,
+  blockquote isolation, or table regions (a kept block inside a table's
+  bbox still emits verbatim rather than being rasterized away).
 - **Footnotes** — superscript-digit starts in the lower half, OR an unnumbered
   smaller-than-body block below a >2×line-height gap in the bottom 40%,
   OR a bottom-55% block opening with an acknowledgment/correspondence
   pattern (`Preparation of`, `Requests for reprints`, `supported by`…).
-  Removed from the body flow into a `Notes` chapter; in-body superscripts
-  link to `#fnN` (dead links are stripped). Pure-digit blocks in the outer
-  7% edge (page numbers) are dropped.
+  Removed from the body flow into a `Notes` chapter; superscripts link to
+  `#fnN` and dead links are stripped in body and notes alike (a note's own
+  leading marker is always unlinked). Pure-digit blocks in the outer 7%
+  edge (page numbers) are dropped.
 - **Lists & quotes** — lines starting `N.`/`N)` become `p.listitem`
   paragraphs (absorbing continuation lines); a block indented >12pt from
   its column edge AND vertically isolated (>0.7× line-height gaps on both
   sides) becomes `<blockquote>` (quotes, verse).
 - **Tables** — rotated/landscape tables (≥3 tall-narrow blocks sharing a
-  y-band) are rasterized and embedded as PNGs. The clip is padded in
-  mediabox (unrotated) space and mapped through the page's own `/Rotate`
-  (90/180/270) so the render comes out upright and uncropped. Horizontal
+  y-band) are rasterized and embedded as PNGs. `is_furniture`-flagged
+  blocks never seed a region, so sidebar furniture kept under
+  `--keep-headers` can't be rasterized into a false table. Block bboxes arrive in
+  mediabox (unrotated) space; the padded clip is mapped into displayed
+  space via `page.rotation_matrix`, because `get_pixmap` clips in rotated
+  coordinates — the render comes out upright and uncropped. Horizontal
   tables are not yet detected — their cells currently flow as text.
 - **Abstract** — first small-font inset block in the top half of pages 0–1
   injects an `Abstract` h2.

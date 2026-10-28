@@ -17,6 +17,9 @@ NOTE_START_RE = re.compile(
     r"the author[s]? (?:thank|acknowledge|wish)|to whom correspondence)"
 )
 LIST_ITEM_RE = re.compile(r"^\d{1,2}[.)]\s+\S")
+FN_LINK_RE = re.compile(
+    r'<sup><a href="notes\.xhtml#fn(\d+)">(\d+)</a></sup>'
+)
 SECTION_LABEL_RE = re.compile(
     r"^(References and Notes|Notes and References|References|Bibliography|"
     r"Supporting Online Material|Supplementary Materials?|Acknowledg?ements|"

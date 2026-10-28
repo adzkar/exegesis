@@ -1,15 +1,13 @@
 """Reading-order reconstruction: column-aware block ordering plus the
 header/footer furniture drops."""
-import re
-
 from .analyze import (
     _assign_column,
     _covered_cols,
+    _is_furniture,
+    _is_signature_furniture,
     _is_spanning,
-    _signature,
 )
-from .const import EDGE_ZONE
-from .text import FURNITURE_RE, _block_text
+from .text import _block_text
 
 
 def _ordered_blocks(page, blocks, boilerplate, edges, drop_furniture=True):
@@ -22,38 +20,30 @@ def _ordered_blocks(page, blocks, boilerplate, edges, drop_furniture=True):
     Each column then emits its own sequence — non-spanning blocks plus the
     spanning elements that cover it, in y order — columns left to right.
     A span covering several columns emits at its first encounter only.
-    Text blocks whose signature is in ``boilerplate`` are dropped. When
-    ``drop_furniture`` is false, the pattern/margin/digit drops are skipped
-    so ``--keep-headers`` preserves running heads, page numbers, and
-    margin strips verbatim.
+    Text blocks whose signature is in ``boilerplate``, margin strips,
+    pattern furniture, and page numbers are dropped when ``drop_furniture``
+    is true; when false (``--keep-headers``) they are kept but flagged
+    ``is_furniture``, held in a side list, and emitted at the page's
+    top/bottom edge — they render verbatim without reaching any classifier
+    or perturbing the spans/cut/column machinery (a gutter-crossing footer
+    would otherwise collapse the page into interleaved top-zone order).
     """
     rect = page.rect
     items = []
+    furniture_items = []
     for block in blocks:
-        x0, y0, x1, y1 = block["bbox"]
         if block["type"] == 0:
             text = _block_text(block)
             if not text:
                 continue
-            near_edge = y1 < rect.height * EDGE_ZONE or y0 > rect.height * (
-                1 - EDGE_ZONE
+            sig_furniture = _is_signature_furniture(
+                block, rect.height, boilerplate
             )
-            if near_edge and _signature(text) in boilerplate:
-                continue
-            if drop_furniture and (
-                x1 - x0 < 25
-                and y1 - y0 > 4 * (x1 - x0)
-                and (x0 > rect.width * 0.9 or x1 < rect.width * 0.1)
-            ):
-                continue
-            if (
-                drop_furniture
-                and (y0 > rect.height * 0.93 or y1 < rect.height * 0.07)
-                and (
-                    FURNITURE_RE.search(text)
-                    or re.fullmatch(r"\d{1,4}", text)
-                )
-            ):
+            if sig_furniture or _is_furniture(block, rect, text):
+                if drop_furniture:
+                    continue
+                block["is_furniture"] = True
+                furniture_items.append(block)
                 continue
         items.append(block)
 
@@ -92,4 +82,14 @@ def _ordered_blocks(page, blocks, boilerplate, edges, drop_furniture=True):
                 continue
             emitted.add(id(b))
             ordered.append(b)
-    return ordered
+    # kept furniture slots at the page edge it belongs to — running heads
+    # before the content, footers/sidebars after it
+    top_f = sorted(
+        (b for b in furniture_items if b["bbox"][1] < rect.height * 0.5),
+        key=key,
+    )
+    bottom_f = sorted(
+        (b for b in furniture_items if b["bbox"][1] >= rect.height * 0.5),
+        key=key,
+    )
+    return top_f + ordered + bottom_f

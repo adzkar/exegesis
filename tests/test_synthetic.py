@@ -3,6 +3,7 @@ controlled positions/sizes, so assertions hold without any corpus files."""
 import zipfile
 
 import fitz
+import pytest
 from helpers import chapter_text, doc_html, doc_texts, lint_epub, snapshot_epub
 
 from exegesis import convert
@@ -28,10 +29,13 @@ def test_two_column_reading_order(tmp_path):
     right_b = "Final right column sentence closes the paper."
     for _ in range(2):
         p = _page(doc)
-        p.insert_textbox(fitz.Rect(72, 80, 290, 200), left_a, fontsize=BODY)
-        p.insert_textbox(fitz.Rect(72, 320, 290, 440), left_b, fontsize=BODY)
-        p.insert_textbox(fitz.Rect(340, 80, 560, 200), right_a, fontsize=BODY)
-        p.insert_textbox(fitz.Rect(340, 320, 560, 440), right_b, fontsize=BODY)
+        # keep column text below the top edge zone — identical text
+        # repeated near the top of every page reads as a running head and
+        # is dropped as signature boilerplate
+        p.insert_textbox(fitz.Rect(72, 180, 290, 300), left_a, fontsize=BODY)
+        p.insert_textbox(fitz.Rect(72, 340, 290, 460), left_b, fontsize=BODY)
+        p.insert_textbox(fitz.Rect(340, 180, 560, 300), right_a, fontsize=BODY)
+        p.insert_textbox(fitz.Rect(340, 340, 560, 460), right_b, fontsize=BODY)
     pdf = tmp_path / "twocol.pdf"
     _save(doc, pdf)
     out = tmp_path / "twocol.epub"
@@ -78,12 +82,50 @@ def test_keep_headers_preserves_furniture(tmp_path):
     _save(doc, pdf)
     out = tmp_path / "keephdr.epub"
     convert(pdf, out, drop_edges=False)
-    # furniture is retained verbatim — the footer may land in notes.xhtml
-    # because footnote-zone detection is independent of header stripping
+    # furniture is retained verbatim as standalone paragraphs — it never
+    # merges into body paragraphs or lands in notes.xhtml
     text = " ".join(doc_texts(out).values())
     assert "journal.org" in text
     assert "VOL 340" in text
     assert "7" in text
+    htmls = doc_html(out)
+    assert any("<p>7</p>" in h for h in htmls.values())
+    assert any(
+        "<p>www.journal.org VOL 340</p>" in h
+        for n, h in htmls.items()
+        if n.startswith("chap_")
+    )
+
+
+def test_keep_headers_wide_footer_keeps_column_order(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    left_a = "The left column opens here with a complete sentence."
+    left_b = "More left text follows, still in the first column."
+    right_a = "The right column reads only after the left ends."
+    right_b = "Final right column sentence closes the paper."
+    p.insert_textbox(fitz.Rect(72, 80, 290, 200), left_a, fontsize=BODY)
+    p.insert_textbox(fitz.Rect(72, 320, 290, 440), left_b, fontsize=BODY)
+    p.insert_textbox(fitz.Rect(340, 80, 560, 200), right_a, fontsize=BODY)
+    p.insert_textbox(fitz.Rect(340, 320, 560, 440), right_b, fontsize=BODY)
+    # a full-width furniture footer crosses the gutter (its glyph extent,
+    # not the box) — kept verbatim, but it must not become a span whose
+    # `cut` collapses the page into interleaved (y0, x0) order
+    p.insert_textbox(
+        fitz.Rect(72, 745, 560, 765),
+        "www.journal.org VOL 340 ISSN 1234-5678 downloaded from journal.org"
+        " archive 10 Oct 2026",
+        fontsize=9,
+    )
+    pdf = tmp_path / "widefooter.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "widefooter.epub"
+    convert(pdf, out, drop_edges=False)
+    text = chapter_text(out)
+    assert text.index("left column") < text.index("first column")
+    assert text.index("first column") < text.index("right column")
+    assert text.index("right column") < text.index("closes the paper")
+    assert "journal.org" in text
 
 
 def test_bold_marker_tail_line_not_heading(tmp_path):
@@ -107,6 +149,529 @@ def test_bold_marker_tail_line_not_heading(tmp_path):
     convert(pdf, out)
     htmls = doc_html(out)
     assert not any("<h2" in h and "indicates" in h for h in htmls.values())
+
+
+def test_bold_tail_line_without_follower_not_heading(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 400),
+        " ".join(["Body text fills the column above."] * 10),
+        fontsize=BODY,
+    )
+    # last block of its column and outside the edge zones: a bold line that
+    # introduces nothing must not promote to h2
+    p.insert_textbox(
+        fitz.Rect(72, 550, 540, 590),
+        "Closing bold remark",
+        fontsize=BODY,
+        fontname="hebo",
+    )
+    pdf = tmp_path / "tailline.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tailline.epub"
+    convert(pdf, out)
+    htmls = doc_html(out)
+    assert not any("<h2" in h and "Closing bold" in h for h in htmls.values())
+    assert "Closing bold remark" in chapter_text(out)
+
+
+def test_demoted_bold_tail_lines_stay_demoted(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 400),
+        " ".join(["Body text fills the column above."] * 10),
+        fontsize=BODY,
+    )
+    # 10.6pt sits in the [1.05, 1.08) band: the block-level gate demotes it
+    # (no follower), but the per-line check would re-promote it — the
+    # demotion must hold for every line of the block
+    p.insert_textbox(
+        fitz.Rect(72, 550, 540, 590),
+        "Closing bold remark",
+        fontsize=10.6,
+        fontname="hebo",
+    )
+    pdf = tmp_path / "demoted.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "demoted.epub"
+    convert(pdf, out)
+    chaps = [h for n, h in doc_html(out).items() if n.startswith("chap_")]
+    assert not any("<h2" in h or "<h1" in h for h in chaps)
+    assert "Closing bold remark" in chapter_text(out)
+
+
+def test_label_respects_bold_demotion(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 300),
+        " ".join(["Body text fills the column above."] * 10),
+        fontsize=BODY,
+    )
+    # a trailing bold "Funding …" tail is a note, not a section head —
+    # demotion must suppress the label path too
+    p.insert_textbox(
+        fitz.Rect(72, 550, 540, 570),
+        "Funding NIH grant R01-GM123456",
+        fontsize=10.6,
+        fontname="hebo",
+    )
+    pdf = tmp_path / "funding.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "funding.epub"
+    convert(pdf, out)
+    chaps = [h for n, h in doc_html(out).items() if n.startswith("chap_")]
+    assert not any("<h2" in h or "<h1" in h for h in chaps)
+    assert "Funding NIH grant" in chapter_text(out)
+
+
+def test_mixed_block_bold_band_line_demoted(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 300),
+        " ".join(["Body text fills the column above."] * 10),
+        fontsize=BODY,
+    )
+    # a mixed-weight block never classifies at block level, but its bold
+    # [1.05,1.08)x line still needs a body follower — this one has none
+    p.insert_text(
+        fitz.Point(72, 512), "Tail remark", fontsize=10.6, fontname="hebo"
+    )
+    p.insert_text(
+        fitz.Point(72, 525), "and a trailing sentence.", fontsize=BODY
+    )
+    pdf = tmp_path / "mixtail.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "mixtail.epub"
+    convert(pdf, out)
+    chaps = [h for n, h in doc_html(out).items() if n.startswith("chap_")]
+    assert not any("<h2" in h or "<h1" in h for h in chaps)
+    assert "Tail remark" in chapter_text(out)
+
+
+def test_demoted_multiline_bold_block_no_line_headings(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 400),
+        " ".join(["Body text fills the column above."] * 10),
+        fontsize=BODY,
+    )
+    # two-line all-bold trailing block: demoted once, but each line used to
+    # re-emit its own h2 + chapter split
+    p.insert_textbox(
+        fitz.Rect(72, 550, 152, 600),
+        "Closing bold remark",
+        fontsize=10.6,
+        fontname="hebo",
+    )
+    pdf = tmp_path / "demotedmulti.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "demotedmulti.epub"
+    convert(pdf, out)
+    chaps = [h for n, h in doc_html(out).items() if n.startswith("chap_")]
+    assert not any("<h2" in h or "<h1" in h for h in chaps)
+    assert "Closing bold remark" in chapter_text(out)
+
+
+def test_bold_line_followed_only_by_notes_not_heading(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 300),
+        " ".join(["Reference entries fill the column above."] * 10),
+        fontsize=BODY,
+    )
+    # the bold line's only follower is the footnote zone — note blocks leave
+    # the body flow, so they can't qualify it as a section heading
+    p.insert_textbox(
+        fitz.Rect(72, 400, 540, 440),
+        "Section tail remark",
+        fontsize=BODY,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 650, 540, 720),
+        "Requests for reprints should be addressed to the author.",
+        fontsize=8.5,
+    )
+    pdf = tmp_path / "notetail.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "notetail.epub"
+    convert(pdf, out)
+    htmls = doc_html(out)
+    texts = doc_texts(out)
+    assert not any("<h2" in h and "Section tail" in h for h in htmls.values())
+    assert "Section tail remark" in chapter_text(out)
+    assert "reprints" in texts["notes.xhtml"]
+
+
+def test_bold_line_followed_only_by_table_not_heading(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 200),
+        "Body text above the section tail.",
+        fontsize=BODY,
+    )
+    # only followers are rasterized table cells — they leave the body flow,
+    # so a trailing bold line still must not promote to h2
+    p.insert_textbox(
+        fitz.Rect(72, 230, 540, 260),
+        "Introduces a table",
+        fontsize=BODY,
+        fontname="hebo",
+    )
+    for i, x in enumerate((200, 260, 320)):
+        p.insert_textbox(
+            fitz.Rect(x, 400, x + 15, 520),
+            f"r1c{i} r2c{i} r3c{i}",
+            fontsize=BODY,
+        )
+    pdf = tmp_path / "tabletail.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tabletail.epub"
+    convert(pdf, out)
+    with zipfile.ZipFile(out) as zf:
+        assert [n for n in zf.namelist() if "table_" in n], "expected table image"
+    htmls = doc_html(out)
+    assert not any(
+        "<h2" in h and "Introduces a table" in h for h in htmls.values()
+    )
+
+
+def test_keep_headers_margin_strips_not_rasterized(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 400),
+        " ".join(["Body text fills the single column."] * 8),
+        fontsize=BODY,
+    )
+    # three rotated margin strips share a y-band — kept verbatim under
+    # --keep-headers, but they must never seed a rotated-table region
+    for i, x in enumerate((565, 580, 595)):
+        p.insert_text(
+            fitz.Point(x, 350), f"JOURNAL SIDEBAR {i}", fontsize=9, rotate=90
+        )
+    pdf = tmp_path / "sidebars.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "sidebars.epub"
+    convert(pdf, out, drop_edges=False)
+    with zipfile.ZipFile(out) as zf:
+        assert not [n for n in zf.namelist() if "table_" in n]
+    assert "JOURNAL SIDEBAR" in chapter_text(out)
+
+
+def test_keep_headers_strip_does_not_inject_abstract(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 400),
+        " ".join(["Body text fills the single column."] * 8),
+        fontsize=BODY,
+    )
+    # a small-font sidebar in the top half of page 0 satisfies the abstract
+    # heuristic's inset+size+position checks — kept furniture must never
+    # reach it
+    p.insert_text(
+        fitz.Point(585, 350), "JOURNAL OF EXAMPLES", fontsize=9, rotate=90
+    )
+    pdf = tmp_path / "sidebarabstract.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "sidebarabstract.epub"
+    convert(pdf, out, drop_edges=False)
+    htmls = doc_html(out)
+    assert not any("<h2" in h and "Abstract" in h for h in htmls.values())
+    assert "JOURNAL OF EXAMPLES" in chapter_text(out)
+
+
+def test_keep_headers_signature_head_no_abstract(tmp_path):
+    doc = fitz.open()
+    for _ in range(5):
+        p = _page(doc)
+        # a running head repeated on every page is signature boilerplate —
+        # kept verbatim under --keep-headers, but flagged like any other
+        # furniture so it can't reach the abstract/heading/follower logic
+        p.insert_textbox(
+            fitz.Rect(200, 40, 400, 65), "Journal of Studies", fontsize=9
+        )
+        p.insert_textbox(
+            fitz.Rect(72, 100, 540, 400),
+            " ".join(["Body text fills the single column."] * 8),
+            fontsize=BODY,
+        )
+    pdf = tmp_path / "sighead.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "sighead.epub"
+    convert(pdf, out, drop_edges=False)
+    htmls = doc_html(out)
+    assert not any("<h2" in h and "Abstract" in h for h in htmls.values())
+    assert "Journal of Studies" in chapter_text(out)
+
+
+def test_keep_headers_signature_head_flagged_short_doc(tmp_path):
+    doc = fitz.open()
+    for _ in range(3):
+        p = _page(doc)
+        # three pages: enough for the signature layer to recognize a
+        # repeated running head even though page_count <= 3
+        p.insert_textbox(
+            fitz.Rect(200, 40, 400, 65), "Journal of Studies", fontsize=9
+        )
+        p.insert_textbox(
+            fitz.Rect(72, 100, 540, 400),
+            " ".join(["Body text fills the single column."] * 8),
+            fontsize=BODY,
+        )
+    pdf = tmp_path / "sighead3.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "sighead3.epub"
+    convert(pdf, out, drop_edges=False)
+    htmls = doc_html(out)
+    assert not any("<h2" in h and "Abstract" in h for h in htmls.values())
+    assert "Journal of Studies" in chapter_text(out)
+
+
+def test_keep_headers_furniture_in_table_region(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    # three tall-narrow columns sharing a y-band seed a rotated-table
+    # region; the kept page number falls inside it
+    for x in (100, 180, 260):
+        p.insert_textbox(
+            fitz.Rect(x, 20, x + 40, 580),
+            " ".join(["col word"] * 40),
+            fontsize=BODY,
+        )
+    p.insert_text(fitz.Point(150, 45), "42", fontsize=BODY)
+    pdf = tmp_path / "tblfurn.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tblfurn.epub"
+    convert(pdf, out, drop_edges=False)
+    # the table still rasterizes, but the kept page number must emit
+    # verbatim rather than being consumed into the PNG
+    assert 'alt="table"' in "".join(doc_html(out).values())
+    assert "42" in chapter_text(out)
+
+
+def test_keep_headers_carried_paragraph_not_split(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 30, 300, 48), "www.journal.org", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 200, 540, 600),
+        " ".join(["This sentence runs to the page break without ending"] * 6),
+        fontsize=BODY,
+    )
+    p2 = _page(doc)
+    p2.insert_textbox(
+        fitz.Rect(72, 30, 300, 48), "www.journal.org", fontsize=BODY
+    )
+    p2.insert_textbox(
+        fitz.Rect(72, 100, 540, 300),
+        "here on page two the sentence concludes.",
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "carried.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "carried.epub"
+    convert(pdf, out, drop_edges=False)
+    # the kept head must not split the paragraph carried across the page:
+    # the continuation lands inside the same <p> as the page-1 opening
+    html = "".join(
+        h for n, h in doc_html(out).items() if n.startswith("chap_")
+    )
+    i = html.index("without ending")
+    seg = html[i : i + 600]
+    assert "here on page two" in seg.split("</p>")[0]
+
+
+def test_signature_furniture_no_edge_vote(tmp_path):
+    doc = fitz.open()
+    for _ in range(6):
+        p = _page(doc)
+        # repeated head+footer at a fixed x0 — signature furniture that
+        # must not vote for column edges
+        p.insert_textbox(
+            fitz.Rect(290, 40, 430, 65), "Journal of Examples", fontsize=9
+        )
+        p.insert_textbox(
+            fitz.Rect(290, 740, 460, 765), "Journal of Examples", fontsize=9
+        )
+        p.insert_textbox(
+            fitz.Rect(72, 150, 540, 200), "Alpha text fills column.", fontsize=BODY
+        )
+        p.insert_textbox(
+            fitz.Rect(310, 250, 540, 300), "Indent text sits inset.", fontsize=BODY
+        )
+        p.insert_textbox(
+            fitz.Rect(72, 350, 540, 400), "Beta text closes column.", fontsize=BODY
+        )
+    pdf = tmp_path / "sigedge.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "sigedge.epub"
+    convert(pdf, out)
+    text = chapter_text(out)
+    # single column: indented block must not jump behind all col-0 text
+    assert text.index("Alpha") < text.index("Indent") < text.index("Beta")
+
+
+def test_demoted_block_size_signaled_line_still_emits(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 300),
+        " ".join(["Body text fills the column above."] * 10),
+        fontsize=BODY,
+    )
+    # all-bold mixed-size trailing block: the block-level demotion
+    # silences the bold-band lines, but the 14pt line carries its own
+    # size signal (≥1.3×) and still emits (median stays <1.15× so the
+    # block survives byline absorption)
+    p.insert_text(
+        fitz.Point(72, 510), "Small tail", fontsize=10.6, fontname="hebo"
+    )
+    p.insert_text(
+        fitz.Point(72, 524), "Small tail two", fontsize=10.6, fontname="hebo"
+    )
+    p.insert_text(
+        fitz.Point(72, 542), "Big tail", fontsize=14, fontname="hebo"
+    )
+    pdf = tmp_path / "sizetail.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "sizetail.epub"
+    convert(pdf, out)
+    chaps = [h for n, h in doc_html(out).items() if n.startswith("chap_")]
+    assert not any("<h2>Small tail</h2>" in h for h in chaps)
+    assert any(">Big tail</h" in h for h in chaps)
+
+
+def test_bold_tail_heading_follower_demoted(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 300),
+        " ".join(["Body text fills the column above."] * 10),
+        fontsize=BODY,
+    )
+    # a bold tail followed only by a real heading still has no *body*
+    # follower — the heading doesn't count
+    p.insert_textbox(
+        fitz.Rect(72, 520, 300, 540),
+        "Tail remark",
+        fontsize=10.6,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 560, 540, 585),
+        "Discussion",
+        fontsize=14,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 600, 540, 700),
+        " ".join(["Discussion body text."] * 8),
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "headtail.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "headtail.epub"
+    convert(pdf, out)
+    chaps = [h for n, h in doc_html(out).items() if n.startswith("chap_")]
+    assert not any("<h2>Tail remark</h2>" in h for h in chaps)
+    assert any(">Discussion</h" in h for h in chaps)
+
+
+def test_keep_headers_head_no_degenerate_chapter(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 30, 300, 48), "www.journal.org", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 120, 540, 160), "A Paper Title", fontsize=17,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 200, 540, 400),
+        " ".join(["Body text fills the column."] * 10),
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "headchap.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "headchap.epub"
+    convert(pdf, out, drop_edges=False)
+    chaps = {
+        n: h for n, h in doc_html(out).items() if n.startswith("chap_")
+    }
+    # the kept head folds into the title chapter rather than forming a
+    # degenerate "Section 1" containing only the furniture paragraph
+    assert len(chaps) == 1
+    chap = next(iter(chaps.values()))
+    assert "www.journal.org" in chap and "A Paper Title" in chap
+
+
+def test_keep_headers_furniture_not_blockquote_neighbor(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 30, 300, 48), "www.journal.org", fontsize=BODY
+    )
+    # indented long block — isolated enough to look quotable only if the
+    # kept header counts as its neighbor
+    p.insert_textbox(
+        fitz.Rect(100, 200, 540, 260),
+        " ".join(["An indented remark that reads like a quote."] * 3),
+        fontsize=BODY,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 420, 540, 500),
+        " ".join(["Normal body text resumes here."] * 8),
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "bqfurn.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "bqfurn.epub"
+    convert(pdf, out, drop_edges=False)
+    html = "".join(doc_html(out).values())
+    assert "<blockquote>" not in html
+    assert "www.journal.org" in chapter_text(out)
+
+
+def test_keep_headers_furniture_not_a_follower(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 300),
+        " ".join(["Reference entries fill the column above."] * 10),
+        fontsize=BODY,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 340, 540, 380),
+        "Section tail remark",
+        fontsize=BODY,
+        fontname="hebo",
+    )
+    # the bold line's only follower is a kept margin strip (below the 60%
+    # footnote-gap line, no note opener) — furniture can't qualify it
+    p.insert_text(
+        fitz.Point(585, 520), "JOURNAL SIDEBAR", fontsize=9, rotate=90
+    )
+    pdf = tmp_path / "furnfollower.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "furnfollower.epub"
+    convert(pdf, out, drop_edges=False)
+    htmls = doc_html(out)
+    assert not any("<h2" in h and "Section tail" in h for h in htmls.values())
+    text = chapter_text(out)
+    assert "Section tail remark" in text
+    assert "JOURNAL SIDEBAR" in text
 
 
 def test_heading_becomes_h1_and_toc(tmp_path):
@@ -219,6 +784,76 @@ def test_tall_narrow_region_rasterized(tmp_path):
         tables = [n for n in zf.namelist() if "table_" in n]
     assert tables, "expected a rasterized table image"
     assert "r1c0" not in chapter_text(out)
+
+
+def test_note_interior_sup_link_validated(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 400),
+        " ".join(["Body paragraph text fills the upper page."] * 8),
+        fontsize=BODY,
+    )
+    # one note-zone block, two lines: the second is a raised 4-digit token
+    # (e.g. a superscripted year) with no matching note — it must not emit
+    # a dead #fn2010 anchor inside notes.xhtml
+    p.insert_textbox(
+        fitz.Rect(72, 650, 200, 665), "Supported by grant", fontsize=8.5
+    )
+    p.insert_text((176, 660), "2010", fontsize=6)
+    pdf = tmp_path / "notesup.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "notesup.epub"
+    convert(pdf, out)
+    assert lint_epub(out) == []
+    notes = doc_html(out)["notes.xhtml"]
+    assert "#fn2010" not in notes
+    assert "<sup>2010</sup>" in notes
+
+
+@pytest.mark.parametrize("rotation", [90, 270])
+def test_rotated_table_clip_on_rotated_page(tmp_path, rotation):
+    """On a /Rotate page the raster must come from the region the table
+    actually occupies in displayed space.
+
+    The red patch is painted where the correct clip (mediabox rect pushed
+    through ``page.rotation_matrix``) lands but the transposed 90/270 map
+    does not — under the old swapped transform the PNG contains no red.
+    """
+    doc = fitz.open()
+    p = _page(doc)
+    p.set_rotation(rotation)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 200), "A caption above the rotated table.",
+        fontsize=BODY,
+    )
+    for i, x in enumerate((200, 260, 320)):
+        p.insert_textbox(
+            fitz.Rect(x, 400, x + 15, 520), f"r1c{i} r2c{i} r3c{i}",
+            fontsize=BODY,
+        )
+    p.draw_rect(fitz.Rect(200, 430, 330, 500), color=None, fill=(1, 0, 0))
+    p.insert_textbox(
+        fitz.Rect(72, 560, 540, 700), "Body text resumes below the table.",
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "rtable_rot.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "rtable_rot.epub"
+    convert(pdf, out)
+    with zipfile.ZipFile(out) as zf:
+        tables = [n for n in zf.namelist() if "table_" in n]
+        assert tables, "expected a rasterized table image"
+        pix = fitz.Pixmap(zf.read(tables[0]))
+    reds = sum(
+        1
+        for y in range(0, pix.height, 2)
+        for x in range(0, pix.width, 2)
+        if pix.pixel(x, y)[0] > 200
+        and pix.pixel(x, y)[1] < 80
+        and pix.pixel(x, y)[2] < 80
+    )
+    assert reds > 0, "table image misses the painted region (wrong clip)"
 
 
 def test_paragraph_merges_across_page_break(tmp_path):
