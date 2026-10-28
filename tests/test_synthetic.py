@@ -431,6 +431,104 @@ def test_table_alt_finds_later_column_legend_above(tmp_path):
     assert any('alt="Table 9. Late-column legend."' in h for h in htmls.values())
 
 
+def test_table_alt_ignores_later_column_figure_above(tmp_path):
+    """A 'Figure N.' seated above the region in a later column is that
+    column's own figure caption — the stray rescue must not adopt it
+    ahead of the table's 'Table N.' legend below."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 90, 290, 160), "Left column opens the page.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 180, 290, 260), "More left column body text.", fontsize=BODY
+    )
+    # cells stay clear of the caption's x0 so no phantom edge forms
+    for i, x in enumerate((200, 260, 340, 380)):
+        p.insert_textbox(
+            fitz.Rect(x, 380, x + 15, 500), f"r1c{i} r2c{i} r3c{i}", fontsize=BODY
+        )
+    # foreign figure caption: later column, above the region's y-band
+    p.insert_textbox(
+        fitz.Rect(430, 300, 560, 340), "Figure 4. A foreign caption.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(340, 560, 560, 600), "Table 9. Real results.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(340, 620, 560, 720), "Right column body text.", fontsize=BODY
+    )
+    pdf = tmp_path / "latefig.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "latefig.epub"
+    convert(pdf, out)
+    figs = "\n".join(h for h in doc_html(out).values() if "<img" in h)
+    assert 'alt="Table 9. Real results."' in figs
+    assert 'alt="Figure 4.' not in figs
+
+
+def test_table_alt_does_not_reclaim_figure_caption(tmp_path):
+    """A captioned figure directly above a rotated table: the 'Figure N.'
+    block is the figure's own caption — the table must not adopt it a
+    second time via the above scan."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_image(fitz.Rect(72, 150, 300, 250), stream=_noise_png())
+    p.insert_textbox(
+        fitz.Rect(72, 265, 560, 290), "Figure 4. A panel.", fontsize=BODY
+    )
+    for i, x in enumerate((200, 260, 380)):
+        p.insert_textbox(
+            fitz.Rect(x, 320, x + 15, 435), f"r1c{i} r2c{i} r3c{i}", fontsize=BODY
+        )
+    p.insert_textbox(
+        fitz.Rect(72, 500, 300, 560), "Body text resumes below.", fontsize=BODY
+    )
+    pdf = tmp_path / "figtbl.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "figtbl.epub"
+    convert(pdf, out)
+    figs = "\n".join(h for h in doc_html(out).values() if "<img" in h)
+    assert 'alt="Figure 4. A panel."' in figs
+    assert 'alt="table"' in figs
+    assert figs.count('alt="Figure 4.') == 1
+
+
+def test_table_alt_finds_spanning_legend_below(tmp_path):
+    """A legend below the region that spans the gutter emits into every
+    covered column's sequence, so the forward scan reaches it even when
+    all member cells live in the later column."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 90, 290, 160), "Left column opens the page.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(340, 150, 560, 250), "Right column opens too.", fontsize=BODY
+    )
+    # all cells in col 1 — a col-0-homed legend below would correctly
+    # fail the shared-band check, but a gutter-spanning legend is fair
+    for i, x in enumerate((380, 420, 460)):
+        p.insert_textbox(
+            fitz.Rect(x, 380, x + 15, 500), f"r1c{i} r2c{i} r3c{i}", fontsize=BODY
+        )
+    # long enough that the rendered text physically crosses the gutter
+    p.insert_textbox(
+        fitz.Rect(72, 560, 560, 600),
+        "Table 5. Legend with a genuinely long line that crosses the gutter.",
+        fontsize=BODY,
+    )
+    p.insert_textbox(
+        fitz.Rect(340, 620, 560, 720), "Right column body text.", fontsize=BODY
+    )
+    pdf = tmp_path / "spanleg.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "spanleg.epub"
+    convert(pdf, out)
+    htmls = doc_html(out)
+    assert any('alt="Table 5. Legend' in h for h in htmls.values())
+
+
 def test_figure_alt_never_borrows_table_caption(tmp_path):
     """A 'Table N.' block after an image belongs to a text-flowed table
     (legend above), not to the figure — images match figure labels only."""

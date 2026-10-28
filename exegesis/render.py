@@ -166,6 +166,7 @@ def _figure_alt(
     skip_ids=frozenset(),
     pattern=CAPTION_RE,
     above_pattern=CAPTION_RE,
+    claimed=None,
 ):
     """Alt text for a figure: the nearest foreign text block beyond the
     figure's facing edge is its caption when it opens with a caption
@@ -184,10 +185,14 @@ def _figure_alt(
     would skew both the gap origin and the column band; it defaults to
     the block at ``b_i``. ``skip_ids`` lets the rotated-table call step
     over its own cells — the loop still ends at the first candidate, so
-    caption reach does not depend on cell count.
+    caption reach does not depend on cell count. ``claimed`` is a
+    page-shared set of already-adopted caption blocks — one caption
+    cannot alt two images (a figure's 'Figure N.' directly above a
+    rotated table would otherwise caption the table too).
     """
     bbox = region if region is not None else ordered[b_i]["bbox"]
     img_cols = _overlap_cols(bbox, edges, page_width)
+    claimed = claimed if claimed is not None else set()
 
     def _is_caption(b, pat):
         """The block's escaped text if it is a ``pat`` caption in the
@@ -200,27 +205,28 @@ def _figure_alt(
         return html.escape(t[:200], quote=True)
 
     def _scan(seq, gap_of, past_edge, pat, stray=None):
-        """Caption text if the first candidate in ``seq`` is one — the
-        scan ends at that block either way. ``gap_of`` measures its
-        distance from the figure edge facing the scan direction;
-        ``past_edge`` requires the candidate to lie beyond that edge
-        (modulo ~10pt of grazing), so a block inside the band or wholly
-        on the far side is skipped rather than adopted or terminal.
-        ``stray`` optionally re-checks such a skipped block — the region
-        call uses it to rescue a legend seated above the region in a
-        later column, which column-major order emits after the cells."""
+        """(block, alt) at the first candidate in ``seq`` — the scan ends
+        there whether or not the block is a caption — else None.
+        ``gap_of`` measures a candidate's distance from the figure edge
+        facing the scan direction; ``past_edge`` requires it to lie
+        beyond that edge (modulo ~10pt of grazing), so a block inside
+        the band or wholly on the far side is skipped rather than
+        adopted or terminal. ``stray`` optionally re-checks such a
+        skipped block — the region call uses it to rescue a legend
+        seated above the region in a later column, which column-major
+        order emits after the cells."""
         for b in seq:
             if b["type"] != 0:
                 break
-            if id(b) in skip_ids:
+            if id(b) in skip_ids or id(b) in claimed:
                 continue
             if not past_edge(b):
                 if stray is not None and (alt := stray(b)) is not None:
-                    return alt
+                    return b, alt
                 continue
             if gap_of(b) > 120:
                 break
-            return _is_caption(b, pat)
+            return b, _is_caption(b, pat)
         return None
 
     if region is not None:
@@ -229,26 +235,34 @@ def _figure_alt(
         # preceding block is tried first, against the full label set
         # (a text-heavy rotated figure can carry a 'Figure N.' legend)
         above_gap = lambda b: bbox[1] - b["bbox"][3]
-        above = lambda b: (
-            _is_caption(b, above_pattern)
-            if -10 <= above_gap(b) <= 120
-            else None
+        # a later column's above-legend emits after the cells; rescue it
+        # under the table's own label set — a 'Figure N.' over there is
+        # that column's figure caption, not this table's legend
+        stray_above = lambda b: (
+            _is_caption(b, pattern) if -10 <= above_gap(b) <= 120 else None
         )
-        alt = _scan(
+        hit = _scan(
             reversed(ordered[:b_i]),
             above_gap,
             lambda b: above_gap(b) >= -10,
             above_pattern,
         )
-        if alt is not None:
-            return alt
-    return _scan(
+        if hit is not None:
+            b, alt = hit
+            if alt is not None:
+                claimed.add(id(b))
+                return alt
+    hit = _scan(
         iter(ordered[b_i + 1 :]),
         lambda b: b["bbox"][1] - bbox[3],
         lambda b: b["bbox"][1] >= bbox[3] - 10,
         pattern,
-        stray=above if region is not None else None,
-    ) or fallback
+        stray=stray_above if region is not None else None,
+    )
+    if hit is not None and hit[1] is not None:
+        claimed.add(id(hit[0]))
+        return hit[1]
+    return fallback
 
 
 def _footnote_text(block, body_size):
@@ -295,6 +309,7 @@ def _render_page(page, page_index: int, state: PipelineState):
         else set()
     )
     tbl_done = False
+    claimed_caps = set()
 
     def flush_par():
         if state.par:
@@ -340,6 +355,7 @@ def _render_page(page, page_index: int, state: PipelineState):
                     edges,
                     page.rect.width,
                     pattern=FIGURE_CAPTION_RE,
+                    claimed=claimed_caps,
                 )
                 frags.append(
                     f'<p class="fig"><img src="{state.images[digest].file_name}"'
@@ -362,6 +378,7 @@ def _render_page(page, page_index: int, state: PipelineState):
                     fallback="table",
                     skip_ids=tbl_ids,
                     pattern=TABLE_CAPTION_RE,
+                    claimed=claimed_caps,
                 )
                 mb = page.mediabox
                 tbl = fitz.Rect(
