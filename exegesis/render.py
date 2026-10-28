@@ -199,17 +199,24 @@ def _figure_alt(
             return None
         return html.escape(t[:200], quote=True)
 
-    def _scan(seq, gap_of, past_edge, pat):
+    def _scan(seq, gap_of, past_edge, pat, stray=None):
         """Caption text if the first candidate in ``seq`` is one — the
         scan ends at that block either way. ``gap_of`` measures its
         distance from the figure edge facing the scan direction;
         ``past_edge`` requires the candidate to lie beyond that edge
         (modulo ~10pt of grazing), so a block inside the band or wholly
-        on the far side is skipped rather than adopted or terminal."""
+        on the far side is skipped rather than adopted or terminal.
+        ``stray`` optionally re-checks such a skipped block — the region
+        call uses it to rescue a legend seated above the region in a
+        later column, which column-major order emits after the cells."""
         for b in seq:
             if b["type"] != 0:
                 break
-            if id(b) in skip_ids or not past_edge(b):
+            if id(b) in skip_ids:
+                continue
+            if not past_edge(b):
+                if stray is not None and (alt := stray(b)) is not None:
+                    return alt
                 continue
             if gap_of(b) > 120:
                 break
@@ -221,10 +228,16 @@ def _figure_alt(
         # below a table is likelier the *next* table's legend — so the
         # preceding block is tried first, against the full label set
         # (a text-heavy rotated figure can carry a 'Figure N.' legend)
+        above_gap = lambda b: bbox[1] - b["bbox"][3]
+        above = lambda b: (
+            _is_caption(b, above_pattern)
+            if -10 <= above_gap(b) <= 120
+            else None
+        )
         alt = _scan(
             reversed(ordered[:b_i]),
-            lambda b: bbox[1] - b["bbox"][3],
-            lambda b: b["bbox"][3] <= bbox[1] + 10,
+            above_gap,
+            lambda b: above_gap(b) >= -10,
             above_pattern,
         )
         if alt is not None:
@@ -234,6 +247,7 @@ def _figure_alt(
         lambda b: b["bbox"][1] - bbox[3],
         lambda b: b["bbox"][1] >= bbox[3] - 10,
         pattern,
+        stray=above if region is not None else None,
     ) or fallback
 
 

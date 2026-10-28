@@ -397,6 +397,40 @@ def test_table_alt_ignores_figure_caption_below(tmp_path):
     assert 'alt="table"' in figs and 'alt="Figure 4' not in figs
 
 
+def test_table_alt_finds_later_column_legend_above(tmp_path):
+    """A legend seated in a later column above the region emits after the
+    first member cell in column-major order — the forward scan must still
+    rescue it rather than fall back to 'table'."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 90, 290, 160), "Left column opens the page.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 180, 290, 260), "More left column body text.", fontsize=BODY
+    )
+    # cells on both sides of the gutter: the region covers both bands;
+    # none may cross the edge or the legend would hoist into top_zone
+    for i, x in enumerate((200, 260, 380, 420)):
+        p.insert_textbox(
+            fitz.Rect(x, 380, x + 15, 500), f"r1c{i} r2c{i} r3c{i}", fontsize=BODY
+        )
+    # the legend sits at the top of the right column, above the region —
+    # column-major order emits it only after col 0's member cells
+    p.insert_textbox(
+        fitz.Rect(340, 300, 560, 340), "Table 9. Late-column legend.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(340, 560, 560, 720), "Right column body text.", fontsize=BODY
+    )
+    pdf = tmp_path / "lateleg.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "lateleg.epub"
+    convert(pdf, out)
+    htmls = doc_html(out)
+    assert any('alt="Table 9. Late-column legend."' in h for h in htmls.values())
+
+
 def test_figure_alt_never_borrows_table_caption(tmp_path):
     """A 'Table N.' block after an image belongs to a text-flowed table
     (legend above), not to the figure — images match figure labels only."""
