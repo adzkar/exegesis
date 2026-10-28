@@ -31,10 +31,12 @@ chapters.
   ≥0.9× outside edge zones (papers whose headings share the body font) that
   also precedes body-flow text in its column — footnote-zone, rasterized
   table, and kept-furniture blocks don't count (a trailing bold line is
-  usually a note, not a heading). The same edge+follower check gates a
-  bold line inside a mixed-weight block, and the follower scan is
-  column- and page-local — a bold line ending a column or page can't see
-  its next-column/next-page follower and stays demoted. Lines opening
+  usually a note, not a heading); a block that is itself a heading
+  terminates the scan — a tail before a new section precedes no body.
+  The same edge+follower check gates a bold line inside a mixed-weight
+  block, and the follower scan is column- and page-local — a bold line
+  ending a column or page can't see its
+  next-column/next-page follower and stays demoted. Lines opening
   with footnote markers (`*†‡§`) are never headings.
   Sentence-like text with periods is rejected. Named labels (`References`,
   `Supporting Online Material`…) at block start emit h2, but respect the

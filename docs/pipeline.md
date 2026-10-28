@@ -53,7 +53,7 @@ flowchart TD
 | Full-width span | block crosses a gutter between column edges |
 | Top zone | blocks fully above the first spanning element |
 | h1 | single-line ≥1.6× body, multi-line block all-lines ≥1.6×, or first p0 heading ≥1.3× (promoted) |
-| h2 | standalone ≥1.08× body, or all-bold line/block ≥0.9× body outside edge zones that precedes body-flow text in its column (demotion sticks per line and for bold-band lines in mixed blocks; the scan is column- and page-local so a column- or page-final bold line stays demoted); no sentence periods, no `*†‡§` opener |
+| h2 | standalone ≥1.08× body, or all-bold line/block ≥0.9× body outside edge zones that precedes body-flow text in its column (a heading terminates the follower scan; demotion sticks per line and for bold-band lines in mixed blocks; the scan is column- and page-local so a column- or page-final bold line stays demoted); no sentence periods, no `*†‡§` opener |
 | Section label | `References`, `Supporting Online Material`, `Methods`, … at block start → h2 (respects bold-gate demotion — `Funding …` tails are notes) |
 | Top label | all-caps short text in top 12% of page → `<p class="label">` |
 | Byline | median ≥1.15× body, or directly after h1 + name-like (` and `/`,`); short single-line followers merge; trailing drop-cap letter relocates into the paragraph |
