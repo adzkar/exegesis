@@ -46,6 +46,13 @@ FIGURE_CAPTION_RE = re.compile(
     r"(?i)^\s*(fig\.?|figure|plate|scheme|chart)\s*\.?\s*"
     r"\d+\s*(?:[.:)]|$)"
 )
+# the mirror for the rasterized-table call: a 'Figure N.' block *below*
+# the region is a following figure's caption, not the table's legend —
+# while the legend above may still be 'Figure N.' (a text-heavy rotated
+# figure reaches the same raster path)
+TABLE_CAPTION_RE = re.compile(
+    r"(?i)^\s*table\s*\.?\s*\d+\s*(?:[.:)]|$)"
+)
 
 
 def _section_label(text):
@@ -158,69 +165,75 @@ def _figure_alt(
     fallback="",
     skip_ids=frozenset(),
     pattern=CAPTION_RE,
+    above_pattern=CAPTION_RE,
 ):
-    """Alt text for a figure: the first foreign text block after the image
-    is its caption when it opens with a caption pattern ('Fig. 1',
-    'Table 2'…), starts within 120pt below the figure's bottom, and
+    """Alt text for a figure: the nearest foreign text block beyond the
+    figure's facing edge is its caption when it opens with a caption
+    pattern ('Fig. 1', 'Table 2'…), starts within 120pt of that edge, and
     shares a column with it.
 
-    Stopping at the first non-caption text block keeps an uncaptioned
-    figure from inheriting a later figure's caption, and the shared-column
-    requirement keeps a two-column page's image from stealing the adjacent
-    column's 'Table 3.' caption. ``region`` is the figure's true extent —
-    the rotated table's region, since an arbitrary member cell would skew
-    both the gap origin and the column band; it defaults to the block at
-    ``b_i``. ``skip_ids`` lets the rotated-table call step over its own
-    cells — the loop still ends at the first foreign text block, so
-    caption reach does not depend on cell count. Column sharing uses
-    ``_overlap_cols`` rather than ``_covered_cols`` — a block bleeding a
-    point across the gutter must not claim both bands.
+    Candidates must lie clearly past the edge facing the scan — blocks
+    beside or wholly beyond the figure are skipped, since column-major
+    order can interleave a later column's content between the figure and
+    its true caption. The first candidate still ends the scan, so an
+    uncaptioned figure cannot inherit a later figure's caption, and the
+    shared-column requirement (``_overlap_cols``, not the tolerance-free
+    ``_covered_cols``) keeps a two-column page's image from stealing the
+    adjacent column's 'Table 3.' caption. ``region`` is the figure's true
+    extent — the rotated table's region, since an arbitrary member cell
+    would skew both the gap origin and the column band; it defaults to
+    the block at ``b_i``. ``skip_ids`` lets the rotated-table call step
+    over its own cells — the loop still ends at the first candidate, so
+    caption reach does not depend on cell count.
     """
     bbox = region if region is not None else ordered[b_i]["bbox"]
     img_cols = _overlap_cols(bbox, edges, page_width)
 
-    def _is_caption(b):
-        """The block's escaped text if it is a caption in the figure's
-        column band, else None."""
+    def _is_caption(b, pat):
+        """The block's escaped text if it is a ``pat`` caption in the
+        figure's column band, else None."""
         t = _block_text(b)
-        if not pattern.match(t):
+        if not pat.match(t):
             return None
         if not img_cols & _overlap_cols(b["bbox"], edges, page_width):
             return None
         return html.escape(t[:200], quote=True)
 
-    def _scan(seq, gap_of, out_of_band):
-        """Caption text if the first in-band foreign text block in ``seq``
-        is one — the scan ends at that block either way. ``gap_of``
-        measures its distance from the figure edge facing the scan
-        direction; ``out_of_band`` marks blocks lying wholly on the far
-        side of the figure, which column-major order can interleave with
-        the real caption — they are skipped, not adopted or terminal."""
+    def _scan(seq, gap_of, past_edge, pat):
+        """Caption text if the first candidate in ``seq`` is one — the
+        scan ends at that block either way. ``gap_of`` measures its
+        distance from the figure edge facing the scan direction;
+        ``past_edge`` requires the candidate to lie beyond that edge
+        (modulo ~10pt of grazing), so a block inside the band or wholly
+        on the far side is skipped rather than adopted or terminal."""
         for b in seq:
             if b["type"] != 0:
                 break
-            if id(b) in skip_ids or out_of_band(b):
+            if id(b) in skip_ids or not past_edge(b):
                 continue
             if gap_of(b) > 120:
                 break
-            return _is_caption(b)
+            return _is_caption(b, pat)
         return None
 
     if region is not None:
         # journals set 'Table N.' legends above the table body — and text
         # below a table is likelier the *next* table's legend — so the
-        # preceding block is tried before the following one
+        # preceding block is tried first, against the full label set
+        # (a text-heavy rotated figure can carry a 'Figure N.' legend)
         alt = _scan(
             reversed(ordered[:b_i]),
             lambda b: bbox[1] - b["bbox"][3],
-            lambda b: b["bbox"][1] >= bbox[3],
+            lambda b: b["bbox"][3] <= bbox[1] + 10,
+            above_pattern,
         )
         if alt is not None:
             return alt
     return _scan(
         iter(ordered[b_i + 1 :]),
         lambda b: b["bbox"][1] - bbox[3],
-        lambda b: b["bbox"][3] <= bbox[1],
+        lambda b: b["bbox"][1] >= bbox[3] - 10,
+        pattern,
     ) or fallback
 
 
@@ -334,6 +347,7 @@ def _render_page(page, page_index: int, state: PipelineState):
                     region=tbl,
                     fallback="table",
                     skip_ids=tbl_ids,
+                    pattern=TABLE_CAPTION_RE,
                 )
                 mb = page.mediabox
                 tbl = fitz.Rect(

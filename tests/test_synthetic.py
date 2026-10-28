@@ -336,6 +336,67 @@ def test_table_alt_skips_above_region_foreign_caption(tmp_path):
     assert not any('alt="Figure 4' in h for h in htmls.values())
 
 
+def test_table_alt_skips_beside_region_caption(tmp_path):
+    """A caption block beside the region — inside its y-band in a covered
+    later column — is not a candidate: candidates must start beyond the
+    facing edge."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 90, 290, 160), "Left column opens the page.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 180, 290, 260), "More left column body text.", fontsize=BODY
+    )
+    # cells on both sides of the gutter: the region covers both bands
+    for i, x in enumerate((200, 300, 400)):
+        p.insert_textbox(
+            fitz.Rect(x, 380, x + 15, 500), f"r1c{i} r2c{i} r3c{i}", fontsize=BODY
+        )
+    # right column: a figure caption *inside* the region's y-band but
+    # outside its x-range — beside the table, not its legend
+    p.insert_textbox(
+        fitz.Rect(430, 420, 560, 460), "Figure 4. A foreign caption.", fontsize=BODY
+    )
+    # the table's own legend below the region's bottom edge (~90pt)
+    p.insert_textbox(
+        fitz.Rect(340, 560, 560, 600), "Table 9. Real results.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(340, 640, 560, 720), "Right column body text.", fontsize=BODY
+    )
+    pdf = tmp_path / "besidetheft.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "besidetheft.epub"
+    convert(pdf, out)
+    htmls = doc_html(out)
+    assert any('alt="Table 9. Real results."' in h for h in htmls.values())
+    assert not any('alt="Figure 4' in h for h in htmls.values())
+
+
+def test_table_alt_ignores_figure_caption_below(tmp_path):
+    """A 'Figure N.' block below a rasterized table belongs to a following
+    figure — the table call's below-scan accepts table labels only."""
+    doc = fitz.open()
+    p = _page(doc)
+    for i, x in enumerate((180, 220, 260, 300, 340)):
+        p.insert_textbox(
+            fitz.Rect(x, 380, x + 15, 520), f"r1c{i} r2c{i} r3c{i}", fontsize=BODY
+        )
+    p.insert_textbox(
+        fitz.Rect(72, 545, 540, 585), "Figure 4. Not a table legend.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 620, 540, 700), "Body text resumes below.", fontsize=BODY
+    )
+    pdf = tmp_path / "tfigcap.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tfigcap.epub"
+    convert(pdf, out)
+    figs = "\n".join(h for h in doc_html(out).values() if "<img" in h)
+    assert 'alt="table"' in figs and 'alt="Figure 4' not in figs
+
+
 def test_figure_alt_never_borrows_table_caption(tmp_path):
     """A 'Table N.' block after an image belongs to a text-flowed table
     (legend above), not to the figure — images match figure labels only."""
