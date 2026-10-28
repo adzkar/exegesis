@@ -8,7 +8,10 @@ chunking + ebooklib packaging).
 """
 import sys
 
+from exegesis import convert
 from exegesis.cli import main
+
+__all__ = ["convert", "main"]
 
 if __name__ == "__main__":
     sys.exit(main())

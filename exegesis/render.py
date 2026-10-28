@@ -21,6 +21,7 @@ from .const import MAX_HEADING_CHARS, MIN_HEADING_CHARS, MIN_IMAGE_BYTES
 from .order import _ordered_blocks
 from .state import PipelineState
 from .text import (
+    FN_LINK_RE,
     LIST_ITEM_RE,
     SECTION_LABEL_RE,
     _block_lines,
@@ -281,6 +282,19 @@ def _footnote_text(block, body_size):
     )
 
 
+def _strip_dead_fn_links(frag, fn_nums):
+    """Unlink sup-markers whose ``#fnN`` target has no note entry — links to
+    real notes survive; other raised digits (years, cross-refs) revert to
+    plain superscripts. Applied to body fragments and, inside notes.xhtml
+    itself, to everything past a note's leading marker."""
+    return FN_LINK_RE.sub(
+        lambda m: m.group(0)
+        if int(m.group(1)) in fn_nums
+        else f"<sup>{m.group(2)}</sup>",
+        frag,
+    )
+
+
 def _render_page(page, page_index: int, state: PipelineState):
     """Render one page to HTML fragments; collect headings, images, footnotes.
 
@@ -305,17 +319,33 @@ def _render_page(page, page_index: int, state: PipelineState):
         edges,
         state.drop_edges,
     )
+    # kept furniture is render-only: it never feeds footnote-zone detection
+    # or rotated-table candidate sets
+    body_blocks = [b for b in ordered if not b.get("is_furniture")]
     foot_tops = _footnote_tops(
-        ordered, edges, body_size, page.rect.height, state.line_h
+        body_blocks, edges, body_size, page.rect.height, state.line_h
     )
     frags = state.page_frags[page_index]
 
-    tbl = _rotated_table_region(ordered)
+    tbl = _rotated_table_region(body_blocks)
     tbl_ids = (
-        {id(b) for b in ordered if fitz.Rect(b["bbox"]).intersects(tbl)}
+        {id(b) for b in body_blocks if fitz.Rect(b["bbox"]).intersects(tbl)}
         if tbl is not None
         else set()
     )
+    # ids of blocks that leave (or never enter) the body flow — rasterized
+    # table cells, footnote-region blocks, kept furniture — none of them can
+    # count as a bold-only h2's follower
+    nonbody_ids = tbl_ids | {
+        id(b)
+        for b in ordered
+        if b.get("is_furniture")
+        or (
+            b["type"] == 0
+            and (fc := _assign_column(b, edges)) in foot_tops
+            and b["bbox"][1] >= foot_tops[fc] - 5
+        )
+    }
     tbl_done = False
     claimed_caps = set()
 
@@ -394,7 +424,7 @@ def _render_page(page, page_index: int, state: PipelineState):
                     min(mb.width, tbl.x1 + 8),
                     min(mb.height, tbl.y1 + 20),
                 )
-                clip = _rotate_clip(tbl, page.rotation, mb)
+                clip = _rotate_clip(tbl, page.rotation_matrix)
                 pix = page.get_pixmap(clip=clip, matrix=fitz.Matrix(2, 2))
                 data = pix.tobytes("png")
                 digest = hashlib.sha1(data).hexdigest()[:16]
@@ -408,6 +438,18 @@ def _render_page(page, page_index: int, state: PipelineState):
                     f'<p class="fig"><img src="{state.images[digest].file_name}"'
                     f' alt="{alt}"/></p>'
                 )
+            continue
+
+        if block.get("is_furniture"):
+            # kept furniture emits verbatim as its own paragraph — it must
+            # not merge with the open paragraph or reach any classifier.
+            # Only a same-page paragraph is flushed: a paragraph carried
+            # from the previous page must stay open so its continuation
+            # merges and lands on the start page (flushing here would
+            # split it mid-sentence around every running head)
+            if state.par_page == page_index:
+                flush_par()
+            frags.append(f"<p>{html.escape(_block_text(block))}</p>")
             continue
 
         col = _assign_column(block, edges)
@@ -426,29 +468,40 @@ def _render_page(page, page_index: int, state: PipelineState):
             continue
 
         level = _standalone_heading_level(block, body_size)
+        demoted = False
+        # bold-only candidates carry no size signal: they must sit
+        # outside the edge zones AND introduce following *body* text in
+        # their column — a trailing bold line at a section/page end is
+        # far more often a note than a heading (a block that is itself a
+        # heading doesn't count either). The scan is column- and
+        # page-local: a bold line ending a column or page can't see its
+        # next-column/next-page follower and stays demoted.
+        in_edge = (
+            block["bbox"][1] < page.rect.height * 0.12
+            or block["bbox"][3] > page.rect.height * 0.88
+        )
+        follower = None
+        if not in_edge:
+            for b in ordered[b_i + 1 :]:
+                if (
+                    b["type"] != 0
+                    or id(b) in nonbody_ids
+                    or col not in _covered_cols(b, edges, page.rect.width)
+                ):
+                    continue
+                # the first body-flow block in the column decides: a
+                # heading ends the section, so the tail precedes no body
+                if _standalone_heading_level(b, body_size) is None:
+                    follower = b
+                break
+        bold_h2_ok = follower is not None
         if (
             level == 2
             and _line_max_size(_block_lines(block)[0]) < body_size * 1.08
+            and not bold_h2_ok
         ):
-            # bold-only candidates carry no size signal: they must sit
-            # outside the edge zones AND introduce following text in their
-            # column — a trailing bold line at a section/page end is far
-            # more often a note than a heading.
-            in_edge = (
-                block["bbox"][1] < page.rect.height * 0.12
-                or block["bbox"][3] > page.rect.height * 0.88
-            )
-            follower = next(
-                (
-                    b
-                    for b in ordered[b_i + 1 :]
-                    if b["type"] == 0
-                    and col in _covered_cols(b, edges, page.rect.width)
-                ),
-                None,
-            )
-            if in_edge or follower is None:
-                level = None
+            level = None
+            demoted = True
         if (
             level == 2
             and page_index == 0
@@ -505,8 +558,24 @@ def _render_page(page, page_index: int, state: PipelineState):
             and med <= body_size * 1.05
             and len(btext) > 60
         ):
-            prev = ordered[b_i - 1] if b_i > 0 else None
-            nxt = ordered[b_i + 1] if b_i + 1 < len(ordered) else None
+            # isolation is measured against body blocks — kept furniture
+            # sits at the page edges and must not count as a neighbor
+            prev = next(
+                (
+                    b
+                    for b in reversed(ordered[:b_i])
+                    if not b.get("is_furniture")
+                ),
+                None,
+            )
+            nxt = next(
+                (
+                    b
+                    for b in ordered[b_i + 1 :]
+                    if not b.get("is_furniture")
+                ),
+                None,
+            )
             isolated = (
                 prev is not None
                 and prev["type"] == 0
@@ -536,7 +605,10 @@ def _render_page(page, page_index: int, state: PipelineState):
         ):
             flush_par()
         for li, line in enumerate(_block_lines(block)):
-            if li == 0:
+            # labels respect the bold-only demotion — "Funding NIH grant…"
+            # tails are plausible notes, not section heads; a page-final
+            # "References" stays demoted when its body isn't visible
+            if li == 0 and not demoted:
                 m = _section_label(_line_text(line).strip())
                 if m:
                     emit_heading(2, m[0])
@@ -544,12 +616,24 @@ def _render_page(page, page_index: int, state: PipelineState):
                         state.par.append(html.escape(m[1]))
                     continue
             # blocks opening with a footnote marker are note material —
-            # none of their lines may classify as headings
+            # none of their lines may classify as headings. A demoted
+            # block's *size-signaled* lines may still emit; only its
+            # bold-band lines are silenced by the gate below
             line_level = (
                 _heading_level(line, body_size)
                 if btext[:1] not in "*†‡§"
                 else None
             )
+            # a line-level h2 promoted by the bold-only band (size <
+            # 1.08×body is unreachable via the size path) needs the same
+            # edge/follower check as a block-level candidate — a bold line
+            # inside a mixed-weight block is just as often a note
+            if (
+                line_level == 2
+                and _line_max_size(line) < body_size * 1.08
+                and not bold_h2_ok
+            ):
+                line_level = None
             if line_level:
                 emit_heading(line_level, _line_text(line).strip())
                 continue

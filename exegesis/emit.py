@@ -16,7 +16,7 @@ from .analyze import (
     _doc_column_edges,
 )
 from .const import BOOK_LANG, PAGES_PER_FALLBACK_CHAPTER
-from .render import _render_page
+from .render import _render_page, _strip_dead_fn_links
 from .state import PipelineState
 from .text import NOTE_START_RE, _join_lines
 
@@ -47,26 +47,31 @@ def convert(
     """Convert ``pdf_path`` to an EPUB at ``out_path``; returns a stats dict."""
     doc = fitz.open(pdf_path)
     meta = doc.metadata or {}
-    # single extraction pass: every analysis/render step reads these dicts
+    # single extraction pass: every analysis/render step reads these dicts.
+    # All pages are materialized upfront, so peak memory spans the whole
+    # document — bounding it would need a second extraction pass per page.
     pages = _extract_pages(doc)
 
     body_size, line_h = _body_font_size(pages)
+    boilerplate = _boilerplate_signatures(pages)
     state = PipelineState(
         body_size=body_size,
         line_h=line_h,
         page_items=[pdict["blocks"] for _p, pdict in pages],
-        edges=_doc_column_edges(pages),
+        edges=_doc_column_edges(pages, boilerplate),
         drop_edges=drop_edges,
-        boilerplate=(
-            _boilerplate_signatures(pages)
-            if drop_edges and doc.page_count > 3
-            else set()
-        ),
+        boilerplate=boilerplate,
         page_frags=[[] for _ in range(doc.page_count)],
     )
 
-    for i, (page, _pdict) in enumerate(pages):
+    for i, (page, pdict) in enumerate(pages):
         _render_page(page, i, state)
+        # release the rendered page's dict early — embedded image bytes in
+        # it dominate the resident set on image-heavy documents. This trims
+        # the loop's tail residency, not the peak: dicts for unrendered
+        # pages stay alive until their turn.
+        pdict.clear()
+        state.page_items[i] = []
     if state.par:
         state.page_frags[state.par_page].append(
             f"<p>{_join_lines(state.par)}</p>"
@@ -74,13 +79,7 @@ def convert(
     fn_nums = {n for n, _ in state.footnotes if n is not None}
     for frags in state.page_frags:
         for k, frag in enumerate(frags):
-            frags[k] = re.sub(
-                r'<sup><a href="notes.xhtml#fn(\d+)">(\d+)</a></sup>',
-                lambda m: m.group(0)
-                if int(m.group(1)) in fn_nums
-                else f"<sup>{m.group(2)}</sup>",
-                frag,
-            )
+            frags[k] = _strip_dead_fn_links(frag, fn_nums)
 
     flat = [
         (pi, frag)
@@ -97,8 +96,8 @@ def convert(
             if pi % PAGES_PER_FALLBACK_CHAPTER == 0
             and (i == 0 or flat[i - 1][0] != pi)
         ]
-    if not boundaries or boundaries[0] != 0:
-        boundaries.insert(0, 0)
+    if not boundaries:
+        boundaries = [0]
 
     if title is None:
         title = meta.get("title") or ""
@@ -142,12 +141,16 @@ def convert(
 
     chapters = []
     for idx, start in enumerate(boundaries):
+        # frags before the first heading fold into chapter 1 — a kept
+        # running head on the title page must not form a degenerate
+        # leading chapter that pushes the title into chap_2
+        real_start = 0 if idx == 0 else start
         end = boundaries[idx + 1] if idx + 1 < len(boundaries) else len(flat)
-        content = "\n".join(f for _, f in flat[start:end])
+        content = "\n".join(f for _, f in flat[real_start:end])
         heading = next(
             (
                 re.sub(r"<[^>]+>", "", f)
-                for _, f in flat[start:end]
+                for _, f in flat[real_start:end]
                 if f.startswith("<h")
             ),
             None,
@@ -162,7 +165,7 @@ def convert(
             f"<html><body>{content.strip() or '<p></p>'}</body></html>"
         )
         book.add_item(chap)
-        chapters.append((chap, start))
+        chapters.append((chap, real_start))
 
     note_entries = []
     seen_fn = set()
@@ -170,10 +173,15 @@ def convert(
         frag = re.sub(
             r"^<sup><a[^>]*>(\d+)</a></sup>", r"<sup>\1</sup>", frag
         )
+        # note bodies get the same dead-anchor validation as body text —
+        # a raised digit mid-note (e.g. a superscripted year) is not a link
+        frag = _strip_dead_fn_links(frag, fn_nums)
         # an unnumbered block is a column/page-split continuation of the
         # previous note unless it opens a new note itself (correspondence
         # and acknowledgment openers — the same pattern that marks the
-        # note zone on the page)
+        # note zone on the page). A real continuation that happens to open
+        # with such a phrase splits off as an unnumbered entry instead —
+        # rare, and safer than fusing two genuine notes.
         frag_text = re.sub(r"<[^>]+>", "", frag).lstrip("*†‡§ ")
         if (
             num is None

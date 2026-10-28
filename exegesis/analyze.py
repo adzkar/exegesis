@@ -10,6 +10,7 @@ import fitz
 
 from .const import BOILERPLATE_COVERAGE, EDGE_ZONE
 from .text import (
+    FURNITURE_RE,
     NOTE_START_RE,
     _block_lines,
     _block_median_size,
@@ -85,7 +86,7 @@ def _column_edges(items):
     return [median(c) for c in clusters if len(c) >= 2] or [0.0]
 
 
-def _doc_column_edges(pages):
+def _doc_column_edges(pages, boilerplate=frozenset()):
     """Column edges for the document: edges found on ≥half of all pages.
 
     Per-page clustering produces phantom edges from bylines, headings, and
@@ -95,8 +96,19 @@ def _doc_column_edges(pages):
     ``pages`` is a list of ``(fitz.Page, page.get_text("dict"))`` pairs.
     """
     votes = []
-    for _page, pdict in pages:
-        items = pdict["blocks"]
+    for page, pdict in pages:
+        # furniture shapes can't form column edges — a sidebar or running
+        # head recurring at the same x on every page is the classic
+        # phantom-edge generator
+        items = [
+            b
+            for b in pdict["blocks"]
+            if b["type"] == 0
+            and not _is_furniture(b, page.rect, _block_text(b))
+            and not _is_signature_furniture(
+                b, page.rect.height, boilerplate
+            )
+        ]
         for e in _column_edges(items):
             for v in votes:
                 if abs(v[0] - e) < 15:
@@ -151,6 +163,36 @@ def _overlap_cols(bbox, edges, page_width, tol=12):
     return cols
 
 
+def _is_margin_strip(block, rect):
+    """Narrow+tall block in the outer 10% margins — rotated sidebar
+    furniture (journal titles running down the page edge)."""
+    x0, y0, x1, y1 = block["bbox"]
+    return (
+        x1 - x0 < 25
+        and y1 - y0 > 4 * (x1 - x0)
+        and (x0 > rect.width * 0.9 or x1 < rect.width * 0.1)
+    )
+
+
+def _is_furniture(block, rect, text):
+    """Edge furniture by shape or content: narrow+tall margin strips in
+    the outer 10% margins, or pattern furniture/page numbers in the outer
+    7% edge."""
+    _, y0, _, y1 = block["bbox"]
+    return _is_margin_strip(block, rect) or (
+        (y0 > rect.height * 0.93 or y1 < rect.height * 0.07)
+        and (FURNITURE_RE.search(text) or re.fullmatch(r"\d{1,4}", text))
+    )
+
+
+def _is_signature_furniture(block, height, boilerplate):
+    """Edge-zone text whose normalized signature repeats across pages —
+    a running head/footer detected by recurrence rather than content."""
+    _, y0, _, y1 = block["bbox"]
+    near_edge = y1 < height * EDGE_ZONE or y0 > height * (1 - EDGE_ZONE)
+    return near_edge and _signature(_block_text(block)) in boilerplate
+
+
 def _rotated_table_region(blocks):
     """Bbox of a rotated (landscape) table: ≥3 tall-narrow text blocks sharing
     a common y-point, i.e. rotated text columns standing side by side."""
@@ -183,30 +225,17 @@ def _rotated_table_region(blocks):
     )
 
 
-def _rotate_clip(rect, rot, mb):
-    """Map a rect found in rotated (displayed) space back into mediabox
-    coordinates for ``page.get_pixmap(clip=...)``.
+def _rotate_clip(rect, matrix):
+    """Map a mediabox-space rect into the displayed space that
+    ``page.get_pixmap(clip=...)`` expects; pass ``page.rotation_matrix``.
 
-    ``get_pixmap`` interprets the clip in the page's unrotated mediabox
-    space, so a table region located on the displayed page must be pushed
-    back through the page's own ``/Rotate``. For 90 the displayed x axis
-    runs along the mediabox y axis while displayed y maps to ``width - x``;
-    270 is the mirror image; 180 flips both axes. 0 returns the rect.
+    ``get_text`` reports block bboxes in the page's unrotated mediabox
+    coordinates, while ``get_pixmap`` interprets the clip in the rotated
+    (displayed) coordinate system — on a ``/Rotate`` page the same table
+    region sits somewhere else. ``rotation_matrix`` is exactly this map
+    (the identity on unrotated pages).
     """
-    if rot == 90:
-        return fitz.Rect(
-            rect.y0, mb.width - rect.x1, rect.y1, mb.width - rect.x0
-        )
-    if rot == 270:
-        return fitz.Rect(
-            mb.height - rect.y1, rect.x0, mb.height - rect.y0, rect.x1
-        )
-    if rot == 180:
-        return fitz.Rect(
-            mb.width - rect.x1, mb.height - rect.y1,
-            mb.width - rect.x0, mb.height - rect.y0,
-        )
-    return rect
+    return rect * matrix
 
 
 def _sup_marker(block, body_size):
