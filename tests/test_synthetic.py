@@ -786,6 +786,533 @@ def test_tall_narrow_region_rasterized(tmp_path):
     assert "r1c0" not in chapter_text(out)
 
 
+def test_rotated_table_alt_from_caption(tmp_path):
+    """A caption below a wide rotated table is found no matter how many
+    cell blocks intervene — the alt scan steps over member cells."""
+    doc = fitz.open()
+    p = _page(doc)
+    for i, x in enumerate((180, 220, 260, 300, 340)):
+        p.insert_textbox(
+            fitz.Rect(x, 380, x + 15, 520), f"r1c{i} r2c{i} r3c{i}", fontsize=BODY
+        )
+    p.insert_textbox(
+        fitz.Rect(72, 545, 540, 585), "Table 1. Landscape results.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 620, 540, 700), "Body text resumes below.", fontsize=BODY
+    )
+    pdf = tmp_path / "rtablecap.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "rtablecap.epub"
+    convert(pdf, out)
+    htmls = doc_html(out)
+    assert any('alt="Table 1. Landscape results."' in h for h in htmls.values())
+
+
+def test_rotated_table_alt_gap_from_region_bottom(tmp_path):
+    """The caption gap measures from the table region's bottom, not the
+    first cell's — a short leading cell must not push the caption away."""
+    doc = fitz.open()
+    p = _page(doc)
+    # earliest cell in reading order (min y0, min x0) renders to y1~=428…
+    p.insert_textbox(
+        fitz.Rect(180, 340, 195, 470), "r1c0 r2c0 r3c0", fontsize=BODY
+    )
+    # …while the rest of the region renders down to y1~=497
+    for i, x in enumerate((220, 260, 300, 340)):
+        p.insert_textbox(
+            fitz.Rect(x, 380, x + 15, 620),
+            f"r1c{i} r2c{i} r3c{i} r4c{i}",
+            fontsize=BODY,
+        )
+    # caption top is ~140pt below the first cell's bottom but only ~73pt
+    # below the region's true bottom
+    p.insert_textbox(
+        fitz.Rect(72, 570, 540, 610), "Table 2. Deep landscape.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 640, 540, 720), "Body text resumes below.", fontsize=BODY
+    )
+    pdf = tmp_path / "rtabledeep.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "rtabledeep.epub"
+    convert(pdf, out)
+    htmls = doc_html(out)
+    assert any('alt="Table 2. Deep landscape."' in h for h in htmls.values())
+
+
+def test_rotated_table_alt_from_caption_above(tmp_path):
+    """Journals set 'Table N.' legends above the table body — a caption
+    preceding the figure in reading order must still be found."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 300, 540, 340), "Table 3. Legend above.", fontsize=BODY
+    )
+    for i, x in enumerate((180, 220, 260, 300, 340)):
+        p.insert_textbox(
+            fitz.Rect(x, 380, x + 15, 520), f"r1c{i} r2c{i} r3c{i}", fontsize=BODY
+        )
+    p.insert_textbox(
+        fitz.Rect(72, 560, 540, 620), "Body text resumes below.", fontsize=BODY
+    )
+    pdf = tmp_path / "rtableabove.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "rtableabove.epub"
+    convert(pdf, out)
+    htmls = doc_html(out)
+    assert any('alt="Table 3. Legend above."' in h for h in htmls.values())
+
+
+def test_table_alt_skips_above_region_foreign_caption(tmp_path):
+    """Column-major order emits a later column's top-of-column blocks
+    after the member cells — a caption lying wholly above the region
+    must be skipped, not adopted."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 90, 290, 160), "Left column opens the page.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 180, 290, 260), "More left column body text.", fontsize=BODY
+    )
+    # cells on both sides of the gutter: the region covers both bands
+    for i, x in enumerate((200, 300, 400)):
+        p.insert_textbox(
+            fitz.Rect(x, 380, x + 15, 500), f"r1c{i} r2c{i} r3c{i}", fontsize=BODY
+        )
+    # right column: a figure caption at the top (~290pt above the region)…
+    p.insert_textbox(
+        fitz.Rect(340, 90, 560, 130), "Figure 4. A foreign caption.", fontsize=BODY
+    )
+    # …and the table's own legend below the region's bottom (~60pt)
+    p.insert_textbox(
+        fitz.Rect(340, 560, 560, 600), "Table 9. Real results.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(340, 640, 560, 720), "Right column body text.", fontsize=BODY
+    )
+    pdf = tmp_path / "spantheft.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "spantheft.epub"
+    convert(pdf, out)
+    htmls = doc_html(out)
+    assert any('alt="Table 9. Real results."' in h for h in htmls.values())
+    assert not any('alt="Figure 4' in h for h in htmls.values())
+
+
+def test_table_alt_skips_beside_region_caption(tmp_path):
+    """A caption block beside the region — inside its y-band in a covered
+    later column — is not a candidate: candidates must start beyond the
+    facing edge."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 90, 290, 160), "Left column opens the page.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 180, 290, 260), "More left column body text.", fontsize=BODY
+    )
+    # cells on both sides of the gutter: the region covers both bands
+    for i, x in enumerate((200, 300, 400)):
+        p.insert_textbox(
+            fitz.Rect(x, 380, x + 15, 500), f"r1c{i} r2c{i} r3c{i}", fontsize=BODY
+        )
+    # right column: a figure caption *inside* the region's y-band but
+    # outside its x-range — beside the table, not its legend
+    p.insert_textbox(
+        fitz.Rect(430, 420, 560, 460), "Figure 4. A foreign caption.", fontsize=BODY
+    )
+    # the table's own legend below the region's bottom edge (~90pt)
+    p.insert_textbox(
+        fitz.Rect(340, 560, 560, 600), "Table 9. Real results.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(340, 640, 560, 720), "Right column body text.", fontsize=BODY
+    )
+    pdf = tmp_path / "besidetheft.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "besidetheft.epub"
+    convert(pdf, out)
+    htmls = doc_html(out)
+    assert any('alt="Table 9. Real results."' in h for h in htmls.values())
+    assert not any('alt="Figure 4' in h for h in htmls.values())
+
+
+def test_table_alt_ignores_figure_caption_below(tmp_path):
+    """A 'Figure N.' block below a rasterized table belongs to a following
+    figure — the table call's below-scan accepts table labels only."""
+    doc = fitz.open()
+    p = _page(doc)
+    for i, x in enumerate((180, 220, 260, 300, 340)):
+        p.insert_textbox(
+            fitz.Rect(x, 380, x + 15, 520), f"r1c{i} r2c{i} r3c{i}", fontsize=BODY
+        )
+    p.insert_textbox(
+        fitz.Rect(72, 545, 540, 585), "Figure 4. Not a table legend.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 620, 540, 700), "Body text resumes below.", fontsize=BODY
+    )
+    pdf = tmp_path / "tfigcap.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tfigcap.epub"
+    convert(pdf, out)
+    figs = "\n".join(h for h in doc_html(out).values() if "<img" in h)
+    assert 'alt="table"' in figs and 'alt="Figure 4' not in figs
+
+
+def test_table_alt_finds_later_column_legend_above(tmp_path):
+    """A legend seated in a later column above the region emits after the
+    first member cell in column-major order — the forward scan must still
+    rescue it rather than fall back to 'table'."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 90, 290, 160), "Left column opens the page.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 180, 290, 260), "More left column body text.", fontsize=BODY
+    )
+    # cells on both sides of the gutter: the region covers both bands;
+    # none may cross the edge or the legend would hoist into top_zone
+    for i, x in enumerate((200, 260, 380, 420)):
+        p.insert_textbox(
+            fitz.Rect(x, 380, x + 15, 500), f"r1c{i} r2c{i} r3c{i}", fontsize=BODY
+        )
+    # the legend sits at the top of the right column, above the region —
+    # column-major order emits it only after col 0's member cells
+    p.insert_textbox(
+        fitz.Rect(340, 300, 560, 340), "Table 9. Late-column legend.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(340, 560, 560, 720), "Right column body text.", fontsize=BODY
+    )
+    pdf = tmp_path / "lateleg.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "lateleg.epub"
+    convert(pdf, out)
+    htmls = doc_html(out)
+    assert any('alt="Table 9. Late-column legend."' in h for h in htmls.values())
+
+
+def test_table_alt_ignores_later_column_figure_above(tmp_path):
+    """A 'Figure N.' seated above the region in a later column is that
+    column's own figure caption — the stray rescue must not adopt it
+    ahead of the table's 'Table N.' legend below."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 90, 290, 160), "Left column opens the page.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 180, 290, 260), "More left column body text.", fontsize=BODY
+    )
+    # cells stay clear of the caption's x0 so no phantom edge forms
+    for i, x in enumerate((200, 260, 340, 380)):
+        p.insert_textbox(
+            fitz.Rect(x, 380, x + 15, 500), f"r1c{i} r2c{i} r3c{i}", fontsize=BODY
+        )
+    # foreign figure caption: later column, above the region's y-band
+    p.insert_textbox(
+        fitz.Rect(430, 300, 560, 340), "Figure 4. A foreign caption.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(340, 560, 560, 600), "Table 9. Real results.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(340, 620, 560, 720), "Right column body text.", fontsize=BODY
+    )
+    pdf = tmp_path / "latefig.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "latefig.epub"
+    convert(pdf, out)
+    figs = "\n".join(h for h in doc_html(out).values() if "<img" in h)
+    assert 'alt="Table 9. Real results."' in figs
+    assert 'alt="Figure 4.' not in figs
+
+
+def test_table_alt_does_not_reclaim_figure_caption(tmp_path):
+    """A captioned figure directly above a rotated table: the 'Figure N.'
+    block is the figure's own caption — the table must not adopt it a
+    second time via the above scan."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_image(fitz.Rect(72, 150, 300, 250), stream=_noise_png())
+    p.insert_textbox(
+        fitz.Rect(72, 265, 560, 290), "Figure 4. A panel.", fontsize=BODY
+    )
+    for i, x in enumerate((200, 260, 380)):
+        p.insert_textbox(
+            fitz.Rect(x, 320, x + 15, 435), f"r1c{i} r2c{i} r3c{i}", fontsize=BODY
+        )
+    p.insert_textbox(
+        fitz.Rect(72, 500, 300, 560), "Body text resumes below.", fontsize=BODY
+    )
+    pdf = tmp_path / "figtbl.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "figtbl.epub"
+    convert(pdf, out)
+    figs = "\n".join(h for h in doc_html(out).values() if "<img" in h)
+    assert 'alt="Figure 4. A panel."' in figs
+    assert 'alt="table"' in figs
+    assert figs.count('alt="Figure 4.') == 1
+
+
+def test_table_alt_finds_spanning_legend_below(tmp_path):
+    """A legend below the region that spans the gutter emits into every
+    covered column's sequence, so the forward scan reaches it even when
+    all member cells live in the later column."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 90, 290, 160), "Left column opens the page.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(340, 150, 560, 250), "Right column opens too.", fontsize=BODY
+    )
+    # all cells in col 1 — a col-0-homed legend below would correctly
+    # fail the shared-band check, but a gutter-spanning legend is fair
+    for i, x in enumerate((380, 420, 460)):
+        p.insert_textbox(
+            fitz.Rect(x, 380, x + 15, 500), f"r1c{i} r2c{i} r3c{i}", fontsize=BODY
+        )
+    # long enough that the rendered text physically crosses the gutter
+    p.insert_textbox(
+        fitz.Rect(72, 560, 560, 600),
+        "Table 5. Legend with a genuinely long line that crosses the gutter.",
+        fontsize=BODY,
+    )
+    p.insert_textbox(
+        fitz.Rect(340, 620, 560, 720), "Right column body text.", fontsize=BODY
+    )
+    pdf = tmp_path / "spanleg.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "spanleg.epub"
+    convert(pdf, out)
+    htmls = doc_html(out)
+    assert any('alt="Table 5. Legend' in h for h in htmls.values())
+
+
+def test_figure_alt_accepts_subfigure_and_dash_labels(tmp_path):
+    """Journal caption openers with a subfigure letter, a parenthesized
+    panel, or a dash-set legend still count as captions."""
+    # Base-14 fonts can't encode em/en dashes, so the dash-set case uses
+    # a plain hyphen — the regex accepts the unicode dashes too
+    for k, cap in enumerate(
+        ("Fig. 2b", "Figure 1(a)", "Figure 3 - Wide panel.")
+    ):
+        doc = fitz.open()
+        p = _page(doc)
+        p.insert_image(fitz.Rect(72, 150, 300, 250), stream=_noise_png())
+        p.insert_textbox(fitz.Rect(72, 265, 560, 290), cap, fontsize=BODY)
+        pdf = tmp_path / f"cap{k}.pdf"
+        _save(doc, pdf)
+        out = tmp_path / f"cap{k}.epub"
+        convert(pdf, out)
+        htmls = doc_html(out)
+        assert any(f'alt="{cap}"' in h for h in htmls.values()), cap
+
+
+def test_figure_alt_never_borrows_table_caption(tmp_path):
+    """A 'Table N.' block after an image belongs to a text-flowed table
+    (legend above), not to the figure — images match figure labels only."""
+    data = _noise_png()
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_image(fitz.Rect(80, 300, 260, 420), stream=data)
+    p.insert_textbox(
+        fitz.Rect(72, 440, 540, 480), "Table 4. Paired results.", fontsize=BODY
+    )
+    pdf = tmp_path / "figtable.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "figtable.epub"
+    convert(pdf, out)
+    figs = "\n".join(h for h in doc_html(out).values() if "<img" in h)
+    assert 'alt="Table 4' not in figs and 'alt=""' in figs
+
+
+def test_figure_alt_ignores_prose_citation(tmp_path):
+    """'Figure N shows…' is a citation, not a caption — the digits must be
+    followed by '.', ':', ')' or end-of-text."""
+    data = _noise_png()
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_image(fitz.Rect(80, 300, 260, 420), stream=data)
+    p.insert_textbox(
+        fitz.Rect(72, 440, 540, 500),
+        "Figure 9 shows the outcome clearly.",
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "prosecap.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "prosecap.epub"
+    convert(pdf, out)
+    figs = "\n".join(h for h in doc_html(out).values() if "<img" in h)
+    assert 'alt="Figure 9' not in figs and 'alt=""' in figs
+
+
+def test_nested_toc_h2_under_h1(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(fitz.Rect(72, 60, 540, 100), "The Paper Title", fontsize=18)
+    p.insert_textbox(fitz.Rect(72, 140, 540, 170), "First Section", fontsize=13)
+    p.insert_textbox(
+        fitz.Rect(72, 200, 540, 400), "Body text under the section.", fontsize=BODY
+    )
+    pdf = tmp_path / "nestedtoc.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "nestedtoc.epub"
+    convert(pdf, out)
+    snap = snapshot_epub(out)
+    texts = [t for _lv, t in snap["toc"]]
+    levels = [lv for lv, _t in snap["toc"]]
+    assert "The Paper Title" in texts and "First Section" in texts
+    assert levels[texts.index("First Section")] == 2
+
+
+def test_childless_h1_toc_has_no_empty_ol(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 60, 540, 100), "Title With No Sections", fontsize=18
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 140, 540, 300), "Body text, no headings.", fontsize=BODY
+    )
+    pdf = tmp_path / "titleonly.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "titleonly.epub"
+    convert(pdf, out)
+    # a childless h1 must be a bare <li><a/></li> — epubcheck rejects <ol/>
+    nav = doc_html(out)["nav.xhtml"]
+    assert "<ol/>" not in nav and "<ol></ol>" not in nav
+    snap = snapshot_epub(out)
+    assert any("Title With No Sections" in t for _lv, t in snap["toc"])
+
+
+def _noise_png(size=120):
+    """A noisy pixmap whose PNG encoding exceeds MIN_IMAGE_BYTES."""
+    pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, size, size))
+    for x in range(size):
+        for y in range(size):
+            pix.set_pixel(x, y, ((x * y) % 256, (x * 3 + y) % 256, (x + y * 7) % 256))
+    return pix.tobytes("png")
+
+
+def test_figure_alt_from_caption(tmp_path):
+    data = _noise_png()
+    assert len(data) > 2048, "noise fixture must clear MIN_IMAGE_BYTES"
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 160), "The findings are shown below.", fontsize=BODY
+    )
+    p.insert_image(fitz.Rect(200, 200, 400, 400), stream=data)
+    p.insert_textbox(
+        fitz.Rect(72, 420, 540, 470), "Figure 1. A noise gradient.", fontsize=BODY
+    )
+    pdf = tmp_path / "figcap.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "figcap.epub"
+    convert(pdf, out)
+    htmls = doc_html(out)
+    assert any('alt="Figure 1. A noise gradient."' in h for h in htmls.values())
+
+
+def test_figure_alt_never_from_a_foreign_caption(tmp_path):
+    """Neither an intervening paragraph's later caption nor the adjacent
+    column's 'Table N.' caption may be borrowed as alt text."""
+    data = _noise_png()
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 90, 290, 160), "Left column opens the page.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 180, 290, 260), "More left column body text.", fontsize=BODY
+    )
+    # mid-column image: a paragraph then a caption inside its own column —
+    # the caption belongs to a later figure, not this one
+    p.insert_image(fitz.Rect(80, 380, 260, 470), stream=data)
+    p.insert_textbox(
+        fitz.Rect(72, 485, 290, 540), "Body resumes below the image.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 545, 290, 575), "Figure 7. Not this image.", fontsize=BODY
+    )
+    # column-ending image: the next text in reading order is the right
+    # column's 'Table 3.' caption — a different column's caption entirely
+    p.insert_image(fitz.Rect(80, 600, 260, 690), stream=data)
+    p.insert_textbox(
+        fitz.Rect(340, 90, 560, 130), "Table 3. Foreign results.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(340, 160, 560, 240),
+        "Right column body text follows.",
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "foreigncap.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "foreigncap.epub"
+    convert(pdf, out)
+    figs = "\n".join(h for h in doc_html(out).values() if "<img" in h)
+    assert 'alt="Figure 7' not in figs and 'alt="Table 3' not in figs
+    assert figs.count('alt=""') == 2
+
+
+def test_figure_alt_ignores_gutter_bleed_caption(tmp_path):
+    """A foreign caption bleeding a few points across the column edge must
+    not satisfy the shared-column check — jitter can't claim both bands."""
+    data = _noise_png()
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 90, 290, 160), "Left column opens the page.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 180, 290, 260), "More left column body text.", fontsize=BODY
+    )
+    p.insert_image(fitz.Rect(80, 400, 260, 520), stream=data)
+    # right-column caption starting 5pt left of the gutter edge: any-pixel
+    # coverage counts both columns, genuine occupancy counts only its home
+    p.insert_textbox(
+        fitz.Rect(335, 90, 560, 130), "Table 3. Foreign results.", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(340, 160, 560, 240),
+        "Right column body text follows.",
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "bleedcap.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "bleedcap.epub"
+    convert(pdf, out)
+    figs = "\n".join(h for h in doc_html(out).values() if "<img" in h)
+    assert 'alt="Table 3' not in figs and 'alt=""' in figs
+
+
+def test_headingless_doc_still_gets_a_toc_entry(tmp_path):
+    """No headings and no notes must not leave an empty nav <ol/> or
+    navMap — one entry is seeded pointing at the first chapter."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 300),
+        "Plain body text with no headings or notes at all.",
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "plain.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "plain.epub"
+    convert(pdf, out)
+    nav = doc_html(out)["nav.xhtml"]
+    assert "<ol/>" not in nav and "<a " in nav
+    with zipfile.ZipFile(out) as zf:
+        ncx = next(n for n in zf.namelist() if n.endswith(".ncx"))
+        assert "<navPoint" in zf.read(ncx).decode("utf8")
+
+
 def test_note_interior_sup_link_validated(tmp_path):
     doc = fitz.open()
     p = _page(doc)
