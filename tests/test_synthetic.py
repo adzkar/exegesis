@@ -592,7 +592,7 @@ def test_headingless_doc_still_gets_a_toc_entry(tmp_path):
     nav = doc_html(out)["nav.xhtml"]
     assert "<ol/>" not in nav and "<a " in nav
     with zipfile.ZipFile(out) as zf:
-        ncx = [n for n in zf.namelist() if n.endswith(".ncx")][0]
+        ncx = next(n for n in zf.namelist() if n.endswith(".ncx"))
         assert "<navPoint" in zf.read(ncx).decode("utf8")
 
 
