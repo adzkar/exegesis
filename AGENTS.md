@@ -35,8 +35,9 @@ chapters.
   terminates the scan — a tail before a new section precedes no body.
   The same edge+follower check gates a bold line inside a mixed-weight
   block, and the follower scan is column- and page-local — a bold line
-  ending a column or page can't see its
-  next-column/next-page follower and stays demoted. Lines opening
+  ending a column or page can't see its next-column/next-page follower
+  and stays demoted (a demoted block's size-signaled ≥1.3× lines may
+  still emit; only its bold-band lines are silenced). Lines opening
   with footnote markers (`*†‡§`) are never headings.
   Sentence-like text with periods is rejected. Named labels (`References`,
   `Supporting Online Material`…) at block start emit h2, but respect the
