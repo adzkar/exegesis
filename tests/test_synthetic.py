@@ -529,6 +529,26 @@ def test_table_alt_finds_spanning_legend_below(tmp_path):
     assert any('alt="Table 5. Legend' in h for h in htmls.values())
 
 
+def test_figure_alt_accepts_subfigure_and_dash_labels(tmp_path):
+    """Journal caption openers with a subfigure letter, a parenthesized
+    panel, or a dash-set legend still count as captions."""
+    # Base-14 fonts can't encode em/en dashes, so the dash-set case uses
+    # a plain hyphen — the regex accepts the unicode dashes too
+    for k, cap in enumerate(
+        ("Fig. 2b", "Figure 1(a)", "Figure 3 - Wide panel.")
+    ):
+        doc = fitz.open()
+        p = _page(doc)
+        p.insert_image(fitz.Rect(72, 150, 300, 250), stream=_noise_png())
+        p.insert_textbox(fitz.Rect(72, 265, 560, 290), cap, fontsize=BODY)
+        pdf = tmp_path / f"cap{k}.pdf"
+        _save(doc, pdf)
+        out = tmp_path / f"cap{k}.epub"
+        convert(pdf, out)
+        htmls = doc_html(out)
+        assert any(f'alt="{cap}"' in h for h in htmls.values()), cap
+
+
 def test_figure_alt_never_borrows_table_caption(tmp_path):
     """A 'Table N.' block after an image belongs to a text-flowed table
     (legend above), not to the figure — images match figure labels only."""

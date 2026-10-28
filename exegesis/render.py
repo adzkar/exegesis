@@ -35,23 +35,31 @@ from .text import (
     _span_is_italic,
 )
 
+# the tail allows a subfigure letter ('Fig. 2b', 'Figure 1(a)') or a
+# dash-set legend ('Figure 3 — …') but still demands punctuation or
+# end-of-text — 'Figure 9 shows' stays a prose citation, and the leading
+# space requirement on the dash keeps 'Table 1–3' ranges out
 CAPTION_RE = re.compile(
     r"(?i)^\s*(fig\.?|figure|table|plate|scheme|chart)\s*\.?\s*"
-    r"\d+\s*(?:[.:)]|$)"
+    r"\d+(?:[a-z]|\s*\([a-zA-Z]\))?"
+    r"(?:\s+[—–-]|\s*[.:)]|$)"
 )
 # the image call must not accept 'Table N.' — tables keep their legends
 # above the body, so a following 'Table N.' block belongs to a
 # text-flowed table, not to the figure
 FIGURE_CAPTION_RE = re.compile(
     r"(?i)^\s*(fig\.?|figure|plate|scheme|chart)\s*\.?\s*"
-    r"\d+\s*(?:[.:)]|$)"
+    r"\d+(?:[a-z]|\s*\([a-zA-Z]\))?"
+    r"(?:\s+[—–-]|\s*[.:)]|$)"
 )
 # the mirror for the rasterized-table call: a 'Figure N.' block *below*
 # the region is a following figure's caption, not the table's legend —
 # while the legend above may still be 'Figure N.' (a text-heavy rotated
 # figure reaches the same raster path)
 TABLE_CAPTION_RE = re.compile(
-    r"(?i)^\s*table\s*\.?\s*\d+\s*(?:[.:)]|$)"
+    r"(?i)^\s*table\s*\.?\s*"
+    r"\d+(?:[a-z]|\s*\([a-zA-Z]\))?"
+    r"(?:\s+[—–-]|\s*[.:)]|$)"
 )
 
 
