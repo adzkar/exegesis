@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 from helpers import corpus_pdf, lint_epub, snapshot_epub
 
-import pdf_to_epub as m
+from exegesis import convert
 
 GOLDEN = Path(__file__).parent / "golden"
 
@@ -34,7 +34,7 @@ def _slug(name):
 def test_corpus_golden(pdf_name, tmp_path, update_golden):
     pdf = corpus_pdf(pdf_name)
     out = tmp_path / (pdf.stem + ".epub")
-    stats = m.convert(pdf, out)
+    stats = convert(pdf, out)
     stats.pop("output", None)
     assert lint_epub(out) == []
     snap = snapshot_epub(out)

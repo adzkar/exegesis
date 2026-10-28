@@ -6,7 +6,7 @@ import fitz
 import pytest
 from helpers import chapter_text, doc_html, doc_texts, lint_epub, snapshot_epub
 
-import pdf_to_epub as m
+from exegesis import convert
 
 W, H = 612, 792
 BODY = 10
@@ -39,7 +39,7 @@ def test_two_column_reading_order(tmp_path):
     pdf = tmp_path / "twocol.pdf"
     _save(doc, pdf)
     out = tmp_path / "twocol.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     assert lint_epub(out) == []
     text = chapter_text(out)
     assert "left column" in text and "right column" in text
@@ -60,7 +60,7 @@ def test_furniture_and_page_number_stripped(tmp_path):
     pdf = tmp_path / "furniture.pdf"
     _save(doc, pdf)
     out = tmp_path / "furniture.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     text = chapter_text(out)
     assert "journal.org" not in text
     assert "single column document" in text
@@ -81,7 +81,7 @@ def test_keep_headers_preserves_furniture(tmp_path):
     pdf = tmp_path / "keephdr.pdf"
     _save(doc, pdf)
     out = tmp_path / "keephdr.epub"
-    m.convert(pdf, out, drop_edges=False)
+    convert(pdf, out, drop_edges=False)
     # furniture is retained verbatim as standalone paragraphs — it never
     # merges into body paragraphs or lands in notes.xhtml
     text = " ".join(doc_texts(out).values())
@@ -120,7 +120,7 @@ def test_keep_headers_wide_footer_keeps_column_order(tmp_path):
     pdf = tmp_path / "widefooter.pdf"
     _save(doc, pdf)
     out = tmp_path / "widefooter.epub"
-    m.convert(pdf, out, drop_edges=False)
+    convert(pdf, out, drop_edges=False)
     text = chapter_text(out)
     assert text.index("left column") < text.index("first column")
     assert text.index("first column") < text.index("right column")
@@ -146,7 +146,7 @@ def test_bold_marker_tail_line_not_heading(tmp_path):
     pdf = tmp_path / "markerh2.pdf"
     _save(doc, pdf)
     out = tmp_path / "markerh2.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     htmls = doc_html(out)
     assert not any("<h2" in h and "indicates" in h for h in htmls.values())
 
@@ -170,7 +170,7 @@ def test_bold_tail_line_without_follower_not_heading(tmp_path):
     pdf = tmp_path / "tailline.pdf"
     _save(doc, pdf)
     out = tmp_path / "tailline.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     htmls = doc_html(out)
     assert not any("<h2" in h and "Closing bold" in h for h in htmls.values())
     assert "Closing bold remark" in chapter_text(out)
@@ -196,7 +196,7 @@ def test_demoted_bold_tail_lines_stay_demoted(tmp_path):
     pdf = tmp_path / "demoted.pdf"
     _save(doc, pdf)
     out = tmp_path / "demoted.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     chaps = [h for n, h in doc_html(out).items() if n.startswith("chap_")]
     assert not any("<h2" in h or "<h1" in h for h in chaps)
     assert "Closing bold remark" in chapter_text(out)
@@ -221,7 +221,7 @@ def test_label_respects_bold_demotion(tmp_path):
     pdf = tmp_path / "funding.pdf"
     _save(doc, pdf)
     out = tmp_path / "funding.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     chaps = [h for n, h in doc_html(out).items() if n.startswith("chap_")]
     assert not any("<h2" in h or "<h1" in h for h in chaps)
     assert "Funding NIH grant" in chapter_text(out)
@@ -246,7 +246,7 @@ def test_mixed_block_bold_band_line_demoted(tmp_path):
     pdf = tmp_path / "mixtail.pdf"
     _save(doc, pdf)
     out = tmp_path / "mixtail.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     chaps = [h for n, h in doc_html(out).items() if n.startswith("chap_")]
     assert not any("<h2" in h or "<h1" in h for h in chaps)
     assert "Tail remark" in chapter_text(out)
@@ -271,7 +271,7 @@ def test_demoted_multiline_bold_block_no_line_headings(tmp_path):
     pdf = tmp_path / "demotedmulti.pdf"
     _save(doc, pdf)
     out = tmp_path / "demotedmulti.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     chaps = [h for n, h in doc_html(out).items() if n.startswith("chap_")]
     assert not any("<h2" in h or "<h1" in h for h in chaps)
     assert "Closing bold remark" in chapter_text(out)
@@ -301,7 +301,7 @@ def test_bold_line_followed_only_by_notes_not_heading(tmp_path):
     pdf = tmp_path / "notetail.pdf"
     _save(doc, pdf)
     out = tmp_path / "notetail.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     htmls = doc_html(out)
     texts = doc_texts(out)
     assert not any("<h2" in h and "Section tail" in h for h in htmls.values())
@@ -334,7 +334,7 @@ def test_bold_line_followed_only_by_table_not_heading(tmp_path):
     pdf = tmp_path / "tabletail.pdf"
     _save(doc, pdf)
     out = tmp_path / "tabletail.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     with zipfile.ZipFile(out) as zf:
         assert [n for n in zf.namelist() if "table_" in n], "expected table image"
     htmls = doc_html(out)
@@ -360,7 +360,7 @@ def test_keep_headers_margin_strips_not_rasterized(tmp_path):
     pdf = tmp_path / "sidebars.pdf"
     _save(doc, pdf)
     out = tmp_path / "sidebars.epub"
-    m.convert(pdf, out, drop_edges=False)
+    convert(pdf, out, drop_edges=False)
     with zipfile.ZipFile(out) as zf:
         assert not [n for n in zf.namelist() if "table_" in n]
     assert "JOURNAL SIDEBAR" in chapter_text(out)
@@ -383,7 +383,7 @@ def test_keep_headers_strip_does_not_inject_abstract(tmp_path):
     pdf = tmp_path / "sidebarabstract.pdf"
     _save(doc, pdf)
     out = tmp_path / "sidebarabstract.epub"
-    m.convert(pdf, out, drop_edges=False)
+    convert(pdf, out, drop_edges=False)
     htmls = doc_html(out)
     assert not any("<h2" in h and "Abstract" in h for h in htmls.values())
     assert "JOURNAL OF EXAMPLES" in chapter_text(out)
@@ -407,7 +407,7 @@ def test_keep_headers_signature_head_no_abstract(tmp_path):
     pdf = tmp_path / "sighead.pdf"
     _save(doc, pdf)
     out = tmp_path / "sighead.epub"
-    m.convert(pdf, out, drop_edges=False)
+    convert(pdf, out, drop_edges=False)
     htmls = doc_html(out)
     assert not any("<h2" in h and "Abstract" in h for h in htmls.values())
     assert "Journal of Studies" in chapter_text(out)
@@ -430,7 +430,7 @@ def test_keep_headers_signature_head_flagged_short_doc(tmp_path):
     pdf = tmp_path / "sighead3.pdf"
     _save(doc, pdf)
     out = tmp_path / "sighead3.epub"
-    m.convert(pdf, out, drop_edges=False)
+    convert(pdf, out, drop_edges=False)
     htmls = doc_html(out)
     assert not any("<h2" in h and "Abstract" in h for h in htmls.values())
     assert "Journal of Studies" in chapter_text(out)
@@ -451,7 +451,7 @@ def test_keep_headers_furniture_in_table_region(tmp_path):
     pdf = tmp_path / "tblfurn.pdf"
     _save(doc, pdf)
     out = tmp_path / "tblfurn.epub"
-    m.convert(pdf, out, drop_edges=False)
+    convert(pdf, out, drop_edges=False)
     # the table still rasterizes, but the kept page number must emit
     # verbatim rather than being consumed into the PNG
     assert 'alt="table"' in "".join(doc_html(out).values())
@@ -481,7 +481,7 @@ def test_keep_headers_carried_paragraph_not_split(tmp_path):
     pdf = tmp_path / "carried.pdf"
     _save(doc, pdf)
     out = tmp_path / "carried.epub"
-    m.convert(pdf, out, drop_edges=False)
+    convert(pdf, out, drop_edges=False)
     # the kept head must not split the paragraph carried across the page:
     # the continuation lands inside the same <p> as the page-1 opening
     html = "".join(
@@ -516,7 +516,7 @@ def test_signature_furniture_no_edge_vote(tmp_path):
     pdf = tmp_path / "sigedge.pdf"
     _save(doc, pdf)
     out = tmp_path / "sigedge.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     text = chapter_text(out)
     # single column: indented block must not jump behind all col-0 text
     assert text.index("Alpha") < text.index("Indent") < text.index("Beta")
@@ -546,7 +546,7 @@ def test_demoted_block_size_signaled_line_still_emits(tmp_path):
     pdf = tmp_path / "sizetail.pdf"
     _save(doc, pdf)
     out = tmp_path / "sizetail.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     chaps = [h for n, h in doc_html(out).items() if n.startswith("chap_")]
     assert not any("<h2>Small tail</h2>" in h for h in chaps)
     assert any(">Big tail</h" in h for h in chaps)
@@ -582,7 +582,7 @@ def test_bold_tail_heading_follower_demoted(tmp_path):
     pdf = tmp_path / "headtail.pdf"
     _save(doc, pdf)
     out = tmp_path / "headtail.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     chaps = [h for n, h in doc_html(out).items() if n.startswith("chap_")]
     assert not any("<h2>Tail remark</h2>" in h for h in chaps)
     assert any(">Discussion</h" in h for h in chaps)
@@ -606,7 +606,7 @@ def test_keep_headers_head_no_degenerate_chapter(tmp_path):
     pdf = tmp_path / "headchap.pdf"
     _save(doc, pdf)
     out = tmp_path / "headchap.epub"
-    m.convert(pdf, out, drop_edges=False)
+    convert(pdf, out, drop_edges=False)
     chaps = {
         n: h for n, h in doc_html(out).items() if n.startswith("chap_")
     }
@@ -638,7 +638,7 @@ def test_keep_headers_furniture_not_blockquote_neighbor(tmp_path):
     pdf = tmp_path / "bqfurn.pdf"
     _save(doc, pdf)
     out = tmp_path / "bqfurn.epub"
-    m.convert(pdf, out, drop_edges=False)
+    convert(pdf, out, drop_edges=False)
     html = "".join(doc_html(out).values())
     assert "<blockquote>" not in html
     assert "www.journal.org" in chapter_text(out)
@@ -666,7 +666,7 @@ def test_keep_headers_furniture_not_a_follower(tmp_path):
     pdf = tmp_path / "furnfollower.pdf"
     _save(doc, pdf)
     out = tmp_path / "furnfollower.epub"
-    m.convert(pdf, out, drop_edges=False)
+    convert(pdf, out, drop_edges=False)
     htmls = doc_html(out)
     assert not any("<h2" in h and "Section tail" in h for h in htmls.values())
     text = chapter_text(out)
@@ -686,7 +686,7 @@ def test_heading_becomes_h1_and_toc(tmp_path):
     pdf = tmp_path / "heading.pdf"
     _save(doc, pdf)
     out = tmp_path / "heading.epub"
-    stats = m.convert(pdf, out)
+    stats = convert(pdf, out)
     assert int(stats["headings"]) >= 1
     snap = snapshot_epub(out)
     texts = [t for _lv, t in snap["toc"]]
@@ -714,7 +714,7 @@ def test_bold_body_size_line_becomes_h2(tmp_path):
     pdf = tmp_path / "boldh2.pdf"
     _save(doc, pdf)
     out = tmp_path / "boldh2.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     htmls = doc_html(out)
     assert any("<h2" in h and "Bold Section" in h for h in htmls.values())
 
@@ -731,7 +731,7 @@ def test_italic_font_marks_up(tmp_path):
     pdf = tmp_path / "italic.pdf"
     _save(doc, pdf)
     out = tmp_path / "italic.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     htmls = doc_html(out)
     assert any("<i>" in h and "italics" in h for h in htmls.values())
 
@@ -752,7 +752,7 @@ def test_unnumbered_note_moves_to_notes(tmp_path):
     pdf = tmp_path / "note.pdf"
     _save(doc, pdf)
     out = tmp_path / "note.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     texts = doc_texts(out)
     assert "notes.xhtml" in texts
     assert "reprints" in texts["notes.xhtml"]
@@ -779,7 +779,7 @@ def test_tall_narrow_region_rasterized(tmp_path):
     pdf = tmp_path / "rtable.pdf"
     _save(doc, pdf)
     out = tmp_path / "rtable.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     with zipfile.ZipFile(out) as zf:
         tables = [n for n in zf.namelist() if "table_" in n]
     assert tables, "expected a rasterized table image"
@@ -804,7 +804,7 @@ def test_note_interior_sup_link_validated(tmp_path):
     pdf = tmp_path / "notesup.pdf"
     _save(doc, pdf)
     out = tmp_path / "notesup.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     assert lint_epub(out) == []
     notes = doc_html(out)["notes.xhtml"]
     assert "#fn2010" not in notes
@@ -840,7 +840,7 @@ def test_rotated_table_clip_on_rotated_page(tmp_path, rotation):
     pdf = tmp_path / "rtable_rot.pdf"
     _save(doc, pdf)
     out = tmp_path / "rtable_rot.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     with zipfile.ZipFile(out) as zf:
         tables = [n for n in zf.namelist() if "table_" in n]
         assert tables, "expected a rasterized table image"
@@ -873,6 +873,6 @@ def test_paragraph_merges_across_page_break(tmp_path):
     pdf = tmp_path / "merge.pdf"
     _save(doc, pdf)
     out = tmp_path / "merge.epub"
-    m.convert(pdf, out)
+    convert(pdf, out)
     text = chapter_text(out)
     assert "page bottom and the sentence continues at the top" in text

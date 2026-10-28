@@ -10,7 +10,13 @@ layout analysis over PyMuPDF blocks — no OCR, no ML dependencies.
 - Verify output: `unzip -l out.epub` (chapters, notes.xhtml, images, nav present),
   then spot-check a chapter's XHTML for reading order
 
-## Architecture (`pdf_to_epub.py`)
+## Architecture (`exegesis` package)
+
+`pdf_to_epub.py` is a thin CLI shim; the pipeline lives in the package:
+`analyze` (font/column/footnote detection) → `order` (reading order) →
+`render` (block classification to HTML fragments) → `emit` (chapter
+chunking + ebooklib packaging), with `state` (`PipelineState`), `text`,
+`const`, and `cli` alongside.
 
 Single-pass pipeline: per page, positioned text/image blocks are extracted,
 reordered into reading order, rendered to HTML fragments, then chunked into
