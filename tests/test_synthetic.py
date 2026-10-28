@@ -458,6 +458,106 @@ def test_keep_headers_furniture_in_table_region(tmp_path):
     assert "42" in chapter_text(out)
 
 
+def test_keep_headers_carried_paragraph_not_split(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 30, 300, 48), "www.journal.org", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 200, 540, 600),
+        " ".join(["This sentence runs to the page break without ending"] * 6),
+        fontsize=BODY,
+    )
+    p2 = _page(doc)
+    p2.insert_textbox(
+        fitz.Rect(72, 30, 300, 48), "www.journal.org", fontsize=BODY
+    )
+    p2.insert_textbox(
+        fitz.Rect(72, 100, 540, 300),
+        "here on page two the sentence concludes.",
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "carried.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "carried.epub"
+    m.convert(pdf, out, drop_edges=False)
+    # the kept head must not split the paragraph carried across the page:
+    # the continuation lands inside the same <p> as the page-1 opening
+    html = "".join(
+        h for n, h in doc_html(out).items() if n.startswith("chap_")
+    )
+    i = html.index("without ending")
+    seg = html[i : i + 600]
+    assert "here on page two" in seg.split("</p>")[0]
+
+
+def test_signature_furniture_no_edge_vote(tmp_path):
+    doc = fitz.open()
+    for _ in range(6):
+        p = _page(doc)
+        # repeated head+footer at a fixed x0 — signature furniture that
+        # must not vote for column edges
+        p.insert_textbox(
+            fitz.Rect(290, 40, 430, 65), "Journal of Examples", fontsize=9
+        )
+        p.insert_textbox(
+            fitz.Rect(290, 740, 460, 765), "Journal of Examples", fontsize=9
+        )
+        p.insert_textbox(
+            fitz.Rect(72, 150, 540, 200), "Alpha text fills column.", fontsize=BODY
+        )
+        p.insert_textbox(
+            fitz.Rect(310, 250, 540, 300), "Indent text sits inset.", fontsize=BODY
+        )
+        p.insert_textbox(
+            fitz.Rect(72, 350, 540, 400), "Beta text closes column.", fontsize=BODY
+        )
+    pdf = tmp_path / "sigedge.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "sigedge.epub"
+    m.convert(pdf, out)
+    text = chapter_text(out)
+    # single column: indented block must not jump behind all col-0 text
+    assert text.index("Alpha") < text.index("Indent") < text.index("Beta")
+
+
+def test_bold_tail_heading_follower_demoted(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 300),
+        " ".join(["Body text fills the column above."] * 10),
+        fontsize=BODY,
+    )
+    # a bold tail followed only by a real heading still has no *body*
+    # follower — the heading doesn't count
+    p.insert_textbox(
+        fitz.Rect(72, 520, 300, 540),
+        "Tail remark",
+        fontsize=10.6,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 560, 540, 585),
+        "Discussion",
+        fontsize=14,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 600, 540, 700),
+        " ".join(["Discussion body text."] * 8),
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "headtail.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "headtail.epub"
+    m.convert(pdf, out)
+    chaps = [h for n, h in doc_html(out).items() if n.startswith("chap_")]
+    assert not any("<h2>Tail remark</h2>" in h for h in chaps)
+    assert any(">Discussion</h" in h for h in chaps)
+
+
 def test_keep_headers_head_no_degenerate_chapter(tmp_path):
     doc = fitz.open()
     p = _page(doc)

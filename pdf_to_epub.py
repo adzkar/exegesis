@@ -364,7 +364,7 @@ def _column_edges(items):
     return [median(c) for c in clusters if len(c) >= 2] or [0.0]
 
 
-def _doc_column_edges(doc):
+def _doc_column_edges(doc, boilerplate=frozenset()):
     """Column edges for the document: edges found on ≥half of all pages.
 
     Per-page clustering produces phantom edges from bylines, headings, and
@@ -374,13 +374,17 @@ def _doc_column_edges(doc):
     """
     votes = []
     for page in doc:
-        # furniture shapes can't form column edges — a sidebar recurring at
-        # the same x on every page is the classic phantom-edge generator
+        # furniture shapes can't form column edges — a sidebar or running
+        # head recurring at the same x on every page is the classic
+        # phantom-edge generator
         items = [
             b
             for b in page.get_text("dict")["blocks"]
             if b["type"] == 0
             and not _is_furniture(b, page.rect, _block_text(b))
+            and not _is_signature_furniture(
+                b, page.rect.height, boilerplate
+            )
         ]
         for e in _column_edges(items):
             for v in votes:
@@ -440,6 +444,14 @@ def _is_furniture(block, rect, text):
     )
 
 
+def _is_signature_furniture(block, height, boilerplate):
+    """Edge-zone text whose normalized signature repeats across pages —
+    a running head/footer detected by recurrence rather than content."""
+    _, y0, _, y1 = block["bbox"]
+    near_edge = y1 < height * EDGE_ZONE or y0 > height * (1 - EDGE_ZONE)
+    return near_edge and _signature(_block_text(block)) in boilerplate
+
+
 def _ordered_blocks(page, boilerplate, edges, drop_furniture=True):
     """Return page blocks in reading order for any column layout.
 
@@ -464,10 +476,9 @@ def _ordered_blocks(page, boilerplate, edges, drop_furniture=True):
             text = _block_text(block)
             if not text:
                 continue
-            near_edge = y1 < rect.height * EDGE_ZONE or y0 > rect.height * (
-                1 - EDGE_ZONE
+            sig_furniture = _is_signature_furniture(
+                block, rect.height, boilerplate
             )
-            sig_furniture = near_edge and _signature(text) in boilerplate
             if sig_furniture or _is_furniture(block, rect, text):
                 if drop_furniture:
                     continue
@@ -680,8 +691,13 @@ def _render_page(page, page_index, state):
 
         if block.get("is_furniture"):
             # kept furniture emits verbatim as its own paragraph — it must
-            # not merge with the open paragraph or reach any classifier
-            flush_par()
+            # not merge with the open paragraph or reach any classifier.
+            # Only a same-page paragraph is flushed: a paragraph carried
+            # from the previous page must stay open so its continuation
+            # merges and lands on the start page (flushing here would
+            # split it mid-sentence around every running head)
+            if state["par_page"] == page_index:
+                flush_par()
             frags.append(f"<p>{html.escape(_block_text(block))}</p>")
             continue
 
@@ -705,27 +721,28 @@ def _render_page(page, page_index, state):
         # bold-only candidates carry no size signal: they must sit
         # outside the edge zones AND introduce following *body* text in
         # their column — a trailing bold line at a section/page end is
-        # far more often a note than a heading. The scan is column- and
+        # far more often a note than a heading (a block that is itself a
+        # heading doesn't count either). The scan is column- and
         # page-local: a bold line ending a column or page can't see its
         # next-column/next-page follower and stays demoted.
         in_edge = (
             block["bbox"][1] < page.rect.height * 0.12
             or block["bbox"][3] > page.rect.height * 0.88
         )
-        follower = (
-            None
-            if in_edge
-            else next(
-                (
-                    b
-                    for b in ordered[b_i + 1 :]
-                    if b["type"] == 0
-                    and id(b) not in nonbody_ids
-                    and col in _covered_cols(b, edges, page.rect.width)
-                ),
-                None,
-            )
-        )
+        follower = None
+        if not in_edge:
+            for b in ordered[b_i + 1 :]:
+                if (
+                    b["type"] != 0
+                    or id(b) in nonbody_ids
+                    or col not in _covered_cols(b, edges, page.rect.width)
+                ):
+                    continue
+                # the first body-flow block in the column decides: a
+                # heading ends the section, so the tail precedes no body
+                if _standalone_heading_level(b, body_size) is None:
+                    follower = b
+                break
         bold_h2_ok = follower is not None
         if (
             level == 2
@@ -886,10 +903,11 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
     meta = doc.metadata or {}
 
     body_size, line_h = _body_font_size(doc)
+    boilerplate = _boilerplate_signatures(doc)
     state = {
         "body_size": body_size,
         "line_h": line_h,
-        "edges": _doc_column_edges(doc),
+        "edges": _doc_column_edges(doc, boilerplate),
         "abstract_done": False,
         "after_h1": False,
         "byline_text": None,
@@ -902,7 +920,7 @@ def convert(pdf_path, out_path, title=None, author=None, drop_edges=True):
         "page_frags": [[] for _ in range(doc.page_count)],
         "heading_seq": 0,
         "drop_edges": drop_edges,
-        "boilerplate": _boilerplate_signatures(doc),
+        "boilerplate": boilerplate,
     }
 
     for i, page in enumerate(doc):
