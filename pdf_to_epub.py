@@ -471,7 +471,6 @@ def _ordered_blocks(page, boilerplate, edges, drop_furniture=True):
     items = []
     furniture_items = []
     for block in page.get_text("dict")["blocks"]:
-        _, y0, _, y1 = block["bbox"]
         if block["type"] == 0:
             text = _block_text(block)
             if not text:
@@ -860,12 +859,13 @@ def _render_page(page, page_index, state):
                     if m[1]:
                         state["par"].append(html.escape(m[1]))
                     continue
-            # blocks opening with a footnote marker are note material, and
-            # blocks demoted by the bold-only gate stay demoted — neither
-            # may classify lines as headings
+            # blocks opening with a footnote marker are note material —
+            # none of their lines may classify as headings. A demoted
+            # block's *size-signaled* lines may still emit; only its
+            # bold-band lines are silenced by the gate below
             line_level = (
                 _heading_level(line, body_size)
-                if not demoted and btext[:1] not in "*†‡§"
+                if btext[:1] not in "*†‡§"
                 else None
             )
             # a line-level h2 promoted by the bold-only band (size <

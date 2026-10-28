@@ -522,6 +522,36 @@ def test_signature_furniture_no_edge_vote(tmp_path):
     assert text.index("Alpha") < text.index("Indent") < text.index("Beta")
 
 
+def test_demoted_block_size_signaled_line_still_emits(tmp_path):
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 300),
+        " ".join(["Body text fills the column above."] * 10),
+        fontsize=BODY,
+    )
+    # all-bold mixed-size trailing block: the block-level demotion
+    # silences the bold-band lines, but the 14pt line carries its own
+    # size signal (≥1.3×) and still emits (median stays <1.15× so the
+    # block survives byline absorption)
+    p.insert_text(
+        fitz.Point(72, 510), "Small tail", fontsize=10.6, fontname="hebo"
+    )
+    p.insert_text(
+        fitz.Point(72, 524), "Small tail two", fontsize=10.6, fontname="hebo"
+    )
+    p.insert_text(
+        fitz.Point(72, 542), "Big tail", fontsize=14, fontname="hebo"
+    )
+    pdf = tmp_path / "sizetail.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "sizetail.epub"
+    m.convert(pdf, out)
+    chaps = [h for n, h in doc_html(out).items() if n.startswith("chap_")]
+    assert not any("<h2>Small tail</h2>" in h for h in chaps)
+    assert any(">Big tail</h" in h for h in chaps)
+
+
 def test_bold_tail_heading_follower_demoted(tmp_path):
     doc = fitz.open()
     p = _page(doc)
