@@ -158,12 +158,23 @@ def test_rotated_table_region_disjoint_y_rejected():
 
 
 def test_rotate_clip():
+    """The clip map is ``page.rotation_matrix``: mediabox -> displayed space.
+
+    Oracles are where a rect painted in mediabox coordinates (612x792)
+    actually renders on the rotated page — verified against get_pixmap:
+    the pixmap only contains the paint when clipped at these coordinates.
+    """
     rect = fitz.Rect(100, 50, 500, 300)
-    mb = fitz.Rect(0, 0, 612, 792)
-    assert m._rotate_clip(rect, 0, mb) == rect
-    assert m._rotate_clip(rect, 90, mb) == fitz.Rect(50, 112, 300, 512)
-    assert m._rotate_clip(rect, 270, mb) == fitz.Rect(492, 100, 742, 500)
-    assert m._rotate_clip(rect, 180, mb) == fitz.Rect(112, 492, 512, 742)
+    doc = fitz.open()
+    page = doc.new_page(width=612, height=792)
+    for rot, want in (
+        (0, rect),
+        (90, fitz.Rect(492, 100, 742, 500)),
+        (180, fitz.Rect(112, 492, 512, 742)),
+        (270, fitz.Rect(50, 112, 300, 512)),
+    ):
+        page.set_rotation(rot)
+        assert m._rotate_clip(rect, page.rotation_matrix) == want
 
 
 # --- footnotes ----------------------------------------------------------
