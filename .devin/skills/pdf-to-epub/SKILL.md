@@ -39,8 +39,8 @@ python3 pdf_to_epub.py <input.pdf> [-o output.epub] [--title "..."] [--author ".
   with `--title` / `--author`.
 - `--lang` selects the pattern profile for furniture, notes, section labels,
   and captions plus the EPUB's language metadata: `en` (default), `de`,
-  `fr`, `es`. Non-Latin scripts (CJK, RTL) are out of scope — they fall
-  back to the English pattern set.
+  `fr`, `es`. Non-Latin scripts (CJK, RTL) are out of scope — converting
+  them under the English default degrades detection quality.
 - `--keep-headers` disables stripping of page headers/footers (page numbers,
   running heads). Enabled by default for documents over 3 pages.
 

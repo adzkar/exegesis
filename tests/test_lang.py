@@ -5,6 +5,7 @@ Each non-English profile gets a synthetic paper exercising the same
 signals the English suite uses — a captioned figure, a named section
 heading, pattern furniture, and the language stamp on the output.
 """
+import re
 import zipfile
 
 import fitz
@@ -101,6 +102,44 @@ def test_french_section_and_furniture(tmp_path):
     assert "Année 2024" not in html  # pattern furniture dropped
 
 
+def test_french_longest_label_wins(tmp_path):
+    """'Références bibliographiques' must reach the h2, not be eaten by the
+    shorter 'Références' arm — ordered alternation, longest first."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 200),
+        "Le texte de l'article précède les références ici.",
+        fontsize=BODY,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 500, 540, 520),
+        "Références bibliographiques",
+        fontsize=BODY,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 530, 540, 560),
+        "Durand, P. et Moreau, S. Un titre.",
+        fontsize=BODY,
+    )
+    _out, html = _convert_epub(doc, tmp_path, "fr_long", lang="fr")
+    assert re.search(r"<h2[^>]*>Références bibliographiques<", html)
+    # and the short form still heads its section
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 200), "Même structure, étiquette courte.",
+        fontsize=BODY,
+    )
+    p.insert_textbox(fitz.Rect(72, 500, 540, 520), "Références", fontsize=BODY)
+    p.insert_textbox(
+        fitz.Rect(72, 530, 540, 560), "Durand, P. Un autre titre.",
+        fontsize=BODY,
+    )
+    _out, html = _convert_epub(doc, tmp_path, "fr_short", lang="fr")
+    assert re.search(r"<h2[^>]*>Références<", html)
+
+
 def test_spanish_caption_and_abstract_title(tmp_path):
     """'Fig.' works in Spanish too; the injected abstract is localized."""
     doc = fitz.open()
@@ -165,8 +204,8 @@ def test_get_lang_resolution(tmp_path):
         convert(tmp_path / "fig_en.pdf", tmp_path / "x.epub", lang="ja")
 
 
-def test_custom_profile_accepted(tmp_path):
-    """A hand-built LangProfile flows through convert end to end."""
+def test_profile_object_accepted(tmp_path):
+    """A LangProfile instance (not just a code) flows through convert."""
     doc = _figure_doc("Abb. 1  Ergebnisse der Messung.")
     _out, html = _convert_epub(doc, tmp_path, "custom", lang=LANGS["de"])
     assert isinstance(EN, LangProfile)

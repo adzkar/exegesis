@@ -67,9 +67,10 @@ See the [pipeline diagram](docs/pipeline.md) for a visual walkthrough and
 - **No OCR.** Scanned PDFs without a text layer produce image-only output —
   an OCR pass (e.g. tesseract) would be needed as a separate step.
 - **Latin-script languages** — profiles exist for English, German, French,
-  and Spanish (`--lang`); other languages degrade to the English pattern
-  set. CJK and RTL scripts need word-shaping/vertical-text and direction
-  review — out of scope today.
+  and Spanish (`--lang`); other languages are rejected by `--lang` but can
+  still be converted under the default English profile (detection quality
+  degrades) or a custom `LangProfile` via `convert()`. CJK and RTL scripts
+  need word-shaping/vertical-text and direction review — out of scope today.
 - Complex layouts (dense figures, equations, tables) may read imperfectly.
 - Degraded PDFs with jittery fonts or OCR-layer artifacts can yield imperfect
   heading detection; source artifacts are reproduced faithfully.

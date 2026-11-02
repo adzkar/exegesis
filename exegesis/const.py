@@ -1,4 +1,4 @@
-"""Shared pipeline constants — tuned thresholds and the assumed language."""
+"""Shared pipeline constants — tuned thresholds."""
 
 EDGE_ZONE = 0.20
 BOILERPLATE_COVERAGE = 0.4

@@ -160,7 +160,7 @@ FR = _profile(
         r"correspondance (?:à|adresser)|ce travail (?:a été|fut))"
     ),
     sections=(
-        r"^(Bibliographie|Références|Références bibliographiques|"
+        r"^(Bibliographie|Références bibliographiques|Références|"
         r"Méthodes|Matériels? et Méthodes|Remerciements|Annexe|Résumé|"
         r"Introduction|Résultats|Discussion|Supplément|Financement|"
         r"Contributions des auteurs|Disponibilité des données)\b"
