@@ -355,7 +355,10 @@ def _grid_runs(bands, min_gutter, max_gap):
     a trailing ``Note.``/``n.s.`` line or a prose fragment is never
     absorbed as a fake sparse row; a wide one is held pending as a
     colspan candidate — absorbed if a multi-cell band resumes the grid,
-    dropped as ordinary text if not.
+    dropped as ordinary text if not. One pending band is a divider
+    candidate; a second consecutive one means paragraph prose is filling
+    the gap — the run closes instead of committing a run of colspan
+    rows.
     """
     runs = []
     cur = None  # [bands, union, pending, open_row_cols]
@@ -443,7 +446,15 @@ def _grid_runs(bands, min_gutter, max_gap):
                     cur[0].append(band)
                     cur[3] |= occ
             else:
-                cur[2].append(band)
+                # a second consecutive wide band is not a colspan
+                # candidate — it is prose infiltrating the gap; close
+                # the run so it (and the still-pending first) stays
+                # text instead of committing as colspan rows
+                if cur[2]:
+                    runs.append(cur[0])
+                    cur = None
+                else:
+                    cur[2].append(band)
     if cur is not None:
         runs.append(cur[0])
     return runs

@@ -100,10 +100,13 @@ chapters.
   wrapped-cell continuation (occupied columns a strict subset of the row
   above's, ≤ ncols−2, column 0 empty — the same test `_assemble_rows`
   folds on), so a `Note.`/`n.s.` line or prose fragment below the grid
-  stays prose instead of surfacing as a fake sparse row. Footnote-region
-  blocks are excluded from grid candidates like furniture and rotated
-  cells are, so a note band-joining the grid can't be swallowed into
-  cells instead of notes.xhtml. Guards are
+  stays prose instead of surfacing as a fake sparse row. A wide
+  lone-cell band is held pending as a colspan candidate — only a
+  resuming multi-cell band commits it, and a second consecutive wide
+  band closes the run (prose filling the gap is not a run of divider
+  rows). Footnote-region blocks are excluded from grid candidates like
+  furniture and rotated cells are, so a note band-joining the grid
+  can't be swallowed into cells instead of notes.xhtml. Guards are
   precision-first: ≥3 rows (≥2 when captioned), ≥60% grid-dense rows,
   band/cell fill under prose levels (0.88/0.9), no list-marker first
   column, no image overlap;

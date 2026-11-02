@@ -257,23 +257,43 @@ def _band(pairs, y, h=11):
              for (s, a, b), bid in pairs], y, y + h]
 
 
-def test_grid_runs_pending_bands_do_not_drift_gap():
-    """A chain of pending wide bands keeps the run's gap window alive —
-    measuring max_gap only from the last committed band would close the
-    run early and sever the trailing rows into a second run."""
+def test_grid_runs_pending_band_bridges_the_gap():
+    """A pending wide band keeps the run's gap window alive — measuring
+    max_gap only from the last committed band would close the run early
+    and sever the trailing rows into a second run."""
     cells = [(("a", 0, 100), 1), (("b", 140, 240), 2)]
     runs = analyze._grid_runs(
         [
             _band(cells, 0),
             _band(cells, 16),
             _band([(("section", 10, 230), 3)], 34),   # pending (wide)
-            _band([(("section", 10, 230), 4)], 66),   # still pending
-            _band(cells, 84),
+            _band(cells, 66),
         ],
         min_gutter=6,
         max_gap=36,
     )
-    assert len(runs) == 1 and len(runs[0]) == 5
+    assert len(runs) == 1 and len(runs[0]) == 4
+
+
+def test_grid_runs_second_pending_closes_run():
+    """One wide band is a colspan candidate; a second consecutive one
+    means prose is filling the gap between two grid fragments — the
+    run closes so the paragraph lines stay text instead of committing
+    as a run of colspan rows."""
+    cells = [(("a", 0, 100), 1), (("b", 140, 240), 2)]
+    wide1 = _band([(("line one", 10, 230), 3)], 34)
+    wide2 = _band([(("line two", 10, 230), 4)], 50)
+    runs = analyze._grid_runs(
+        [_band(cells, 0), _band(cells, 16), wide1, wide2,
+         _band(cells, 68)],
+        min_gutter=6,
+        max_gap=36,
+    )
+    assert len(runs) == 2
+    assert [len(r) for r in runs] == [2, 1]
+    assert all(
+        b is not wide1 and b is not wide2 for run in runs for b in run
+    )
 
 
 def test_grid_runs_caption_band_never_joins():
