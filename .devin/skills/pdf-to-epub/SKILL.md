@@ -69,7 +69,9 @@ python3 pdf_to_epub.py <input.pdf> [-o output.epub] [--title "..."] [--author ".
   (rotated sidebars).
 - Numbered lines (N./N)) become list-item paragraphs; vertically isolated
   indented blocks become <blockquote>; rotated tables (tall-narrow block
-  clusters) are re-rendered upright and embedded as images.
+  clusters) are re-rendered upright and embedded as images; upright grid
+  tables (row bands sharing a permanent column gutter, captioned `Table N`
+  when they span the page) emit real `<table>` markup.
 - Bold/italic come from font-name suffixes (.B/Bold/.I/Italic) when flags
   are absent; embedded raster images are deduplicated and included; tiny
   artifacts (<2 KB) are dropped.

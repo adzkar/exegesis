@@ -1504,3 +1504,694 @@ def test_paragraph_merges_across_page_break(tmp_path):
     convert(pdf, out)
     text = chapter_text(out)
     assert "page bottom and the sentence continues at the top" in text
+
+
+def _grid_table(p, cols, rows, y=220, fontsize=8, header_bold=False):
+    """Draw a grid table as one textbox per cell (mirrors journal layout)."""
+    for ri, r in enumerate(rows):
+        for ci, txt in enumerate(r):
+            if txt is None:
+                continue
+            p.insert_textbox(
+                fitz.Rect(cols[ci], y, cols[ci] + 120, y + 40),
+                txt,
+                fontsize=fontsize,
+                fontname="hebo" if header_bold and ri == 0 else "helv",
+            )
+        y += 16
+    return y
+
+
+def test_horizontal_table_markup(tmp_path):
+    """Captioned 3-column grid emits real <table> markup with a header."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 110),
+        "An introductory paragraph that must stay ordinary prose.",
+        fontsize=BODY,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 120, 540, 140),
+        "Table 1  Reaction times by group",
+        fontsize=BODY,
+    )
+    _grid_table(
+        p,
+        [72, 230, 400],
+        [
+            ["Study", "N", "Mean RT"],
+            ["Alpha et al.", "42", "350 msec"],
+            ["Beta and Gamma", "108", "412 msec"],
+            ["Delta", "19", "298 msec"],
+        ],
+        y=150,
+        header_bold=True,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 260, 540, 380),
+        "A following paragraph keeps the table bounded from below.",
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "htable.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "htable.epub"
+    convert(pdf, out)
+    assert lint_epub(out) == []
+    html = " ".join(doc_html(out).values())
+    assert "<table>" in html
+    assert "<caption>Table 1 Reaction times by group</caption>" in html.replace(
+        "  ", " "
+    )
+    assert "<th><b>Study</b></th>" in html
+    assert "<td>Alpha et al.</td>" in html and "<td>298 msec</td>" in html
+    text = chapter_text(out)
+    # cell text must not also flow as body paragraphs
+    assert text.count("Alpha et al.") == 1
+
+
+def test_table_wrapped_cell_continuation(tmp_path):
+    """A wrapped cell's second line folds into the same <td>."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 120), "Table 2  Study details", fontsize=BODY
+    )
+    _grid_table(
+        p,
+        [72, 230, 430],
+        [
+            ["Study", "Sample size", "RT"],
+            ["Alpha", "42 participants total recruited", "350"],
+            ["Beta", "108", "412"],
+            ["Delta", "19", "298"],
+        ],
+        y=140,
+    )
+    pdf = tmp_path / "twrap.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "twrap.epub"
+    convert(pdf, out)
+    html = " ".join(doc_html(out).values())
+    assert "<td>42 participants total recruited</td>" in html
+
+
+def test_table_inside_column_of_two_col_page(tmp_path):
+    """A grid inside one column of a 2-col page becomes a table; the
+    other column's prose is untouched."""
+    doc = fitz.open()
+    prose = (
+        "The quick brown fox jumps over the lazy dog repeatedly and "
+        "without pause for breath. "
+    )
+    for _ in range(2):
+        p = _page(doc)
+        for i in range(3):
+            p.insert_textbox(
+                fitz.Rect(72, 90 + i * 120, 290, 200 + i * 120),
+                prose * (3 - i),
+                fontsize=BODY,
+            )
+            p.insert_textbox(
+                fitz.Rect(340, 90 + i * 120, 560, 200 + i * 120),
+                prose * (3 - i),
+                fontsize=BODY,
+            )
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 90, 290, 150),
+        "Left column prose sits above the table region here.",
+        fontsize=BODY,
+    )
+    _grid_table(
+        p,
+        [76, 140, 210],
+        [["Grp", "N", "RT"], ["A1", "42", "350"], ["B2", "108", "412"], ["C3", "19", "298"]],
+        y=220,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 310, 290, 400),
+        "Left column prose below the table continues here.",
+        fontsize=BODY,
+    )
+    for i in range(3):
+        p.insert_textbox(
+            fitz.Rect(340, 90 + i * 120, 560, 200 + i * 120),
+            prose * (3 - i),
+            fontsize=BODY,
+        )
+    pdf = tmp_path / "tincol.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tincol.epub"
+    convert(pdf, out)
+    assert lint_epub(out) == []
+    html = " ".join(doc_html(out).values())
+    assert "<td>A1</td>" in html and "<td>298</td>" in html
+    assert "prose below the table continues" in chapter_text(out)
+
+
+def test_full_width_table_spanning_columns(tmp_path):
+    """A captioned page-wide grid in a 2-col doc emits a table."""
+    doc = fitz.open()
+    prose = (
+        "The quick brown fox jumps over the lazy dog repeatedly and "
+        "without pause for breath. "
+    )
+    for _ in range(2):
+        p = _page(doc)
+        for i in range(2):
+            p.insert_textbox(
+                fitz.Rect(72, 400 + i * 120, 290, 510 + i * 120),
+                prose * (3 - i),
+                fontsize=BODY,
+            )
+            p.insert_textbox(
+                fitz.Rect(340, 400 + i * 120, 560, 510 + i * 120),
+                prose * (3 - i),
+                fontsize=BODY,
+            )
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 90, 540, 110),
+        "Table 3  Descriptive statistics across conditions",
+        fontsize=BODY,
+    )
+    _grid_table(
+        p,
+        [72, 200, 340, 470],
+        [
+            ["Measure", "Mean", "SD", "Range"],
+            ["Anxiety", "3.2", "0.8", "1-5"],
+            ["Depression", "2.7", "0.9", "1-4"],
+            ["Stress", "4.1", "1.1", "2-6"],
+        ],
+        y=130,
+        fontsize=9,
+    )
+    for i in range(2):
+        p.insert_textbox(
+            fitz.Rect(72, 400 + i * 120, 290, 510 + i * 120),
+            prose * (3 - i),
+            fontsize=BODY,
+        )
+        p.insert_textbox(
+            fitz.Rect(340, 400 + i * 120, 560, 510 + i * 120),
+            prose * (3 - i),
+            fontsize=BODY,
+        )
+    pdf = tmp_path / "twide.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "twide.epub"
+    convert(pdf, out)
+    html = " ".join(doc_html(out).values())
+    assert "<td>Anxiety</td>" in html and "<td>1-4</td>" in html
+    assert "<caption>Table 3" in html
+
+
+def test_wrapped_caption_block_keeps_all_lines(tmp_path):
+    """A 'Table N' legend wrapping to a second line in the same block
+    must land both lines in <caption> — the continuation used to be
+    claimed away and silently dropped."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 110),
+        "An introductory paragraph that must stay ordinary prose.",
+        fontsize=BODY,
+    )
+    # narrow box forces a two-line legend inside one block
+    p.insert_textbox(
+        fitz.Rect(72, 118, 230, 150),
+        "Table 1  Reaction times by group and condition",
+        fontsize=BODY,
+    )
+    _grid_table(
+        p,
+        [72, 230, 400],
+        [
+            ["Study", "N", "Mean RT"],
+            ["Alpha et al.", "42", "350 msec"],
+            ["Beta and Gamma", "108", "412 msec"],
+            ["Delta", "19", "298 msec"],
+        ],
+        y=150,
+    )
+    pdf = tmp_path / "twcap.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "twcap.epub"
+    convert(pdf, out)
+    assert lint_epub(out) == []
+    html = " ".join(doc_html(out).values())
+    assert "<caption>" in html and "and condition" in html.split(
+        "<caption>", 1
+    )[1].split("</caption>", 1)[0]
+    assert chapter_text(out).count("and condition") == 1
+
+
+def test_note_below_table_stays_prose(tmp_path):
+    """A 'Note.' line under the grid must not be absorbed as a fake
+    sparse row — it is prose, not a wrapped-cell stub."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 120), "Table 5  Model results", fontsize=BODY
+    )
+    last_y = _grid_table(
+        p,
+        [72, 230, 400],
+        [
+            ["Study", "N", "Estimate"],
+            ["Alpha", "42", "0.31"],
+            ["Beta", "108", "0.47"],
+            ["Delta", "19", "0.29"],
+        ],
+        y=140,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, last_y + 4, 320, last_y + 20),
+        "Note. Values are means of three replicates.",
+        fontsize=8,
+    )
+    pdf = tmp_path / "tnote.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tnote.epub"
+    convert(pdf, out)
+    html = " ".join(doc_html(out).values())
+    assert "<table>" in html
+    table_html = html.split("<table>", 1)[1].split("</table>", 1)[0]
+    assert "Note." not in table_html
+    assert "Note. Values are means of three replicates." in chapter_text(out)
+
+
+def test_gutter_straddling_stub_does_not_kill_table(tmp_path):
+    """A lone line sitting across the grid's gutter used to reach the
+    column union and empty it, rejecting the whole region; now it can
+    neither reshape the layout nor become a row."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 120), "Table 6  Pairs", fontsize=BODY
+    )
+    last_y = _grid_table(
+        p,
+        [72, 160],
+        [
+            ["Grp", "RT"],
+            ["Alpha", "350"],
+            ["Beta", "412"],
+            ["Gamma", "298"],
+        ],
+        y=140,
+    )
+    # spans the whole ~50pt gutter between the two columns but stays
+    # under 0.7x the union width
+    p.insert_textbox(
+        fitz.Rect(105, last_y + 4, 175, last_y + 20),
+        "not significant",
+        fontsize=8,
+    )
+    pdf = tmp_path / "tstrad.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tstrad.epub"
+    convert(pdf, out)
+    html = " ".join(doc_html(out).values())
+    assert "<table>" in html and "<td>298</td>" in html
+    table_html = html.split("<table>", 1)[1].split("</table>", 1)[0]
+    assert "not significant" not in table_html
+    assert "not significant" in chapter_text(out)
+
+
+def test_spanning_row_emits_colspan_not_rejection(tmp_path):
+    """A full-width 'Group B' divider row inside the grid is a colspan
+    row — it must neither erase the permanent gutters (killing the
+    region) nor merge adjacent columns."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 120), "Table 7  Cohort results", fontsize=BODY
+    )
+    _grid_table(
+        p,
+        [72, 230, 400],
+        [
+            ["Study", "N", "Estimate"],
+            ["Alpha", "42", "0.31"],
+            ["Beta", "108", "0.47"],
+        ],
+        y=140,
+    )
+    # one wide single-cell band spanning the whole grid — a section
+    # divider that must survive as <td colspan="3">
+    p.insert_textbox(
+        fitz.Rect(72, 192, 500, 208),
+        "Group B — participants from the second recruitment cohort "
+        "including all follow-up visits scheduled for analysis",
+        fontsize=8,
+    )
+    _grid_table(
+        p,
+        [72, 230, 400],
+        [
+            ["Gamma", "19", "0.29"],
+            ["Delta", "77", "0.35"],
+        ],
+        y=214,
+    )
+    pdf = tmp_path / "tspan.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tspan.epub"
+    convert(pdf, out)
+    assert lint_epub(out) == []
+    html = " ".join(doc_html(out).values())
+    assert "<table>" in html and "<td>0.35</td>" in html
+    assert 'colspan="3"' in html
+
+
+def test_two_column_prose_is_not_a_table(tmp_path):
+    """Two text columns of prose must not fuse into a grid region."""
+    doc = fitz.open()
+    prose_l = (
+        "Left column prose fills its measure completely and consistently "
+        "with ordinary justified sentences throughout the page. "
+    )
+    prose_r = (
+        "Right column prose does exactly the same thing on its side of "
+        "the gutter and is not table content either. "
+    )
+    p = _page(doc)
+    p.insert_textbox(fitz.Rect(72, 100, 290, 600), prose_l * 6, fontsize=BODY)
+    p.insert_textbox(fitz.Rect(340, 100, 560, 600), prose_r * 6, fontsize=BODY)
+    pdf = tmp_path / "notable.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "notable.epub"
+    convert(pdf, out)
+    html = " ".join(doc_html(out).values())
+    assert "<table>" not in html
+
+
+def test_numbered_list_is_not_a_table(tmp_path):
+    """A marker column plus text column reads as a list, not a grid."""
+    doc = fitz.open()
+    p = _page(doc)
+    for i in range(5):
+        p.insert_textbox(
+            fitz.Rect(72, 100 + i * 22, 100, 122 + i * 22),
+            f"{i + 1}.",
+            fontsize=BODY,
+        )
+        p.insert_textbox(
+            fitz.Rect(110, 100 + i * 22, 540, 122 + i * 22),
+            f"List item number {i + 1} with some explanatory text",
+            fontsize=BODY,
+        )
+    pdf = tmp_path / "listcase.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "listcase.epub"
+    convert(pdf, out)
+    html = " ".join(doc_html(out).values())
+    assert "<table>" not in html
+    assert "List item number 3" in chapter_text(out)
+
+
+def test_caption_sharing_band_stays_out_of_cells(tmp_path):
+    """A 'Table N' legend sharing its y-band with stray text used to
+    join the run as a multi-cell row — legend and foreign text both
+    landed inside <td>s while _table_caption stayed blind. The band is
+    now a caption candidate only: the mixed legend fails claim
+    validation (no <caption>), but nothing is mangled into cells."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 220, 120),
+        "Table 8  Results by group",
+        fontsize=BODY,
+    )
+    p.insert_textbox(
+        fitz.Rect(400, 100, 560, 120),
+        "a sidenote",
+        fontsize=8,
+    )
+    _grid_table(
+        p,
+        [72, 230, 400],
+        [
+            ["Study", "N", "Estimate"],
+            ["Alpha", "42", "0.31"],
+            ["Beta", "108", "0.47"],
+            ["Delta", "19", "0.29"],
+        ],
+        y=130,
+    )
+    pdf = tmp_path / "tcmix.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tcmix.epub"
+    convert(pdf, out)
+    assert lint_epub(out) == []
+    html = " ".join(doc_html(out).values())
+    assert "<table>" in html
+    table_html = html.split("<table>", 1)[1].split("</table>", 1)[0]
+    assert "Results by group" not in table_html
+    assert "sidenote" not in table_html
+    text = chapter_text(out)
+    assert "Table 8" in text and "sidenote" in text
+
+
+def test_below_table_legend_is_caption_not_merged_cell(tmp_path):
+    """A 'Table N' legend below the grid that starts in a later column
+    used to pass the wrapped-cell fold and merge into the last row's
+    cell as '<td>19 Table 9 …</td>' — it must be adopted as <caption>
+    and never appear inside a <td>."""
+    doc = fitz.open()
+    p = _page(doc)
+    last_y = _grid_table(
+        p,
+        [72, 230, 400],
+        [
+            ["Study", "N", "Estimate"],
+            ["Alpha", "42", "0.31"],
+            ["Beta", "108", "0.47"],
+            ["Delta", "19", "0.29"],
+        ],
+        y=140,
+    )
+    p.insert_textbox(
+        fitz.Rect(230, last_y + 4, 540, last_y + 24),
+        "Table 9  Results by group",
+        fontsize=8,
+    )
+    pdf = tmp_path / "tcbel.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tcbel.epub"
+    convert(pdf, out)
+    assert lint_epub(out) == []
+    html = " ".join(doc_html(out).values()).replace("  ", " ")
+    assert "<table>" in html
+    assert "<caption>Table 9 Results by group</caption>" in html
+    assert "<td>Table" not in html and "Table 9" not in html.split(
+        "<caption>", 1
+    )[1].split("</caption>", 1)[1].split("</table>", 1)[0]
+
+
+def test_footnote_zone_block_not_swallowed_into_cells(tmp_path):
+    """A footnote-region block whose lines all land in grid member
+    bands used to be claimed into <td>s — the emit loop tests grid_of
+    before foot_tops, so the note never reached notes.xhtml. Footnote
+    blocks are now excluded from grid candidates up front, like
+    furniture and rotated-table cells are."""
+    doc = fitz.open()
+    p = _page(doc)
+    _grid_table(
+        p,
+        [76, 140, 210],
+        [
+            ["Grp", "N", "RT"],
+            ["A1", "42", "350"],
+            ["B2", "108", "412"],
+            ["C3", "19", "298"],
+            ["D4", "77", "265"],
+            ["E5", "91", "311"],
+        ],
+        y=360,
+        fontsize=8,
+    )
+    # smaller-than-body 'Supported by' opener in the bottom 55% just
+    # under the last row — footnote-zone material whose narrow band
+    # passes the wrapped-cell fold and used to merge into the last
+    # row's <td>
+    p.insert_textbox(
+        fitz.Rect(210, 464, 560, 482),
+        "Supported by NIH grant R01-GM123.",
+        fontsize=6.5,
+    )
+    pdf = tmp_path / "tfoot.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tfoot.epub"
+    convert(pdf, out)
+    texts = doc_texts(out)
+    assert "Supported by NIH grant" in texts["notes.xhtml"]
+    html = " ".join(doc_html(out).values())
+    assert "<table>" in html
+    table_html = html.split("<table>", 1)[1].split("</table>", 1)[0]
+    assert "Supported by" not in table_html
+    assert "<td>412</td>" in table_html
+
+
+def test_single_digit_cell_not_dropped_as_rotated(tmp_path):
+    """A lone '7' in a cell is taller than wide — an aspect-ratio
+    filter used to drop it as 'rotated', unclaiming its block so the
+    digit vanished or the whole grid rejected. The direction signal
+    keeps it."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 120), "Table 1  Counts", fontsize=BODY
+    )
+    _grid_table(
+        p,
+        [72, 230, 400],
+        [
+            ["Study", "N", "Mean RT"],
+            ["Alpha et al.", "7", "350 msec"],
+            ["Beta and Gamma", "108", "412 msec"],
+            ["Delta", "19", "298 msec"],
+        ],
+        y=140,
+    )
+    pdf = tmp_path / "tdigit.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tdigit.epub"
+    convert(pdf, out)
+    assert lint_epub(out) == []
+    html = " ".join(doc_html(out).values())
+    assert "<table>" in html
+    table_html = html.split("<table>", 1)[1].split("</table>", 1)[0]
+    assert "<td>7</td>" in table_html
+    assert "<p>7</p>" not in html  # the digit isn't loose body text
+
+
+def test_wide_stray_beyond_grid_stays_prose(tmp_path):
+    """A wide line beyond the grid's right edge used to hold pending
+    and commit on resume, then cover no recovered column — its block
+    was claimed for a colspan cell that never emitted, dropping the
+    text entirely. It must stay body prose."""
+    doc = fitz.open()
+    p = _page(doc)
+    _grid_table(
+        p,
+        [76, 140, 210],
+        [
+            ["Grp", "N", "RT"],
+            ["A1", "42", "350"],
+        ],
+        y=200,
+        fontsize=8,
+    )
+    # its own band, ≥0.7× union width but lying entirely beyond the
+    # grid's right edge — covers no recovered column
+    p.insert_textbox(
+        fitz.Rect(400, 240, 590, 258),
+        "A marginal aside that belongs to the body flow.",
+        fontsize=8,
+    )
+    _grid_table(
+        p,
+        [76, 140, 210],
+        [
+            ["B2", "108", "412"],
+            ["C3", "19", "298"],
+            ["D4", "77", "265"],
+        ],
+        y=264,
+        fontsize=8,
+    )
+    pdf = tmp_path / "tstray.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tstray.epub"
+    convert(pdf, out)
+    html = " ".join(doc_html(out).values())
+    assert "A marginal aside" in chapter_text(out)
+    if "<table>" in html:
+        table_html = html.split("<table>", 1)[1].split("</table>", 1)[0]
+        assert "marginal aside" not in table_html
+
+
+def test_stacked_tables_legend_belongs_to_lower(tmp_path):
+    """A 'Table N' legend between two stacked grids is the lower
+    table's legend — the upper grid must emit uncaptioned rather than
+    steal it, and the shared caption block must not sink the lower
+    region in the claimed-overlap dedupe."""
+    doc = fitz.open()
+    p = _page(doc)
+    _grid_table(
+        p,
+        [76, 140, 210],
+        [["Grp", "N", "RT"], ["A1", "42", "350"], ["B2", "108", "412"]],
+        y=140,
+        fontsize=8,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 196, 340, 214),
+        "Table 5  Lower estimates",
+        fontsize=BODY,
+    )
+    _grid_table(
+        p,
+        [76, 140, 210],
+        [["Grp", "N", "RT"], ["C3", "19", "298"], ["D4", "77", "265"]],
+        y=220,
+        fontsize=8,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 280, 540, 310),
+        "A closing paragraph bounds the lower grid.",
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "tstacked.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tstacked.epub"
+    convert(pdf, out)
+    assert lint_epub(out) == []
+    html = " ".join(doc_html(out).values())
+    parts = html.split("<table>")
+    assert len(parts) == 3
+    assert "<caption>" not in parts[1]
+    assert parts[2].startswith("<caption>")
+    assert "Table 5  Lower estimates" in parts[2]
+
+
+def test_cell_internal_gap_merges_one_td(tmp_path):
+    """A value cell extracted as two fragments across a wide internal
+    gap ('3.2     (0.4)') must merge into one <td> — the row can't
+    emit more cells than the table has columns."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 120), "Table 6  Scores", fontsize=BODY
+    )
+    _grid_table(
+        p,
+        [72, 230, 400],
+        [
+            ["Study", "Mean", "SD"],
+            ["Alpha", None, "0.4"],
+            ["Beta", "4.1 msec estimated", "0.9"],
+            ["Delta", "2.8", "0.5"],
+        ],
+        y=140,
+    )
+    # one logical cell split into two fragments sharing Alpha's band —
+    # another row's wide cell keeps both inside recovered column 1
+    p.insert_textbox(fitz.Rect(230, 156, 260, 172), "3.2", fontsize=8)
+    p.insert_textbox(fitz.Rect(300, 156, 340, 172), "(0.4)", fontsize=8)
+    pdf = tmp_path / "tgap.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tgap.epub"
+    convert(pdf, out)
+    assert lint_epub(out) == []
+    html = " ".join(doc_html(out).values())
+    assert "<table>" in html
+    row = next(
+        r for r in html.split("<tr>") if "Alpha" in r
+    ).split("</tr>", 1)[0]
+    assert row.count("<td") == 3
+    assert "3.2 (0.4)" in row

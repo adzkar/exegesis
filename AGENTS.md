@@ -83,19 +83,65 @@ chapters.
   paragraphs (absorbing continuation lines); a block indented >12pt from
   its column edge AND vertically isolated (>0.7× line-height gaps on both
   sides) becomes `<blockquote>` (quotes, verse).
-- **Tables** — rotated/landscape tables (≥3 tall-narrow blocks sharing a
-  y-band) are rasterized and embedded as PNGs. `is_furniture`-flagged
+- **Tables** — two paths. Rotated/landscape tables (≥3 tall-narrow blocks
+  sharing a y-band) are rasterized and embedded as PNGs. `is_furniture`-flagged
   blocks never seed a region, so sidebar furniture kept under
   `--keep-headers` can't be rasterized into a false table. Block bboxes arrive in
   mediabox (unrotated) space; the padded clip is mapped into displayed
   space via `page.rotation_matrix`, because `get_pixmap` clips in rotated
-  coordinates — the render comes out upright and uncropped. Horizontal
-  tables are not yet detected — their cells currently flow as text.
+  coordinates — the render comes out upright and uncropped. Upright grid
+  tables emit real `<table>` markup: page text lines (rotated ones
+  excluded via their reported `dir`, not aspect ratio — a lone '7' cell
+  is taller than wide) cluster into y-bands,
+  bands split into cells at ≥0.45×line-height x-gaps, and runs of
+  multi-cell bands that keep a permanent interior whitespace gutter
+  (crossed by no row) become regions. Columns fall out of the surviving
+  gutters — only multi-cell bands feed that union, so a lone-cell band
+  can never reshape or kill the layout; cells spanning several columns
+  emit `colspan`. A narrow lone-cell band joins the run only as a
+  wrapped-cell continuation (occupied columns a strict subset of the row
+  above's, ≤ max(1, ncols−2), column 0 empty — the same test `_assemble_rows`
+  folds on), so a `Note.`/`n.s.` line or prose fragment below the grid
+  stays prose instead of surfacing as a fake sparse row. A wide
+  lone-cell band is held pending as a colspan candidate — only a
+  resuming multi-cell band commits it, a second consecutive wide band
+  closes the run (prose filling the gap is not a run of divider rows),
+  and a wide band covering no recovered column is never held at all
+  (it could claim a block for a cell that can never emit).
+  Footnote-region blocks are excluded from grid candidates like
+  furniture and rotated cells are, so a note band-joining the grid
+  can't be swallowed into cells instead of notes.xhtml. Guards are
+  precision-first: ≥3 rows (≥2 when captioned), ≥60% grid-dense rows,
+  band/cell fill under prose levels (0.88/0.9), no list-marker first
+  column, no image overlap;
+  a region spanning a document column edge additionally needs a `Table N`
+  caption and gutters that don't just mirror the page's own columns (the
+  layout itself is not a table). A band whose text opens with the
+  `Table N` label never seeds or joins a run — it is a hard boundary
+  reserved for the caption machinery, so a legend can't be mangled into
+  cells or swallowed as a wrapped-cell continuation. A `Table N` band
+  adjacent to the region becomes `<caption>` — an above-run band wins
+  over a below-run one, and a below-run band within the caption window
+  of a following run belongs to that table instead (legends sit above
+  the grid they label), so a legend between stacked grids can't be
+  stolen upward; regions contending for the same caption block resolve
+  by ownership — the loser keeps its grid with the caption stripped
+  rather than the whole region being discarded — bands made purely of the
+  caption block's other lines (a wrapped legend) join it; a legend band
+  shared with a foreign block is ambiguous and degrades to prose. A
+  block is claimed into a region only
+  when every one of its lines lands in a member band — partial coverage
+  leaves the whole block in body flow rather than silently dropping the
+  un-emitted lines. An all-bold first row becomes `<thead>` `<th>`s.
+  Misses degrade to ordinary text flow, never to mangled prose.
 - **Caption alt text** — images and rasterized tables adopt the nearest
   text block beyond the region's facing edge as `alt` when it opens with
-  a caption label (`Fig.`/`Figure`/`Table`/`Plate`/`Scheme`/`Chart` +
+  a caption label from the language profile (EN:
+  `Fig.`/`Figure`/`Table`/`Plate`/`Scheme`/`Chart` +
   number, incl. `S`-prefixed supplementary labels, subfigure letters,
-  and dash-joined ranges) within 120pt and shares a column band
+  dash-joined ranges, and 2+-space layout-gap tails — the number core
+  and terminator are shared across all three caption regexes so the
+  patterns can't drift) within 120pt and shares a column band
   (`_overlap_cols`, so a few points of gutter bleed can't claim both
   columns). The first candidate ends the scan, image blocks break it,
   and a page-shared `claimed` set keeps one caption from alting two
