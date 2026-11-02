@@ -296,6 +296,17 @@ def test_grid_runs_second_pending_closes_run():
     )
 
 
+def test_upright_lines_keeps_narrow_cells():
+    """A 1-char line is taller than wide but reports dir (1, 0) — the
+    direction check keeps it where an aspect-ratio proxy dropped it."""
+    upright = line("7", size=8, x0=0, y0=0, x1=5, y1=11)
+    upright["dir"] = (1.0, 0.0)
+    rotated = line("v", size=8, x0=5, y0=0, x1=9, y1=30)
+    rotated["dir"] = (0.0, 1.0)
+    out = analyze._upright_lines([block([upright, rotated], 0, 0, 9, 30)])
+    assert [l["spans"][0]["text"] for l, _ in out] == ["7"]
+
+
 def test_grid_runs_caption_band_never_joins():
     """A 'Table N …' band — even a multi-cell one sharing text with a
     foreign line — is the caption machinery's to claim: it must neither

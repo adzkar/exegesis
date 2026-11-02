@@ -2034,3 +2034,37 @@ def test_footnote_zone_block_not_swallowed_into_cells(tmp_path):
     table_html = html.split("<table>", 1)[1].split("</table>", 1)[0]
     assert "Supported by" not in table_html
     assert "<td>412</td>" in table_html
+
+
+def test_single_digit_cell_not_dropped_as_rotated(tmp_path):
+    """A lone '7' in a cell is taller than wide — an aspect-ratio
+    filter used to drop it as 'rotated', unclaiming its block so the
+    digit vanished or the whole grid rejected. The direction signal
+    keeps it."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 120), "Table 1  Counts", fontsize=BODY
+    )
+    _grid_table(
+        p,
+        [72, 230, 400],
+        [
+            ["Study", "N", "Mean RT"],
+            ["Alpha et al.", "7", "350 msec"],
+            ["Beta and Gamma", "108", "412 msec"],
+            ["Delta", "19", "298 msec"],
+        ],
+        y=140,
+    )
+    pdf = tmp_path / "tdigit.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tdigit.epub"
+    convert(pdf, out)
+    assert lint_epub(out) == []
+    html = " ".join(doc_html(out).values())
+    assert "<table>" in html
+    table_html = html.split("<table>", 1)[1].split("</table>", 1)[0]
+    assert "<td>7</td>" in table_html
+    text = chapter_text(out)
+    assert text.count(">7<") == 0  # the digit isn't loose body text

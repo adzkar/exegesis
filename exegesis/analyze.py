@@ -258,16 +258,19 @@ class _TableRegion:
 def _upright_lines(blocks):
     """All ``(line, block_id)`` pairs of text blocks, minus rotated text.
 
-    Turned-table and vertical-text lines are taller than wide; they must
-    not seed row bands here (the rotated-table path owns them).
+    PyMuPDF reports each line's writing direction: ``dir`` is x-dominant
+    for upright text and y-dominant for rotated text (which the
+    rotated-table path owns). An aspect-ratio proxy is lossy — a
+    legitimate narrow cell (a lone '7' is taller than wide) drops out of
+    every band and unclaims its whole block under the straddler rule.
     """
     out = []
     for b in blocks:
         if b["type"] != 0:
             continue
         for l in _block_lines(b):
-            x0, y0, x1, y1 = l["bbox"]
-            if x1 - x0 >= (y1 - y0) * 0.5:
+            dx, dy = l.get("dir", (1.0, 0.0))
+            if abs(dx) >= abs(dy):
                 out.append((l, id(b)))
     return out
 

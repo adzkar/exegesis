@@ -90,7 +90,9 @@ chapters.
   mediabox (unrotated) space; the padded clip is mapped into displayed
   space via `page.rotation_matrix`, because `get_pixmap` clips in rotated
   coordinates — the render comes out upright and uncropped. Upright grid
-  tables emit real `<table>` markup: page text lines cluster into y-bands,
+  tables emit real `<table>` markup: page text lines (rotated ones
+  excluded via their reported `dir`, not aspect ratio — a lone '7' cell
+  is taller than wide) cluster into y-bands,
   bands split into cells at ≥0.45×line-height x-gaps, and runs of
   multi-cell bands that keep a permanent interior whitespace gutter
   (crossed by no row) become regions. Columns fall out of the surviving
