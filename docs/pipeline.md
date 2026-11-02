@@ -69,6 +69,7 @@ flowchart TD
 | Blockquote | block indented >12pt from column edge AND isolated (gap >0.7× line height both sides; kept furniture doesn't count as a neighbor) |
 | Rotated table | ≥3 tall-narrow blocks sharing a y-band → region rasterized; clip mapped mediabox→displayed via `page.rotation_matrix` |
 | Grid table | multi-cell row bands sharing a permanent interior gutter → `<table>` with `colspan`s, wrapped-cell merges, `Table N` caption, all-bold `<thead>`; edge-spanning regions need a caption and non-layout gutters |
+| Figure/table alt text | nearest text block past the region's facing edge within 120pt that opens with a caption label (`Fig.`/`Figure`/`Table`/`Plate`/`Scheme`/`Chart` + number; `S`-prefix, subfigure letter, and dash-joined range allowed) in the same `_overlap_cols` band — first candidate ends the scan, footnote-zone/kept-furniture/cell blocks can't donate, images never take `Table N.`; a page-shared `claimed` set stops one caption alting two images |
 | Header/footer | signature repeated on ≥40% of pages in edge zone (set built at any doc length; under `--keep-headers` matches flag `is_furniture`) |
 | Furniture | pattern (`VOL`, `www.`, `ISSN`, `doi`, `©`, dates) in outer 7% edge; under `--keep-headers` flagged `is_furniture` and emitted verbatim at page edges — inert to classifiers, ordering machinery, and table regions |
 | Margin strip | <25pt wide, >4× tall, in outer 10% margin (rotated sidebars) |

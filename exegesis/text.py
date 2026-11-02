@@ -26,6 +26,17 @@ SECTION_LABEL_RE = re.compile(
     r"Acknowledgments|Materials and Methods|Appendix|Funding|"
     r"Author Contributions|Data Availability)\b"
 )
+# a 'Table N.' legend opener: letter suffixes, ranges, and trailing
+# punctuation all occur in the wild; the label must open the text so
+# mid-sentence 'see Table 1' citations don't match. A run of 2+ spaces
+# after the number also qualifies — journals like Springer set bare
+# 'Table 1  Title' legends with a layout gap instead of punctuation,
+# while flowing prose never carries a double-space here
+TABLE_CAPTION_RE = re.compile(
+    r"(?i)^\s*table\s*\.?\s*"
+    r"s?\d+(?:[a-z]|\s*\([a-zA-Z]\))?(?:\s*[–-]\s*s?\d+)?"
+    r"(?:\s+[—–-]|\s*[.:)]|\s{2,}|$)"
+)
 
 
 def _block_lines(block):

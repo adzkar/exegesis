@@ -1,9 +1,12 @@
 """Per-page rendering: ordered blocks become headings, bylines,
 paragraphs, footnotes, figures, and list/quote fragments — collected into
 ``PipelineState.page_frags`` plus heading/footnote/image side channels."""
+from __future__ import annotations
+
 import hashlib
 import html
 import re
+from collections.abc import Container
 
 import fitz
 from ebooklib import epub
@@ -12,6 +15,7 @@ from .analyze import (
     _assign_column,
     _covered_cols,
     _footnote_tops,
+    _overlap_cols,
     _rotate_clip,
     _rotated_table_region,
     _sup_marker,
@@ -24,6 +28,7 @@ from .text import (
     FN_LINK_RE,
     LIST_ITEM_RE,
     SECTION_LABEL_RE,
+    TABLE_CAPTION_RE,
     _block_lines,
     _block_median_size,
     _block_text,
@@ -35,6 +40,29 @@ from .text import (
     _span_is_bold,
     _span_is_italic,
 )
+
+# the label core allows a supplementary 'S' prefix ('Fig. S1'), a
+# subfigure letter ('Fig. 2b', 'Figure 1(a)'), and a dash-joined range
+# ('Figure 1–2'); the tail allows a dash-set legend ('Figure 3 — …') but
+# still demands punctuation or end-of-text — 'Figure 9 shows' stays a
+# prose citation, as does 'see Table 1–3' (labels must open the block)
+CAPTION_RE = re.compile(
+    r"(?i)^\s*(fig\.?|figure|table|plate|scheme|chart)\s*\.?\s*"
+    r"s?\d+(?:[a-z]|\s*\([a-zA-Z]\))?(?:\s*[–-]\s*s?\d+)?"
+    r"(?:\s+[—–-]|\s*[.:)]|$)"
+)
+# the image call must not accept 'Table N.' — tables keep their legends
+# above the body, so a following 'Table N.' block belongs to a
+# text-flowed table, not to the figure
+FIGURE_CAPTION_RE = re.compile(
+    r"(?i)^\s*(fig\.?|figure|plate|scheme|chart)\s*\.?\s*"
+    r"s?\d+(?:[a-z]|\s*\([a-zA-Z]\))?(?:\s*[–-]\s*s?\d+)?"
+    r"(?:\s+[—–-]|\s*[.:)]|$)"
+)
+# the mirror for the rasterized-table call: a 'Figure N.' block *below*
+# the region is a following figure's caption, not the table's legend —
+# while the legend above may still be 'Figure N.' (a text-heavy rotated
+# figure reaches the same raster path)
 
 
 def _section_label(text):
@@ -136,6 +164,120 @@ def _line_html(line, body_size):
             text = f"<i>{text}</i>"
         parts.append(text)
     return "".join(parts)
+
+
+def _figure_alt(
+    ordered,
+    b_i,
+    edges,
+    page_width,
+    region=None,
+    fallback="",
+    skip_ids: Container[int] = frozenset(),
+    pattern=CAPTION_RE,
+    above_pattern=CAPTION_RE,
+    claimed: set | None = None,
+):
+    """Alt text for a figure: the nearest foreign text block beyond the
+    figure's facing edge is its caption when it opens with a caption
+    pattern ('Fig. 1', 'Table 2'…), starts within 120pt of that edge, and
+    shares a column with it.
+
+    Candidates must lie clearly past the edge facing the scan — blocks
+    beside or wholly beyond the figure are skipped, since column-major
+    order can interleave a later column's content between the figure and
+    its true caption. The first candidate still ends the scan, so an
+    uncaptioned figure cannot inherit a later figure's caption, and the
+    shared-column requirement (``_overlap_cols``, not the tolerance-free
+    ``_covered_cols``) keeps a two-column page's image from stealing the
+    adjacent column's 'Table 3.' caption. ``region`` is the figure's true
+    extent — the rotated table's region, since an arbitrary member cell
+    would skew both the gap origin and the column band; it defaults to
+    the block at ``b_i``. ``skip_ids`` steps over blocks that can't
+    donate a caption — callers pass the page's non-body set (rasterized
+    table cells, footnote-zone blocks, kept furniture), so a 'Figure N.'
+    bound for notes.xhtml or a caption-shaped running head can't alt an
+    image while still emitting in the flow. The loop still ends at the
+    first candidate, so caption reach does not depend on cell count.
+    ``claimed`` is a
+    page-shared set of already-adopted caption blocks — one caption
+    cannot alt two images (a figure's 'Figure N.' directly above a
+    rotated table would otherwise caption the table too).
+    """
+    bbox = region if region is not None else ordered[b_i]["bbox"]
+    img_cols = _overlap_cols(bbox, edges, page_width)
+    claimed = claimed if claimed is not None else set()
+
+    def _is_caption(b, pat):
+        """The block's escaped text if it is a ``pat`` caption in the
+        figure's column band, else None."""
+        t = _block_text(b)
+        if not pat.match(t):
+            return None
+        if not img_cols & _overlap_cols(b["bbox"], edges, page_width):
+            return None
+        return html.escape(t[:200], quote=True)
+
+    def _scan(seq, gap_of, past_edge, pat, stray=None):
+        """(block, alt) at the first candidate in ``seq`` — the scan ends
+        there whether or not the block is a caption — else None.
+        ``gap_of`` measures a candidate's distance from the figure edge
+        facing the scan direction; ``past_edge`` requires it to lie
+        beyond that edge (modulo ~10pt of grazing), so a block inside
+        the band or wholly on the far side is skipped rather than
+        adopted or terminal. ``stray`` optionally re-checks such a
+        skipped block — the region call uses it to rescue a legend
+        seated above the region in a later column, which column-major
+        order emits after the cells."""
+        for b in seq:
+            if b["type"] != 0:
+                break
+            if id(b) in skip_ids or id(b) in claimed:
+                continue
+            if not past_edge(b):
+                if stray is not None and (alt := stray(b)) is not None:
+                    return b, alt
+                continue
+            if gap_of(b) > 120:
+                break
+            return b, _is_caption(b, pat)
+        return None
+
+    stray_above = None
+    if region is not None:
+        # journals set 'Table N.' legends above the table body — and text
+        # below a table is likelier the *next* table's legend — so the
+        # preceding block is tried first, against the full label set
+        # (a text-heavy rotated figure can carry a 'Figure N.' legend)
+        above_gap = lambda b: bbox[1] - b["bbox"][3]
+        # a later column's above-legend emits after the cells; rescue it
+        # under the table's own label set — a 'Figure N.' over there is
+        # that column's figure caption, not this table's legend
+        stray_above = lambda b: (
+            _is_caption(b, pattern) if -10 <= above_gap(b) <= 120 else None
+        )
+        hit = _scan(
+            reversed(ordered[:b_i]),
+            above_gap,
+            lambda b: above_gap(b) >= -10,
+            above_pattern,
+        )
+        if hit is not None:
+            b, alt = hit
+            if alt is not None:
+                claimed.add(id(b))
+                return alt
+    hit = _scan(
+        iter(ordered[b_i + 1 :]),
+        lambda b: b["bbox"][1] - bbox[3],
+        lambda b: b["bbox"][1] >= bbox[3] - 10,
+        pattern,
+        stray=stray_above,
+    )
+    if hit is not None and hit[1] is not None:
+        claimed.add(id(hit[0]))
+        return hit[1]
+    return fallback
 
 
 def _footnote_text(block, body_size):
@@ -253,7 +395,7 @@ def _render_page(page, page_index: int, state: PipelineState):
     grid_of = {bid: g for g in grids for bid in g.claimed}
     # ids of blocks that leave (or never enter) the body flow — rasterized
     # table cells, footnote-region blocks, kept furniture — none of them can
-    # count as a bold-only h2's follower
+    # count as a bold-only h2's follower or donate alt text to a figure
     nonbody_ids = tbl_ids | set(grid_of) | {
         id(b)
         for b in ordered
@@ -266,6 +408,7 @@ def _render_page(page, page_index: int, state: PipelineState):
     }
     tbl_done = False
     grid_done = set()
+    claimed_caps = set()
 
     def flush_par():
         if state.par:
@@ -305,8 +448,18 @@ def _render_page(page, page_index: int, state: PipelineState):
                         media_type=f"image/{'jpeg' if ext in ('jpg', 'jpeg') else ext}",
                         content=data,
                     )
+                alt = _figure_alt(
+                    ordered,
+                    b_i,
+                    edges,
+                    page.rect.width,
+                    pattern=FIGURE_CAPTION_RE,
+                    skip_ids=nonbody_ids,
+                    claimed=claimed_caps,
+                )
                 frags.append(
-                    f'<p class="fig"><img src="{state.images[digest].file_name}" alt=""/></p>'
+                    f'<p class="fig"><img src="{state.images[digest].file_name}"'
+                    f' alt="{alt}"/></p>'
                 )
             continue
 
@@ -316,6 +469,17 @@ def _render_page(page, page_index: int, state: PipelineState):
                 assert tbl is not None
                 tbl_done = True
                 flush_par()
+                alt = _figure_alt(
+                    ordered,
+                    b_i,
+                    edges,
+                    page.rect.width,
+                    region=tbl,
+                    fallback="table",
+                    skip_ids=nonbody_ids,
+                    pattern=TABLE_CAPTION_RE,
+                    claimed=claimed_caps,
+                )
                 mb = page.mediabox
                 tbl = fitz.Rect(
                     max(0, tbl.x0 - 8), max(0, tbl.y0 - 20),
@@ -333,7 +497,8 @@ def _render_page(page, page_index: int, state: PipelineState):
                         content=data,
                     )
                 frags.append(
-                    f'<p class="fig"><img src="{state.images[digest].file_name}" alt="table"/></p>'
+                    f'<p class="fig"><img src="{state.images[digest].file_name}"'
+                    f' alt="{alt}"/></p>'
                 )
             continue
 

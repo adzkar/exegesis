@@ -51,7 +51,11 @@ chapters.
   not a section head. All-caps short labels in the top 12% emit
   `<p class="label">` instead. Chapters split at heading fragments; frags
   before the first heading fold into chapter 1 rather than forming a
-  degenerate leading chapter.
+  degenerate leading chapter. The TOC nests: each h1 opens a section that
+  absorbs following h2s (an h2 before the first h1 stays top-level); a
+  childless h1 degrades to a bare nav Link — ebooklib emits an invalid
+  empty `<ol/>` for childless section tuples — and a headingless, noteless
+  document seeds one entry at chapter one so nav/NCX are never empty.
 - **Bylines** — blocks ≥1.15× body, or the block right after an h1 when it
   looks like a name list; merge into one `<p class="byline">` with short
   single-line followers. A trailing drop-cap letter moves into the body
@@ -100,6 +104,24 @@ chapters.
   layout itself is not a table). A `Table N` band adjacent to the region
   becomes `<caption>`; an all-bold first row becomes `<thead>` `<th>`s.
   Misses degrade to ordinary text flow, never to mangled prose.
+- **Caption alt text** — images and rasterized tables adopt the nearest
+  text block beyond the region's facing edge as `alt` when it opens with
+  a caption label (`Fig.`/`Figure`/`Table`/`Plate`/`Scheme`/`Chart` +
+  number, incl. `S`-prefixed supplementary labels, subfigure letters,
+  and dash-joined ranges) within 120pt and shares a column band
+  (`_overlap_cols`, so a few points of gutter bleed can't claim both
+  columns). The first candidate ends the scan, image blocks break it,
+  and a page-shared `claimed` set keeps one caption from alting two
+  images — the adopted block still renders in the body flow. Blocks that
+  leave the flow can't donate: rasterized cells, footnote-zone blocks,
+  and kept furniture are skipped via the page's `nonbody_ids` set (a
+  `Figure N.` bound for notes.xhtml or a caption-shaped running head
+  must not double as `alt`). Images
+  never take `Table N.` (table legends sit above the body, so a
+  following one belongs to a text-flowed table); the rotated-table call
+  tries the block *above* the region first against the full label set
+  and rescues a later column's `Table N.` legend that column-major
+  order emits after the cells.
 - **Abstract** — first small-font inset block in the top half of pages 0–1
   injects an `Abstract` h2.
 - **Styles** — bold via flags or `.B`/`Bold` font-name suffix, italic via

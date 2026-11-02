@@ -16,6 +16,7 @@ from .const import BOILERPLATE_COVERAGE, EDGE_ZONE
 from .text import (
     FURNITURE_RE,
     NOTE_START_RE,
+    TABLE_CAPTION_RE,
     _block_lines,
     _block_median_size,
     _block_text,
@@ -150,6 +151,24 @@ def _covered_cols(block, edges, page_width):
     ]
 
 
+def _overlap_cols(bbox, edges, page_width, tol=12):
+    """Columns a rect genuinely occupies: its home column (the edge nearest
+    x0) plus any column overlapped by at least ``tol`` points.
+
+    ``_covered_cols`` counts any pixel of overlap, so a block bleeding a
+    point across the modal gutter claims both columns — fine for ordering
+    but too eager for identity tests like caption attribution, where a
+    jittery OCR-layer bbox must not borrow the adjacent column.
+    """
+    x0, _, x1, _ = bbox
+    bounds = list(edges) + [page_width]
+    cols = {_assign_column({"bbox": bbox}, edges)}
+    for i in range(len(edges)):
+        if min(x1, bounds[i + 1]) - max(x0, bounds[i]) >= tol:
+            cols.add(i)
+    return cols
+
+
 def _is_margin_strip(block, rect):
     """Narrow+tall block in the outer 10% margins — rotated sidebar
     furniture (journal titles running down the page edge)."""
@@ -212,7 +231,6 @@ def _rotated_table_region(blocks):
     )
 
 
-TABLE_CAPTION_RE = re.compile(r"(?i)^\s*table\s+[0-9ivxlcdm]{1,8}\b")
 # first column made almost entirely of enumeration/bullet marks is a
 # list, not a table — rejecting it keeps list rendering intact
 _LIST_CELL_RE = re.compile(r"^\s*(?:\d{1,3}[.)]|[•·\-–—*†‡§])\s*$")
