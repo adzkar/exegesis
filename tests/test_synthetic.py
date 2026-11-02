@@ -1114,6 +1114,24 @@ def test_figure_alt_accepts_subfigure_and_dash_labels(tmp_path):
         assert any(f'alt="{cap}"' in h for h in htmls.values()), cap
 
 
+def test_figure_alt_accepts_supplementary_and_range_labels(tmp_path):
+    """'Fig. S1'-style supplementary labels and 'Figure 1–2' ranges are
+    caption labels too — only the label must open the block."""
+    # Base-14 fonts can't encode an en dash, so the range case uses a
+    # plain hyphen — the regex accepts both dashes
+    for k, cap in enumerate(("Fig. S1.", "Figure 1-2.")):
+        doc = fitz.open()
+        p = _page(doc)
+        p.insert_image(fitz.Rect(72, 150, 300, 250), stream=_noise_png())
+        p.insert_textbox(fitz.Rect(72, 265, 560, 290), cap, fontsize=BODY)
+        pdf = tmp_path / f"suppcap{k}.pdf"
+        _save(doc, pdf)
+        out = tmp_path / f"suppcap{k}.epub"
+        convert(pdf, out)
+        htmls = doc_html(out)
+        assert any(f'alt="{cap}"' in h for h in htmls.values()), cap
+
+
 def test_figure_alt_never_borrows_table_caption(tmp_path):
     """A 'Table N.' block after an image belongs to a text-flowed table
     (legend above), not to the figure — images match figure labels only."""

@@ -36,13 +36,14 @@ from .text import (
     _span_is_italic,
 )
 
-# the tail allows a subfigure letter ('Fig. 2b', 'Figure 1(a)') or a
-# dash-set legend ('Figure 3 — …') but still demands punctuation or
-# end-of-text — 'Figure 9 shows' stays a prose citation, and the leading
-# space requirement on the dash keeps 'Table 1–3' ranges out
+# the label core allows a supplementary 'S' prefix ('Fig. S1'), a
+# subfigure letter ('Fig. 2b', 'Figure 1(a)'), and a dash-joined range
+# ('Figure 1–2'); the tail allows a dash-set legend ('Figure 3 — …') but
+# still demands punctuation or end-of-text — 'Figure 9 shows' stays a
+# prose citation, as does 'see Table 1–3' (labels must open the block)
 CAPTION_RE = re.compile(
     r"(?i)^\s*(fig\.?|figure|table|plate|scheme|chart)\s*\.?\s*"
-    r"\d+(?:[a-z]|\s*\([a-zA-Z]\))?"
+    r"s?\d+(?:[a-z]|\s*\([a-zA-Z]\))?(?:\s*[–-]\s*s?\d+)?"
     r"(?:\s+[—–-]|\s*[.:)]|$)"
 )
 # the image call must not accept 'Table N.' — tables keep their legends
@@ -50,7 +51,7 @@ CAPTION_RE = re.compile(
 # text-flowed table, not to the figure
 FIGURE_CAPTION_RE = re.compile(
     r"(?i)^\s*(fig\.?|figure|plate|scheme|chart)\s*\.?\s*"
-    r"\d+(?:[a-z]|\s*\([a-zA-Z]\))?"
+    r"s?\d+(?:[a-z]|\s*\([a-zA-Z]\))?(?:\s*[–-]\s*s?\d+)?"
     r"(?:\s+[—–-]|\s*[.:)]|$)"
 )
 # the mirror for the rasterized-table call: a 'Figure N.' block *below*
@@ -59,7 +60,7 @@ FIGURE_CAPTION_RE = re.compile(
 # figure reaches the same raster path)
 TABLE_CAPTION_RE = re.compile(
     r"(?i)^\s*table\s*\.?\s*"
-    r"\d+(?:[a-z]|\s*\([a-zA-Z]\))?"
+    r"s?\d+(?:[a-z]|\s*\([a-zA-Z]\))?(?:\s*[–-]\s*s?\d+)?"
     r"(?:\s+[—–-]|\s*[.:)]|$)"
 )
 
