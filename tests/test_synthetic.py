@@ -1209,6 +1209,33 @@ def test_childless_h1_toc_has_no_empty_ol(tmp_path):
     assert any("Title With No Sections" in t for _lv, t in snap["toc"])
 
 
+def test_h2_before_first_h1_stays_top_level(tmp_path):
+    """An h2 emitted before any h1 has no section to nest under — it
+    stays a top-level nav entry rather than attaching to the later h1."""
+    doc = fitz.open()
+    p = _page(doc)
+    # 12pt sits under the 1.3x page-0 h1-promotion floor, so it stays h2
+    p.insert_textbox(fitz.Rect(72, 60, 540, 90), "Early Section", fontsize=12)
+    p.insert_textbox(
+        fitz.Rect(72, 110, 540, 180), "Body under the early section.",
+        fontsize=BODY,
+    )
+    p.insert_textbox(fitz.Rect(72, 220, 540, 260), "Big Mid Title", fontsize=18)
+    p.insert_textbox(fitz.Rect(72, 300, 540, 330), "Later Section", fontsize=12)
+    p.insert_textbox(
+        fitz.Rect(72, 360, 540, 430), "Body under the later section.",
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "h2first.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "h2first.epub"
+    convert(pdf, out)
+    snap = snapshot_epub(out)
+    texts = [t for _lv, t in snap["toc"]]
+    assert texts == ["Early Section", "Big Mid Title", "Later Section"]
+    assert [lv for lv, _t in snap["toc"]] == [1, 1, 2]
+
+
 def _noise_png(size=120):
     """A noisy pixmap whose PNG encoding exceeds MIN_IMAGE_BYTES."""
     pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, size, size))
