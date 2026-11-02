@@ -25,6 +25,8 @@ from .const import MAX_HEADING_CHARS, MIN_HEADING_CHARS, MIN_IMAGE_BYTES
 from .order import _ordered_blocks
 from .state import PipelineState
 from .text import (
+    _CAPTION_NUM,
+    _CAPTION_TAIL,
     FN_LINK_RE,
     LIST_ITEM_RE,
     SECTION_LABEL_RE,
@@ -41,23 +43,23 @@ from .text import (
     _span_is_italic,
 )
 
-# the label core allows a supplementary 'S' prefix ('Fig. S1'), a
-# subfigure letter ('Fig. 2b', 'Figure 1(a)'), and a dash-joined range
-# ('Figure 1–2'); the tail allows a dash-set legend ('Figure 3 — …') but
-# still demands punctuation or end-of-text — 'Figure 9 shows' stays a
-# prose citation, as does 'see Table 1–3' (labels must open the block)
+# label set + the shared caption number/tail from text.py — the same
+# 'S'-prefix, subfigure-letter, dash-range core and the same tail
+# (dash-set legend, punctuation, 2+ space layout gap, or end-of-text),
+# so a double-spaced 'Figure 3  Legend' alts exactly like a
+# double-spaced 'Table 1  Title' captions a grid
 CAPTION_RE = re.compile(
     r"(?i)^\s*(fig\.?|figure|table|plate|scheme|chart)\s*\.?\s*"
-    r"s?\d+(?:[a-z]|\s*\([a-zA-Z]\))?(?:\s*[–-]\s*s?\d+)?"
-    r"(?:\s+[—–-]|\s*[.:)]|$)"
+    + _CAPTION_NUM
+    + _CAPTION_TAIL
 )
 # the image call must not accept 'Table N.' — tables keep their legends
 # above the body, so a following 'Table N.' block belongs to a
 # text-flowed table, not to the figure
 FIGURE_CAPTION_RE = re.compile(
     r"(?i)^\s*(fig\.?|figure|plate|scheme|chart)\s*\.?\s*"
-    r"s?\d+(?:[a-z]|\s*\([a-zA-Z]\))?(?:\s*[–-]\s*s?\d+)?"
-    r"(?:\s+[—–-]|\s*[.:)]|$)"
+    + _CAPTION_NUM
+    + _CAPTION_TAIL
 )
 # the mirror for the rasterized-table call: a 'Figure N.' block *below*
 # the region is a following figure's caption, not the table's legend —

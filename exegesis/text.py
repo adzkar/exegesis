@@ -26,16 +26,21 @@ SECTION_LABEL_RE = re.compile(
     r"Acknowledgments|Materials and Methods|Appendix|Funding|"
     r"Author Contributions|Data Availability)\b"
 )
-# a 'Table N.' legend opener: letter suffixes, ranges, and trailing
-# punctuation all occur in the wild; the label must open the text so
-# mid-sentence 'see Table 1' citations don't match. A run of 2+ spaces
-# after the number also qualifies — journals like Springer set bare
-# 'Table 1  Title' legends with a layout gap instead of punctuation,
-# while flowing prose never carries a double-space here
+# caption-label number core and terminator, shared by every caption
+# pattern (TABLE_CAPTION_RE here, CAPTION_RE/FIGURE_CAPTION_RE in
+# render.py): a supplementary 'S' prefix ('Table S1'), a subfigure
+# letter or parenthesised index ('Fig. 2b', 'Figure 1(a)'), a
+# dash-joined range ('Figure 1–2'). The tail allows a dash-set legend
+# ('Figure 3 — …') or a run of 2+ spaces — journals like Springer set
+# bare 'Table 1  Title' legends with a layout gap instead of
+# punctuation, while flowing prose never double-spaces there — but
+# still demands punctuation or end-of-text so mid-sentence citations
+# ('see Table 1–3', 'Figure 9 shows') never match. The label must
+# always open the text.
+_CAPTION_NUM = r"s?\d+(?:[a-z]|\s*\([a-zA-Z]\))?(?:\s*[–-]\s*s?\d+)?"
+_CAPTION_TAIL = r"(?:\s+[—–-]|\s*[.:)]|\s{2,}|$)"
 TABLE_CAPTION_RE = re.compile(
-    r"(?i)^\s*table\s*\.?\s*"
-    r"s?\d+(?:[a-z]|\s*\([a-zA-Z]\))?(?:\s*[–-]\s*s?\d+)?"
-    r"(?:\s+[—–-]|\s*[.:)]|\s{2,}|$)"
+    r"(?i)^\s*table\s*\.?\s*" + _CAPTION_NUM + _CAPTION_TAIL
 )
 
 
