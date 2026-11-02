@@ -2066,8 +2066,7 @@ def test_single_digit_cell_not_dropped_as_rotated(tmp_path):
     assert "<table>" in html
     table_html = html.split("<table>", 1)[1].split("</table>", 1)[0]
     assert "<td>7</td>" in table_html
-    text = chapter_text(out)
-    assert text.count(">7<") == 0  # the digit isn't loose body text
+    assert "<p>7</p>" not in html  # the digit isn't loose body text
 
 
 def test_wide_stray_beyond_grid_stays_prose(tmp_path):
