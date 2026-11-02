@@ -2158,3 +2158,41 @@ def test_stacked_tables_legend_belongs_to_lower(tmp_path):
     assert "<caption>" not in parts[1]
     assert parts[2].startswith("<caption>")
     assert "Table 5  Lower estimates" in parts[2]
+
+
+def test_cell_internal_gap_merges_one_td(tmp_path):
+    """A value cell extracted as two fragments across a wide internal
+    gap ('3.2     (0.4)') must merge into one <td> — the row can't
+    emit more cells than the table has columns."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 120), "Table 6  Scores", fontsize=BODY
+    )
+    _grid_table(
+        p,
+        [72, 230, 400],
+        [
+            ["Study", "Mean", "SD"],
+            ["Alpha", None, "0.4"],
+            ["Beta", "4.1 msec estimated", "0.9"],
+            ["Delta", "2.8", "0.5"],
+        ],
+        y=140,
+    )
+    # one logical cell split into two fragments sharing Alpha's band —
+    # another row's wide cell keeps both inside recovered column 1
+    p.insert_textbox(fitz.Rect(230, 156, 260, 172), "3.2", fontsize=8)
+    p.insert_textbox(fitz.Rect(300, 156, 340, 172), "(0.4)", fontsize=8)
+    pdf = tmp_path / "tgap.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tgap.epub"
+    convert(pdf, out)
+    assert lint_epub(out) == []
+    html = " ".join(doc_html(out).values())
+    assert "<table>" in html
+    row = next(
+        r for r in html.split("<tr>") if "Alpha" in r
+    ).split("</tr>", 1)[0]
+    assert row.count("<td") == 3
+    assert "3.2 (0.4)" in row

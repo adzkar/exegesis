@@ -510,8 +510,11 @@ def _cells_cols(band, cols, min_gutter):
     """Assign a band's cells to column spans.
 
     A cell covers a column when it overlaps more than a third of the
-    column's width; multi-column coverage becomes a colspan. Returns a
-    list of ``(col_start, span, cell)`` sorted by column.
+    column's width; multi-column coverage becomes a colspan. Cells
+    whose covered ranges overlap merge into one assign — a wide
+    internal gap splits a logical cell into fragments that must not
+    emit as extra ``<td>``s. Returns a list of ``(col_start, span,
+    cell)`` sorted by column.
     """
     out = []
     for c in _band_cells(band[0], min_gutter):
@@ -521,8 +524,19 @@ def _cells_cols(band, cols, min_gutter):
             if min(c[1], b) - max(c[0], a) > 0.35 * (b - a)
             or a - 1 <= c[0] <= b
         ]
-        if covered:
-            out.append((covered[0], covered[-1] - covered[0] + 1, c))
+        if not covered:
+            continue
+        col, span = covered[0], covered[-1] - covered[0] + 1
+        for i, (pcol, pspan, pc) in enumerate(out):
+            if pcol <= col < pcol + pspan or col <= pcol < col + span:
+                lo, hi = min(pcol, col), max(pcol + pspan, col + span)
+                pc[0] = min(pc[0], c[0])
+                pc[1] = max(pc[1], c[1])
+                pc[2] += c[2]
+                out[i] = (lo, hi - lo, pc)
+                break
+        else:
+            out.append((col, span, c))
     return out
 
 
@@ -754,18 +768,9 @@ def _region_from_run(run, runs, blocks, sbands, edges, min_gutter,
     cell_fills = []
     cell_chars = []
     for band in run:
-        for c in _band_cells(band[0], min_gutter):
-            covered = [
-                i
-                for i, (a, b) in enumerate(cols)
-                if min(c[1], b) - max(c[0], a) > 0.35 * (b - a)
-                or a - 1 <= c[0] <= b
-            ]
-            if not covered:
-                continue
+        for col, span, c in _cells_cols(band, cols, min_gutter):
             cw = sum(
-                cols[i][1] - cols[i][0]
-                for i in range(covered[0], covered[-1] + 1)
+                cols[i][1] - cols[i][0] for i in range(col, col + span)
             )
             cell_fills.append((c[1] - c[0]) / max(1.0, cw))
             cell_chars.append(len(_join_cell_text(c[2])))

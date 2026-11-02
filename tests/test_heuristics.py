@@ -329,6 +329,24 @@ def test_grid_runs_pending_beyond_union_not_held():
     assert len(runs[0]) == 3
 
 
+def test_cells_cols_merges_overlapping_assigns():
+    """A wide internal gap splits '3.2   (0.4–0.9)' into two band cells
+    that both cover the same column — they must merge into one assign
+    or the row emits more <td>s than the table has columns."""
+    cols = [(0, 100), (140, 240)]
+    band = _band(
+        [
+            (("3.2", 10, 30), 1),
+            (("(0.4-0.9)", 60, 95), 1),
+            (("b", 140, 240), 2),
+        ],
+        0,
+    )
+    assigns = analyze._cells_cols(band, cols, 6)
+    assert [(col, span) for col, span, _c in assigns] == [(0, 1), (1, 1)]
+    assert len(assigns[0][2][2]) == 2
+
+
 def test_table_caption_below_legend_belongs_to_next_run():
     """A 'Table N' band between two stacked grids is the lower table's
     legend (legends sit above their table) — the upper run must not
