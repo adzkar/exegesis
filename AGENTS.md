@@ -99,7 +99,11 @@ chapters.
   (`_overlap_cols`, so a few points of gutter bleed can't claim both
   columns). The first candidate ends the scan, image blocks break it,
   and a page-shared `claimed` set keeps one caption from alting two
-  images — the adopted block still renders in the body flow. Images
+  images — the adopted block still renders in the body flow. Blocks that
+  leave the flow can't donate: rasterized cells, footnote-zone blocks,
+  and kept furniture are skipped via the page's `nonbody_ids` set (a
+  `Figure N.` bound for notes.xhtml or a caption-shaped running head
+  must not double as `alt`). Images
   never take `Table N.` (table legends sit above the body, so a
   following one belongs to a text-flowed table); the rotated-table call
   tries the block *above* the region first against the full label set
