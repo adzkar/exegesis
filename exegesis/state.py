@@ -4,6 +4,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from .lang import EN, LangProfile
+
 
 @dataclass
 class PipelineState:
@@ -14,6 +16,8 @@ class PipelineState:
     paragraph and the page it began on so a paragraph that crosses a page
     boundary is emitted where it started. ``images`` maps content hash to
     ``epub.EpubItem`` (kept as ``Any`` to avoid an ebooklib import here).
+    ``lang`` carries the document's pattern profile — every
+    language-bound scan reads it.
     """
 
     body_size: float
@@ -23,6 +27,7 @@ class PipelineState:
     drop_edges: bool
     boilerplate: set[str]
     page_frags: list[list[str]]
+    lang: LangProfile = EN
     abstract_done: bool = False
     after_h1: bool = False
     byline_text: str | None = None

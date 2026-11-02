@@ -6,7 +6,7 @@ layout analysis over PyMuPDF blocks — no OCR, no ML dependencies.
 ## Commands
 
 - Setup: `pip3 install -r requirements.txt` (pymupdf, ebooklib)
-- Convert: `python3 pdf_to_epub.py <input.pdf> [-o output.epub] [--title T] [--author A] [--keep-headers]`
+- Convert: `python3 pdf_to_epub.py <input.pdf> [-o output.epub] [--title T] [--author A] [--lang en|de|fr|es] [--keep-headers]`
 - Verify output: `unzip -l out.epub` (chapters, notes.xhtml, images, nav present),
   then spot-check a chapter's XHTML for reading order
 
@@ -110,7 +110,18 @@ chapters.
   and rescues a later column's `Table N.` legend that column-major
   order emits after the cells.
 - **Abstract** — first small-font inset block in the top half of pages 0–1
-  injects an `Abstract` h2.
+  injects an `Abstract` h2 (title from the language profile's
+  `abstract_title`).
+- **Language** — `convert(lang=)` / `--lang` selects a `LangProfile`
+  (`exegesis/lang.py`: `en` default, `de`, `fr`, `es`) carried on
+  `state.lang`; every language-bound scan reads it — furniture content
+  patterns, note openers, section labels, the three caption patterns
+  (`caption` union, `figure_caption` no-tables, `table_caption`
+  tables-only), plus the localized `abstract_title`, `notes_title`, and
+  byline `name_joiner`. Unknown codes raise; the API accepts a custom
+  `LangProfile` for unsupported languages. Non-Latin scripts (CJK, RTL)
+  are out of scope — word shaping, vertical text, and direction
+  attributes are unhandled.
 - **Styles** — bold via flags or `.B`/`Bold` font-name suffix, italic via
   `.I`/`Italic`/`Oblique` suffix → `<b>`/`<i>` spans.
 - **Metadata** — title/author from PDF metadata are validated (must contain

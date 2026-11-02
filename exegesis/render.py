@@ -1,9 +1,12 @@
 """Per-page rendering: ordered blocks become headings, bylines,
 paragraphs, footnotes, figures, and list/quote fragments — collected into
 ``PipelineState.page_frags`` plus heading/footnote/image side channels."""
+from __future__ import annotations
+
 import hashlib
 import html
 import re
+from collections.abc import Container
 
 import fitz
 from ebooklib import epub
@@ -18,12 +21,12 @@ from .analyze import (
     _sup_marker,
 )
 from .const import MAX_HEADING_CHARS, MIN_HEADING_CHARS, MIN_IMAGE_BYTES
+from .lang import EN, LangProfile
 from .order import _ordered_blocks
 from .state import PipelineState
 from .text import (
     FN_LINK_RE,
     LIST_ITEM_RE,
-    SECTION_LABEL_RE,
     _block_lines,
     _block_median_size,
     _block_text,
@@ -36,43 +39,16 @@ from .text import (
     _span_is_italic,
 )
 
-# the label core allows a supplementary 'S' prefix ('Fig. S1'), a
-# subfigure letter ('Fig. 2b', 'Figure 1(a)'), and a dash-joined range
-# ('Figure 1–2'); the tail allows a dash-set legend ('Figure 3 — …') but
-# still demands punctuation or end-of-text — 'Figure 9 shows' stays a
-# prose citation, as does 'see Table 1–3' (labels must open the block)
-CAPTION_RE = re.compile(
-    r"(?i)^\s*(fig\.?|figure|table|plate|scheme|chart)\s*\.?\s*"
-    r"s?\d+(?:[a-z]|\s*\([a-zA-Z]\))?(?:\s*[–-]\s*s?\d+)?"
-    r"(?:\s+[—–-]|\s*[.:)]|$)"
-)
-# the image call must not accept 'Table N.' — tables keep their legends
-# above the body, so a following 'Table N.' block belongs to a
-# text-flowed table, not to the figure
-FIGURE_CAPTION_RE = re.compile(
-    r"(?i)^\s*(fig\.?|figure|plate|scheme|chart)\s*\.?\s*"
-    r"s?\d+(?:[a-z]|\s*\([a-zA-Z]\))?(?:\s*[–-]\s*s?\d+)?"
-    r"(?:\s+[—–-]|\s*[.:)]|$)"
-)
-# the mirror for the rasterized-table call: a 'Figure N.' block *below*
-# the region is a following figure's caption, not the table's legend —
-# while the legend above may still be 'Figure N.' (a text-heavy rotated
-# figure reaches the same raster path)
-TABLE_CAPTION_RE = re.compile(
-    r"(?i)^\s*table\s*\.?\s*"
-    r"s?\d+(?:[a-z]|\s*\([a-zA-Z]\))?(?:\s*[–-]\s*s?\d+)?"
-    r"(?:\s+[—–-]|\s*[.:)]|$)"
-)
 
-
-def _section_label(text):
+def _section_label(text, lang: LangProfile = EN):
     """Leading section label if a text starts with a known heading phrase.
 
     Labels like 'References and Notes' often share a block/line with the
     first entry, so font-size heading detection can't see them. The rest of
-    the text is returned separately to continue as a paragraph.
+    the text is returned separately to continue as a paragraph. The label
+    set comes from the document's language profile.
     """
-    m = SECTION_LABEL_RE.match(text)
+    m = lang.section_label.match(text)
     if not m:
         return None
     rest = text[m.end():].strip()
@@ -81,12 +57,13 @@ def _section_label(text):
     return m.group(1), rest
 
 
-def _authorish(text):
-    """True if a short block plausibly lists author names (not a sentence)."""
+def _authorish(text, joiner=" and "):
+    """True if a short block plausibly lists author names (not a sentence).
+    ``joiner`` is the language's 'and' inside a name list."""
     t = text.strip()
     return (
         3 < len(t) < 170
-        and (", " in t or " and " in t)
+        and (", " in t or joiner in t)
         and not t.endswith((".", ":", ";", "?", "!"))
     )
 
@@ -173,10 +150,10 @@ def _figure_alt(
     page_width,
     region=None,
     fallback="",
-    skip_ids=frozenset(),
-    pattern=CAPTION_RE,
-    above_pattern=CAPTION_RE,
-    claimed=None,
+    skip_ids: Container[int] = frozenset(),
+    pattern=EN.caption,
+    above_pattern=EN.caption,
+    claimed: set | None = None,
 ):
     """Alt text for a figure: the nearest foreign text block beyond the
     figure's facing edge is its caption when it opens with a caption
@@ -243,6 +220,7 @@ def _figure_alt(
             return b, _is_caption(b, pat)
         return None
 
+    stray_above = None
     if region is not None:
         # journals set 'Table N.' legends above the table body — and text
         # below a table is likelier the *next* table's legend — so the
@@ -271,7 +249,7 @@ def _figure_alt(
         lambda b: b["bbox"][1] - bbox[3],
         lambda b: b["bbox"][1] >= bbox[3] - 10,
         pattern,
-        stray=stray_above if region is not None else None,
+        stray=stray_above,
     )
     if hit is not None and hit[1] is not None:
         claimed.add(id(hit[0]))
@@ -323,12 +301,14 @@ def _render_page(page, page_index: int, state: PipelineState):
         state.boilerplate,
         edges,
         state.drop_edges,
+        lang=state.lang,
     )
     # kept furniture is render-only: it never feeds footnote-zone detection
     # or rotated-table candidate sets
     body_blocks = [b for b in ordered if not b.get("is_furniture")]
     foot_tops = _footnote_tops(
-        body_blocks, edges, body_size, page.rect.height, state.line_h
+        body_blocks, edges, body_size, page.rect.height, state.line_h,
+        lang=state.lang,
     )
     frags = state.page_frags[page_index]
 
@@ -397,7 +377,7 @@ def _render_page(page, page_index: int, state: PipelineState):
                     b_i,
                     edges,
                     page.rect.width,
-                    pattern=FIGURE_CAPTION_RE,
+                    pattern=state.lang.figure_caption,
                     skip_ids=nonbody_ids,
                     claimed=claimed_caps,
                 )
@@ -421,7 +401,8 @@ def _render_page(page, page_index: int, state: PipelineState):
                     region=tbl,
                     fallback="table",
                     skip_ids=nonbody_ids,
-                    pattern=TABLE_CAPTION_RE,
+                    pattern=state.lang.table_caption,
+                    above_pattern=state.lang.caption,
                     claimed=claimed_caps,
                 )
                 mb = page.mediabox
@@ -524,7 +505,9 @@ def _render_page(page, page_index: int, state: PipelineState):
 
         med = _block_median_size(block)
         is_byline = med >= body_size * 1.15
-        if is_byline or (state.after_h1 and _authorish(btext)) or (
+        if is_byline or (
+            state.after_h1 and _authorish(btext, state.lang.name_joiner)
+        ) or (
             frags
             and frags[-1].startswith('<p class="byline">')
             and len(_block_lines(block)) == 1
@@ -556,7 +539,7 @@ def _render_page(page, page_index: int, state: PipelineState):
             and block["bbox"][0] > page.rect.width * 0.15
             and block["bbox"][1] < page.rect.height * 0.5
         ):
-            emit_heading(2, "Abstract")
+            emit_heading(2, state.lang.abstract_title)
             state.abstract_done = True
 
         if (
@@ -615,7 +598,9 @@ def _render_page(page, page_index: int, state: PipelineState):
             # tails are plausible notes, not section heads; a page-final
             # "References" stays demoted when its body isn't visible
             if li == 0 and not demoted:
-                m = _section_label(_line_text(line).strip())
+                m = _section_label(
+                    _line_text(line).strip(), state.lang
+                )
                 if m:
                     emit_heading(2, m[0])
                     if m[1]:

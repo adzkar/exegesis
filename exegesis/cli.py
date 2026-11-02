@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from .emit import convert
+from .lang import LANGS
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -22,6 +23,13 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--title", help="override EPUB title")
     parser.add_argument("--author", help="override EPUB author")
     parser.add_argument(
+        "--lang",
+        choices=sorted(LANGS),
+        default="en",
+        help="document language for furniture/notes/caption patterns "
+        "and EPUB metadata (default: en)",
+    )
+    parser.add_argument(
         "--keep-headers",
         action="store_true",
         help="keep header/footer strips (page numbers, running heads)",
@@ -34,7 +42,7 @@ def main(argv: list[str] | None = None) -> None:
 
     stats = convert(
         args.input, out, title=args.title, author=args.author,
-        drop_edges=not args.keep_headers,
+        drop_edges=not args.keep_headers, lang=args.lang,
     )
     print(
         f"{stats['output']}: {stats['pages']} pages -> {stats['chapters']} "

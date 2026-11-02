@@ -1,30 +1,15 @@
 """Pure helpers over PyMuPDF ``get_text("dict")`` structures, plus the
-shared text patterns (font-name suffixes, furniture, note openers, list
-items, named section labels)."""
+language-agnostic text patterns (font-name suffixes, list items). The
+language-bound patterns — furniture, note openers, section labels,
+caption labels — live in ``lang.LangProfile``."""
 import re
 from statistics import median
 
 BOLD_FONT_RE = re.compile(r"(?i)(bold|\.b\d*$|-b\d*$|/b\d*$)")
 ITAL_FONT_RE = re.compile(r"(?i)(italic|oblique|\.i\d*$|-i\d*$|/i\d*$)")
-FURNITURE_RE = re.compile(
-    r"(?i)(www\.|downloaded from|vol\.?\s*\d|issn|doi[:\s]|©|copyright|"
-    r"\b\d{2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))"
-)
-NOTE_START_RE = re.compile(
-    r"(?i)^[*\s]*(preparation of (?:this|the)|requests? for reprints|"
-    r"correspondence (?:concerning|should be|addressed)|"
-    r"(?:this (?:paper|article|work) was )?supported by|"
-    r"the author[s]? (?:thank|acknowledge|wish)|to whom correspondence)"
-)
 LIST_ITEM_RE = re.compile(r"^\d{1,2}[.)]\s+\S")
 FN_LINK_RE = re.compile(
     r'<sup><a href="notes\.xhtml#fn(\d+)">(\d+)</a></sup>'
-)
-SECTION_LABEL_RE = re.compile(
-    r"^(References and Notes|Notes and References|References|Bibliography|"
-    r"Supporting Online Material|Supplementary Materials?|Acknowledg?ements|"
-    r"Acknowledgments|Materials and Methods|Appendix|Funding|"
-    r"Author Contributions|Data Availability)\b"
 )
 
 

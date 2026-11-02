@@ -3,6 +3,7 @@ assembly, and the ``convert`` entry point."""
 from __future__ import annotations
 
 import hashlib
+import html
 import re
 from pathlib import Path
 from typing import Any, cast
@@ -15,10 +16,11 @@ from .analyze import (
     _boilerplate_signatures,
     _doc_column_edges,
 )
-from .const import BOOK_LANG, PAGES_PER_FALLBACK_CHAPTER
+from .const import PAGES_PER_FALLBACK_CHAPTER
+from .lang import LangProfile, get_lang
 from .render import _render_page, _strip_dead_fn_links
 from .state import PipelineState
-from .text import NOTE_START_RE, _join_lines
+from .text import _join_lines
 
 
 def _valid_title(t):
@@ -43,8 +45,15 @@ def convert(
     title: str | None = None,
     author: str | None = None,
     drop_edges: bool = True,
+    lang: str | LangProfile = "en",
 ) -> dict[str, str | int]:
-    """Convert ``pdf_path`` to an EPUB at ``out_path``; returns a stats dict."""
+    """Convert ``pdf_path`` to an EPUB at ``out_path``; returns a stats dict.
+
+    ``lang`` selects the pattern profile (``en``/``de``/``fr``/``es`` or a
+    ``LangProfile``): it drives furniture, note, section-label, and
+    caption detection and stamps the EPUB's language metadata.
+    """
+    profile = get_lang(lang)
     doc = fitz.open(pdf_path)
     meta = doc.metadata or {}
     # single extraction pass: every analysis/render step reads these dicts.
@@ -58,10 +67,11 @@ def convert(
         body_size=body_size,
         line_h=line_h,
         page_items=[pdict["blocks"] for _p, pdict in pages],
-        edges=_doc_column_edges(pages, boilerplate),
+        edges=_doc_column_edges(pages, boilerplate, profile),
         drop_edges=drop_edges,
         boilerplate=boilerplate,
         page_frags=[[] for _ in range(doc.page_count)],
+        lang=profile,
     )
 
     for i, (page, pdict) in enumerate(pages):
@@ -121,7 +131,7 @@ def convert(
     book = epub.EpubBook()
     book.set_identifier(hashlib.sha1(str(pdf_path).encode()).hexdigest()[:16])
     book.set_title(title)
-    book.set_language(BOOK_LANG)
+    book.set_language(profile.code)
     book.add_author(author)
 
     css = epub.EpubItem(
@@ -158,7 +168,7 @@ def convert(
         chap = epub.EpubHtml(
             title=heading or f"Section {idx + 1}",
             file_name=f"chap_{idx + 1}.xhtml",
-            lang=BOOK_LANG,
+            lang=profile.code,
         )
         chap.add_item(css)
         chap.content = (
@@ -186,7 +196,7 @@ def convert(
         if (
             num is None
             and note_entries
-            and not NOTE_START_RE.match(frag_text)
+            and not profile.note_start.match(frag_text)
         ):
             note_entries[-1] = note_entries[-1][:-4] + " " + frag + "</p>"
         elif num is not None and num not in seen_fn:
@@ -217,14 +227,20 @@ def convert(
             toc.append(link)
     if note_entries:
         notes = epub.EpubHtml(
-            title="Notes", file_name="notes.xhtml", lang=BOOK_LANG
+            title=profile.notes_title,
+            file_name="notes.xhtml",
+            lang=profile.code,
         )
         notes.content = (
-            "<html><body><h1>Notes</h1>" + "".join(note_entries) + "</body></html>"
+            f"<html><body><h1>{html.escape(profile.notes_title)}</h1>"
+            + "".join(note_entries)
+            + "</body></html>"
         )
         book.add_item(notes)
         chapters.append((notes, len(flat)))
-        toc.append(epub.Link("notes.xhtml", "Notes", "notes"))
+        toc.append(
+            epub.Link("notes.xhtml", profile.notes_title, "notes")
+        )
     # a section tuple always renders a nested <ol>, so a childless h1
     # must degrade to a bare Link or nav.xhtml gets an invalid empty <ol/>
     book.toc = [

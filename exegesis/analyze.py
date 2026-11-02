@@ -4,14 +4,14 @@ the /Rotate clip transform. Operates on the page dicts extracted once in
 ``emit.convert``."""
 import re
 from collections import Counter
+from collections.abc import Container
 from statistics import median
 
 import fitz
 
 from .const import BOILERPLATE_COVERAGE, EDGE_ZONE
+from .lang import EN, LangProfile
 from .text import (
-    FURNITURE_RE,
-    NOTE_START_RE,
     _block_lines,
     _block_median_size,
     _block_text,
@@ -86,7 +86,11 @@ def _column_edges(items):
     return [median(c) for c in clusters if len(c) >= 2] or [0.0]
 
 
-def _doc_column_edges(pages, boilerplate=frozenset()):
+def _doc_column_edges(
+    pages,
+    boilerplate: Container[str] = frozenset(),
+    lang: LangProfile = EN,
+):
     """Column edges for the document: edges found on ≥half of all pages.
 
     Per-page clustering produces phantom edges from bylines, headings, and
@@ -104,7 +108,7 @@ def _doc_column_edges(pages, boilerplate=frozenset()):
             b
             for b in pdict["blocks"]
             if b["type"] == 0
-            and not _is_furniture(b, page.rect, _block_text(b))
+            and not _is_furniture(b, page.rect, _block_text(b), lang)
             and not _is_signature_furniture(
                 b, page.rect.height, boilerplate
             )
@@ -174,14 +178,17 @@ def _is_margin_strip(block, rect):
     )
 
 
-def _is_furniture(block, rect, text):
+def _is_furniture(block, rect, text, lang: LangProfile = EN):
     """Edge furniture by shape or content: narrow+tall margin strips in
     the outer 10% margins, or pattern furniture/page numbers in the outer
-    7% edge."""
+    7% edge. Content patterns come from the document's language profile."""
     _, y0, _, y1 = block["bbox"]
     return _is_margin_strip(block, rect) or (
         (y0 > rect.height * 0.93 or y1 < rect.height * 0.07)
-        and (FURNITURE_RE.search(text) or re.fullmatch(r"\d{1,4}", text))
+        and (
+            lang.furniture.search(text)
+            or re.fullmatch(r"\d{1,4}", text)
+        )
     )
 
 
@@ -251,7 +258,9 @@ def _sup_marker(block, body_size):
     return None
 
 
-def _footnote_tops(blocks, edges, body_size, page_height, line_h):
+def _footnote_tops(
+    blocks, edges, body_size, page_height, line_h, lang: LangProfile = EN
+):
     """Map each column index to the y where its footnote region starts.
 
     Two detection paths: (a) blocks opening with a superscript digit in the
@@ -283,7 +292,7 @@ def _footnote_tops(blocks, edges, body_size, page_height, line_h):
             if (
                 b["bbox"][1] > page_height * 0.55
                 and _block_median_size(b) < body_size * 0.95
-                and NOTE_START_RE.match(_block_text(b))
+                and lang.note_start.match(_block_text(b))
             ):
                 tops[col] = min(tops.get(col, b["bbox"][1]), b["bbox"][1])
     return tops
