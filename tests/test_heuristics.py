@@ -329,6 +329,24 @@ def test_grid_runs_pending_beyond_union_not_held():
     assert len(runs[0]) == 3
 
 
+def test_grid_runs_gap_from_latest_kept_y():
+    """The gap measures from the later of the last committed band and
+    the pending one — a stub committed after a pending extends the
+    kept-band bottom, and measuring from the pending overstates the
+    gap by up to a row's height and severs the run."""
+    cells = [(("a", 0, 100), 1), (("b", 140, 240), 2)]
+    pending = _band([(("divider", 10, 230), 3)], 32)   # y1 = 43
+    stub = _band([(("cont", 150, 200), 4)], 48)        # y1 = 59
+    runs = analyze._grid_runs(
+        [_band(cells, 0), _band(cells, 16), pending, stub,
+         _band(cells, 90)],
+        min_gutter=6,
+        max_gap=36,
+    )
+    # true gap from the stub's y1 is 31 ≤ 36; the pending's y1 says 47
+    assert len(runs) == 1
+
+
 def test_cells_cols_merges_overlapping_assigns():
     """A wide internal gap splits '3.2   (0.4–0.9)' into two band cells
     that both cover the same column — they must merge into one assign

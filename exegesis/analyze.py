@@ -396,9 +396,14 @@ def _grid_runs(bands, min_gutter, max_gap):
             # gap measured from the last *kept* band — pending wide bands
             # count too, or a chain of them drifts the window past
             # max_gap and closes the run early (a spanning row followed
-            # by more rows would sever the table in two)
-            prev = cur[2][-1] if cur[2] else cur[0][-1]
-            if y0 - prev[2] > max_gap:
+            # by more rows would sever the table in two). Both the last
+            # committed and the pending band count — a stub committed
+            # after the pending sits lower, and measuring from the
+            # pending's bottom overstates the gap by up to a row
+            last_y = cur[0][-1][2]
+            if cur[2]:
+                last_y = max(last_y, cur[2][-1][2])
+            if y0 - last_y > max_gap:
                 runs.append(cur[0])
                 cur = None
         if len(cells) >= 2:
