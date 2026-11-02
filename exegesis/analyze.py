@@ -361,6 +361,25 @@ def _grid_runs(bands, min_gutter, max_gap):
     cur = None  # [bands, union, pending, open_row_cols]
     for band in bands:
         lines, y0, _y1 = band
+        # a 'Table N …' legend belongs to the caption machinery, never
+        # to a row: if it seeds or joins a run it becomes invisible to
+        # _table_caption (which only inspects bands outside the run's
+        # y-range) while the legend — and whatever shares its band —
+        # is mangled into <td> cells; a legend starting in a later
+        # column would even pass the wrapped-cell fold. A caption band
+        # is a hard boundary: it closes the open run and is skipped.
+        # Check every line — band order isn't x-sorted, so a legend
+        # sharing its band with stray text may not open the band
+        if any(
+            TABLE_CAPTION_RE.match(
+                "".join(s["text"] for s in l["spans"])
+            )
+            for l, _ in lines
+        ):
+            if cur is not None:
+                runs.append(cur[0])
+                cur = None
+            continue
         cells = _band_cells(lines, min_gutter)
         if cur is not None:
             # gap measured from the last *kept* band — pending wide bands
@@ -410,23 +429,19 @@ def _grid_runs(bands, min_gutter, max_gap):
                 # of surfacing as a fake sparse row, and it never feeds
                 # _run_layout where a gutter-straddling interval could
                 # kill the whole region
+                # pendings stay pending — only a resuming multi-cell
+                # band commits a colspan candidate, so a stub can't
+                # flush intervening prose into the run as a merged row
                 cols = _union_cols(cur[1], min_gutter)
-                row_occ = (
-                    _band_occupied(cur[2][-1], cols, min_gutter)
-                    if cur[2]
-                    else cur[3]
-                )
                 occ = _band_occupied(band, cols, min_gutter)
                 if (
                     occ
                     and 0 not in occ
-                    and occ < row_occ
+                    and occ < cur[3]
                     and len(occ) <= max(1, len(cols) - 2)
                 ):
-                    cur[0].extend(cur[2])
-                    cur[2] = []
                     cur[0].append(band)
-                    cur[3] = row_occ | occ
+                    cur[3] |= occ
             else:
                 cur[2].append(band)
     if cur is not None:

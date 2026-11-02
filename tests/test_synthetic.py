@@ -1911,3 +1911,82 @@ def test_numbered_list_is_not_a_table(tmp_path):
     html = " ".join(doc_html(out).values())
     assert "<table>" not in html
     assert "List item number 3" in chapter_text(out)
+
+
+def test_caption_sharing_band_stays_out_of_cells(tmp_path):
+    """A 'Table N' legend sharing its y-band with stray text used to
+    join the run as a multi-cell row — legend and foreign text both
+    landed inside <td>s while _table_caption stayed blind. The band is
+    now a caption candidate only: the mixed legend fails claim
+    validation (no <caption>), but nothing is mangled into cells."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 220, 120),
+        "Table 8  Results by group",
+        fontsize=BODY,
+    )
+    p.insert_textbox(
+        fitz.Rect(400, 100, 560, 120),
+        "a sidenote",
+        fontsize=8,
+    )
+    _grid_table(
+        p,
+        [72, 230, 400],
+        [
+            ["Study", "N", "Estimate"],
+            ["Alpha", "42", "0.31"],
+            ["Beta", "108", "0.47"],
+            ["Delta", "19", "0.29"],
+        ],
+        y=130,
+    )
+    pdf = tmp_path / "tcmix.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tcmix.epub"
+    convert(pdf, out)
+    assert lint_epub(out) == []
+    html = " ".join(doc_html(out).values())
+    assert "<table>" in html
+    table_html = html.split("<table>", 1)[1].split("</table>", 1)[0]
+    assert "Results by group" not in table_html
+    assert "sidenote" not in table_html
+    text = chapter_text(out)
+    assert "Table 8" in text and "sidenote" in text
+
+
+def test_below_table_legend_is_caption_not_merged_cell(tmp_path):
+    """A 'Table N' legend below the grid that starts in a later column
+    used to pass the wrapped-cell fold and merge into the last row's
+    cell as '<td>19 Table 9 …</td>' — it must be adopted as <caption>
+    and never appear inside a <td>."""
+    doc = fitz.open()
+    p = _page(doc)
+    last_y = _grid_table(
+        p,
+        [72, 230, 400],
+        [
+            ["Study", "N", "Estimate"],
+            ["Alpha", "42", "0.31"],
+            ["Beta", "108", "0.47"],
+            ["Delta", "19", "0.29"],
+        ],
+        y=140,
+    )
+    p.insert_textbox(
+        fitz.Rect(230, last_y + 4, 540, last_y + 24),
+        "Table 9  Results by group",
+        fontsize=8,
+    )
+    pdf = tmp_path / "tcbel.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tcbel.epub"
+    convert(pdf, out)
+    assert lint_epub(out) == []
+    html = " ".join(doc_html(out).values()).replace("  ", " ")
+    assert "<table>" in html
+    assert "<caption>Table 9 Results by group</caption>" in html
+    assert "<td>Table" not in html and "Table 9" not in html.split(
+        "<caption>", 1
+    )[1].split("</caption>", 1)[1].split("</table>", 1)[0]

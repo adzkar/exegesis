@@ -276,6 +276,72 @@ def test_grid_runs_pending_bands_do_not_drift_gap():
     assert len(runs) == 1 and len(runs[0]) == 5
 
 
+def test_grid_runs_caption_band_never_joins():
+    """A 'Table N …' band — even a multi-cell one sharing text with a
+    foreign line — is the caption machinery's to claim: it must neither
+    seed nor join a run, or the legend and its band-mate mangle into
+    <td> cells while _table_caption stays blind to it. A caption band
+    is a boundary, so the open run closes at it."""
+    cells = [(("a", 0, 100), 1), (("b", 140, 240), 2)]
+    cap = _band(
+        [
+            (("Table 3  Results", 0, 100), 1),
+            (("a sidenote", 140, 240), 3),
+        ],
+        32,
+    )
+    runs = analyze._grid_runs(
+        [
+            _band(cells, 0),
+            _band(cells, 16),
+            cap,
+            _band(cells, 50),
+        ],
+        min_gutter=6,
+        max_gap=36,
+    )
+    assert len(runs) == 2
+    assert all(b is not cap for run in runs for b in run)
+    assert [len(r) for r in runs] == [2, 1]
+
+
+def test_grid_runs_table_legend_not_folded():
+    """A 'Table N' legend under the grid starting in a later column
+    would pass the wrapped-cell fold (col 0 empty, strict subset) and
+    merge into the last row's cell — it must stay a caption
+    candidate instead."""
+    cells = [
+        (("a", 0, 60), 1),
+        (("b", 100, 160), 2),
+        (("c", 200, 260), 3),
+    ]
+    legend = _band([(("Table 3  Summary", 100, 160), 4)], 48)
+    runs = analyze._grid_runs(
+        [_band(cells, 0), _band(cells, 16), _band(cells, 32), legend],
+        min_gutter=6,
+        max_gap=36,
+    )
+    assert len(runs) == 1
+    assert all(b is not legend for b in runs[0])
+
+
+def test_grid_runs_stub_does_not_commit_pending():
+    """A pending wide band is a colspan candidate only a resuming
+    multi-cell band may commit — a narrow continuation stub must not
+    flush it into the run, or intervening prose becomes a merged row."""
+    cells = [(("a", 0, 100), 1), (("b", 140, 240), 2)]
+    pending = _band([(("section", 10, 230), 3)], 32)   # wide → pending
+    stub = _band([(("cont", 150, 200), 4)], 48)       # narrow stub
+    runs = analyze._grid_runs(
+        [_band(cells, 0), _band(cells, 16), pending, stub],
+        min_gutter=6,
+        max_gap=36,
+    )
+    assert len(runs) == 1
+    assert stub in runs[0]
+    assert all(b is not pending for b in runs[0])
+
+
 def _edge_grid():
     """Blocks + run bands for a 3-col grid straddling a document edge —
     cell columns at 60-120/200-260/340-460 with the page edge at 300."""

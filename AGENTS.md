@@ -106,9 +106,14 @@ chapters.
   column, no image overlap;
   a region spanning a document column edge additionally needs a `Table N`
   caption and gutters that don't just mirror the page's own columns (the
-  layout itself is not a table). A `Table N` band adjacent to the region
-  becomes `<caption>` — bands made purely of the caption block's other
-  lines (a wrapped legend) join it. A block is claimed into a region only
+  layout itself is not a table). A band whose text opens with the
+  `Table N` label never seeds or joins a run — it is a hard boundary
+  reserved for the caption machinery, so a legend can't be mangled into
+  cells or swallowed as a wrapped-cell continuation. A `Table N` band
+  adjacent to the region becomes `<caption>` — bands made purely of the
+  caption block's other lines (a wrapped legend) join it; a legend band
+  shared with a foreign block is ambiguous and degrades to prose. A
+  block is claimed into a region only
   when every one of its lines lands in a member band — partial coverage
   leaves the whole block in body flow rather than silently dropping the
   un-emitted lines. An all-bold first row becomes `<thead>` `<th>`s.
