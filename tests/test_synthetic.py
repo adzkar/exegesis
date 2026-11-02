@@ -1708,6 +1708,119 @@ def test_full_width_table_spanning_columns(tmp_path):
     assert "<caption>Table 3" in html
 
 
+def test_wrapped_caption_block_keeps_all_lines(tmp_path):
+    """A 'Table N' legend wrapping to a second line in the same block
+    must land both lines in <caption> — the continuation used to be
+    claimed away and silently dropped."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 110),
+        "An introductory paragraph that must stay ordinary prose.",
+        fontsize=BODY,
+    )
+    # narrow box forces a two-line legend inside one block
+    p.insert_textbox(
+        fitz.Rect(72, 118, 230, 150),
+        "Table 1  Reaction times by group and condition",
+        fontsize=BODY,
+    )
+    _grid_table(
+        p,
+        [72, 230, 400],
+        [
+            ["Study", "N", "Mean RT"],
+            ["Alpha et al.", "42", "350 msec"],
+            ["Beta and Gamma", "108", "412 msec"],
+            ["Delta", "19", "298 msec"],
+        ],
+        y=150,
+    )
+    pdf = tmp_path / "twcap.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "twcap.epub"
+    convert(pdf, out)
+    assert lint_epub(out) == []
+    html = " ".join(doc_html(out).values())
+    assert "<caption>" in html and "and condition" in html.split(
+        "<caption>", 1
+    )[1].split("</caption>", 1)[0]
+    assert chapter_text(out).count("and condition") == 1
+
+
+def test_note_below_table_stays_prose(tmp_path):
+    """A 'Note.' line under the grid must not be absorbed as a fake
+    sparse row — it is prose, not a wrapped-cell stub."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 120), "Table 5  Model results", fontsize=BODY
+    )
+    last_y = _grid_table(
+        p,
+        [72, 230, 400],
+        [
+            ["Study", "N", "Estimate"],
+            ["Alpha", "42", "0.31"],
+            ["Beta", "108", "0.47"],
+            ["Delta", "19", "0.29"],
+        ],
+        y=140,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, last_y + 4, 320, last_y + 20),
+        "Note. Values are means of three replicates.",
+        fontsize=8,
+    )
+    pdf = tmp_path / "tnote.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tnote.epub"
+    convert(pdf, out)
+    html = " ".join(doc_html(out).values())
+    assert "<table>" in html
+    table_html = html.split("<table>", 1)[1].split("</table>", 1)[0]
+    assert "Note." not in table_html
+    assert "Note. Values are means of three replicates." in chapter_text(out)
+
+
+def test_gutter_straddling_stub_does_not_kill_table(tmp_path):
+    """A lone line sitting across the grid's gutter used to reach the
+    column union and empty it, rejecting the whole region; now it can
+    neither reshape the layout nor become a row."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 120), "Table 6  Pairs", fontsize=BODY
+    )
+    last_y = _grid_table(
+        p,
+        [72, 160],
+        [
+            ["Grp", "RT"],
+            ["Alpha", "350"],
+            ["Beta", "412"],
+            ["Gamma", "298"],
+        ],
+        y=140,
+    )
+    # spans the whole ~50pt gutter between the two columns but stays
+    # under 0.7x the union width
+    p.insert_textbox(
+        fitz.Rect(105, last_y + 4, 175, last_y + 20),
+        "not significant",
+        fontsize=8,
+    )
+    pdf = tmp_path / "tstrad.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tstrad.epub"
+    convert(pdf, out)
+    html = " ".join(doc_html(out).values())
+    assert "<table>" in html and "<td>298</td>" in html
+    table_html = html.split("<table>", 1)[1].split("</table>", 1)[0]
+    assert "not significant" not in table_html
+    assert "not significant" in chapter_text(out)
+
+
 def test_two_column_prose_is_not_a_table(tmp_path):
     """Two text columns of prose must not fuse into a grid region."""
     doc = fitz.open()

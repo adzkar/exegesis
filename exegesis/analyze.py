@@ -323,17 +323,42 @@ def _interior_gaps(intervals, lo, hi, min_gutter):
     return gaps
 
 
+def _union_cols(ivs, min_gutter):
+    """Column bounds implied by an interval union.
+
+    Each column spans from the end of one permanent gutter (or the
+    union's left edge) to the start of the next (or the right edge).
+    Used for the provisional layout inside ``_grid_runs`` and for the
+    final one in ``_run_layout`` — single-cell bands never feed the
+    union, so a stub or colspan row can never reshape the columns.
+    """
+    lo = min(u[0] for u in ivs)
+    hi = max(u[1] for u in ivs)
+    cols = []
+    prev = lo
+    for g0, g1 in _interior_gaps(ivs, lo, hi, min_gutter):
+        cols.append((prev, g0))
+        prev = g1
+    cols.append((prev, hi))
+    return cols
+
+
 def _grid_runs(bands, min_gutter, max_gap):
     """Group consecutive bands into runs whose union keeps ≥1 gutter.
 
     A band joins the open run only if its cells preserve a permanent
     interior whitespace strip — a full-width paragraph line kills every
     gutter and so closes the run (body text can't infiltrate a table).
-    Wide single-cell bands are held pending: absorbed as colspan rows if
-    a multi-cell band resumes the grid, dropped as ordinary text if not.
+    Single-cell bands are suspect: a narrow one commits only as a
+    wrapped-cell continuation of the open row (occupied columns a strict
+    subset with column 0 empty — the fold ``_assemble_rows`` applies), so
+    a trailing ``Note.``/``n.s.`` line or a prose fragment is never
+    absorbed as a fake sparse row; a wide one is held pending as a
+    colspan candidate — absorbed if a multi-cell band resumes the grid,
+    dropped as ordinary text if not.
     """
     runs = []
-    cur = None  # [bands, union, pending]
+    cur = None  # [bands, union, pending, open_row_cols]
     for band in bands:
         lines, y0, _y1 = band
         cells = _band_cells(lines, min_gutter)
@@ -343,7 +368,11 @@ def _grid_runs(bands, min_gutter, max_gap):
         if len(cells) >= 2:
             ivs = [(c[0], c[1]) for c in cells]
             if cur is None:
-                cur = [ [band], ivs, [] ]
+                cur = [
+                    [band], ivs, [],
+                    _band_occupied(band, _union_cols(ivs, min_gutter),
+                                   min_gutter),
+                ]
                 continue
             union = sorted(cur[1] + ivs)
             lo = min(u[0] for u in union)
@@ -353,19 +382,45 @@ def _grid_runs(bands, min_gutter, max_gap):
                 cur[2] = []
                 cur[0].append(band)
                 cur[1] = union
+                cur[3] = _band_occupied(
+                    band, _union_cols(union, min_gutter), min_gutter
+                )
             else:
                 runs.append(cur[0])
-                cur = [[band], ivs, []]
+                cur = [
+                    [band], ivs, [],
+                    _band_occupied(band, _union_cols(ivs, min_gutter),
+                                   min_gutter),
+                ]
         elif cur is not None and cells:
             cx0, cx1 = cells[0][0], cells[0][1]
             lo = min(u[0] for u in cur[1])
             hi = max(u[1] for u in cur[1])
             if cx1 - cx0 < 0.7 * (hi - lo):
-                # narrow lone cell — a wrapped-cell stub; it can't kill a
-                # gutter so it joins without touching the union
-                cur[0].extend(cur[2])
-                cur[2] = []
-                cur[0].append(band)
+                # narrow lone cell — joins only as a wrapped-cell
+                # continuation of the open row; anything else is prose
+                # adjacent to the table, so it is not even held pending:
+                # left out of the run it stays in the body flow instead
+                # of surfacing as a fake sparse row, and it never feeds
+                # _run_layout where a gutter-straddling interval could
+                # kill the whole region
+                cols = _union_cols(cur[1], min_gutter)
+                row_occ = (
+                    _band_occupied(cur[2][-1], cols, min_gutter)
+                    if cur[2]
+                    else cur[3]
+                )
+                occ = _band_occupied(band, cols, min_gutter)
+                if (
+                    occ
+                    and 0 not in occ
+                    and occ < row_occ
+                    and len(occ) <= max(1, len(cols) - 2)
+                ):
+                    cur[0].extend(cur[2])
+                    cur[2] = []
+                    cur[0].append(band)
+                    cur[3] = row_occ | occ
             else:
                 cur[2].append(band)
     if cur is not None:
@@ -374,32 +429,34 @@ def _grid_runs(bands, min_gutter, max_gap):
 
 
 def _run_layout(bands, min_gutter):
-    """Recover column bounds from a run's cell union.
+    """Recover column bounds from a run's multi-cell bands.
 
     Column i spans from the end of the previous permanent gutter (or the
-    region's left edge) to the start of the next (or the right edge).
-    Returns ``(region_rect, cols)`` or None when no gutter survives.
+    region's left edge) to the start of the next. Only multi-cell bands
+    feed the interval union — a lone-cell band (wrapped-cell stub or
+    colspan row) may legitimately sit across a gutter and must not
+    reshape the columns; a stub covering the sole surviving gutter used
+    to empty the union and reject the whole region. The region rect still
+    covers every committed band. Returns ``(region_rect, cols)`` or None
+    when no gutter survives.
     """
     ivs = []
     x0s, y0s, x1s, y1s = [], [], [], []
     for lines, y0, y1 in bands:
         cells = _band_cells(lines, min_gutter)
-        ivs += [(c[0], c[1]) for c in cells]
         x0s.append(min(c[0] for c in cells))
         x1s.append(max(c[1] for c in cells))
         y0s.append(y0)
         y1s.append(y1)
-    lo, hi = min(x0s), max(x1s)
-    gaps = _interior_gaps(ivs, lo, hi, min_gutter)
-    if not gaps:
+        if len(cells) >= 2:
+            ivs += [(c[0], c[1]) for c in cells]
+    cols = _union_cols(ivs, min_gutter)
+    if len(cols) < 2:
         return None
-    bounds = []
-    prev = lo
-    for g0, g1 in gaps:
-        bounds.append((prev, g0))
-        prev = g1
-    bounds.append((prev, hi))
-    return fitz.Rect(lo, min(y0s), hi, max(y1s)), bounds
+    return (
+        fitz.Rect(min(x0s), min(y0s), max(x1s), max(y1s)),
+        cols,
+    )
 
 
 def _cells_cols(band, cols, min_gutter):
@@ -420,6 +477,16 @@ def _cells_cols(band, cols, min_gutter):
         if covered:
             out.append((covered[0], covered[-1] - covered[0] + 1, c))
     return out
+
+
+def _band_occupied(band, cols, min_gutter):
+    """Column indices a band's cells cover under ``cols`` — the
+    'occupied' set ``_assemble_rows`` tests continuation folds against."""
+    return {
+        c
+        for col, span, _cell in _cells_cols(band, cols, min_gutter)
+        for c in range(col, col + span)
+    }
 
 
 def _assemble_rows(bands, cols, min_gutter, claimed):
@@ -497,8 +564,9 @@ def _region_from_run(run, blocks, sbands, edges, min_gutter, line_h,
     """Validate one grid run into a ``_TableRegion`` or reject it.
 
     Guards (precision-first — a miss degrades to ordinary text flow, a
-    false positive mangles it): needs ≥3 recovered rows, ≥60% grid-dense
-    rows, median band fill under 0.88 (prose fills its band), a first
+    false positive mangles it): needs ≥3 recovered rows (≥2 when a
+    ``Table N`` caption anchors the region), ≥60% grid-dense rows,
+    median band fill under 0.88 (prose fills its band), a first
     column that isn't just list markers, and no image overlap. Runs that
     span a document column edge additionally need a ``Table N`` caption
     AND interior gutters that don't merely mirror the page's own column
@@ -529,35 +597,58 @@ def _region_from_run(run, blocks, sbands, edges, min_gutter, line_h,
         rect.x1 + 4, rect.y1 + 0.4 * line_h,
     )
     member_bands = list(run)
+    caption_bands = []
     if caption_band is not None:
-        member_bands = member_bands + [caption_band]
-        cy0, cy1 = caption_band[1], caption_band[2]
-        claim_rect.y0 = min(claim_rect.y0, cy0 - 0.3 * line_h)
-        claim_rect.y1 = max(claim_rect.y1, cy1 + 0.3 * line_h)
+        # a wrapped 'Table N …' legend puts its continuation in its own
+        # band(s) — every band made purely of caption-block lines joins
+        # the member set so the block can be claimed whole and the full
+        # legend reaches <caption> instead of losing its tail
+        run_ids = {id(band) for band in run}
+        cbids = {bid for _l, bid in caption_band[0]}
+        caption_bands = [caption_band] + [
+            band
+            for band in sbands
+            if band is not caption_band
+            and id(band) not in run_ids
+            and all(bid in cbids for _l, bid in band[0])
+        ]
+        member_bands += caption_bands
+        for cb in caption_bands:
+            claim_rect.y0 = min(claim_rect.y0, cb[1] - 0.3 * line_h)
+            claim_rect.y1 = max(claim_rect.y1, cb[2] + 0.3 * line_h)
     if any(
         b["type"] == 1 and fitz.Rect(b["bbox"]).intersects(rect)
         for b in blocks
     ):
         return None
     # a block joins the table only if it sits inside the claim rect AND
-    # actually contributes lines to a member band — blocks that merely
-    # fall inside the padded rect stay in the body flow instead of
-    # vanishing; a caption whose block is a straddler isn't used either
-    member_bids = {
-        bid for band in member_bands for _l, bid in band[0]
+    # every one of its lines lives in a member band — a block whose
+    # lines spill into a non-member band is a straddler: it stays in the
+    # body flow whole, so no line can be claimed away and then never
+    # emitted (the emit loop swallows claimed blocks verbatim)
+    member_lines = {
+        id(l) for band in member_bands for l, _bid in band[0]
     }
-    claimed = {
-        id(b)
-        for b in blocks
-        if b["type"] == 0
-        and id(b) in member_bids
-        and fitz.Rect(b["bbox"]) in claim_rect
-    }
+    claimed = set()
+    for b in blocks:
+        if b["type"] != 0 or fitz.Rect(b["bbox"]) not in claim_rect:
+            continue
+        lids = {id(l) for l in _block_lines(b)}
+        if lids and lids <= member_lines:
+            claimed.add(id(b))
     caption = None
     if caption_band is not None and {
         bid for _l, bid in caption_band[0]
     } <= claimed:
-        caption = [l for l, _ in caption_band[0]]
+        caption = sorted(
+            (
+                l
+                for band in caption_bands
+                for l, bid in band[0]
+                if bid in claimed
+            ),
+            key=lambda l: (l["bbox"][1], l["bbox"][0]),
+        )
     rows = _assemble_rows(run, cols, min_gutter, claimed)
     if len(rows) < (2 if caption is not None else 3):
         return None
@@ -664,8 +755,11 @@ def _table_regions(blocks, line_h, edges, page_width):
             if region is not None:
                 regions.append(region)
     # the same table can surface in both a column-local and the
-    # full-width scan — on overlapping claims keep the richer region
-    regions.sort(key=lambda r: -len(r.rows))
+    # full-width scan — on overlapping claims keep the richer region;
+    # a column-local subset of a page-wide grid yields the same row
+    # count, so break ties on recovered columns (scan order alone would
+    # keep the poorer partial region, which is appended first)
+    regions.sort(key=lambda r: (-len(r.rows), -len(r.cols)))
     kept = []
     for r in regions:
         if any(r.claimed & k.claimed for k in kept):
