@@ -94,15 +94,24 @@ chapters.
   bands split into cells at ≥0.45×line-height x-gaps, and runs of
   multi-cell bands that keep a permanent interior whitespace gutter
   (crossed by no row) become regions. Columns fall out of the surviving
-  gutters; cells spanning several columns emit `colspan`; a band whose
-  occupied columns are a strict subset of the row above's (≤ ncols−2,
-  column 0 empty) merges as wrapped-cell continuation. Guards are
-  precision-first: ≥3 rows, ≥60% grid-dense rows, band/cell fill under
-  prose levels (0.88/0.9), no list-marker first column, no image overlap;
+  gutters — only multi-cell bands feed that union, so a lone-cell band
+  can never reshape or kill the layout; cells spanning several columns
+  emit `colspan`. A narrow lone-cell band joins the run only as a
+  wrapped-cell continuation (occupied columns a strict subset of the row
+  above's, ≤ ncols−2, column 0 empty — the same test `_assemble_rows`
+  folds on), so a `Note.`/`n.s.` line or prose fragment below the grid
+  stays prose instead of surfacing as a fake sparse row. Guards are
+  precision-first: ≥3 rows (≥2 when captioned), ≥60% grid-dense rows,
+  band/cell fill under prose levels (0.88/0.9), no list-marker first
+  column, no image overlap;
   a region spanning a document column edge additionally needs a `Table N`
   caption and gutters that don't just mirror the page's own columns (the
   layout itself is not a table). A `Table N` band adjacent to the region
-  becomes `<caption>`; an all-bold first row becomes `<thead>` `<th>`s.
+  becomes `<caption>` — bands made purely of the caption block's other
+  lines (a wrapped legend) join it. A block is claimed into a region only
+  when every one of its lines lands in a member band — partial coverage
+  leaves the whole block in body flow rather than silently dropping the
+  un-emitted lines. An all-bold first row becomes `<thead>` `<th>`s.
   Misses degrade to ordinary text flow, never to mangled prose.
 - **Caption alt text** — images and rasterized tables adopt the nearest
   text block beyond the region's facing edge as `alt` when it opens with
