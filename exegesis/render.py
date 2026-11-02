@@ -15,6 +15,7 @@ from .analyze import (
     _rotate_clip,
     _rotated_table_region,
     _sup_marker,
+    _table_regions,
 )
 from .const import MAX_HEADING_CHARS, MIN_HEADING_CHARS, MIN_IMAGE_BYTES
 from .order import _ordered_blocks
@@ -145,6 +146,51 @@ def _footnote_text(block, body_size):
     )
 
 
+def _table_html(region, body_size):
+    """Render a detected grid table to ``<table>`` markup.
+
+    Recovered rows become ``<tr>``; the first row promotes to ``<thead>``
+    when every cell is bold. Cells keep span-level markup (bold/italic/
+    sup links) via ``_line_html``; holes between occupied columns emit
+    empty cells so column positions stay aligned.
+    """
+    parts = ["<table>"]
+    if region.caption:
+        cap = _join_lines(
+            _line_html(l, body_size).strip() for l in region.caption
+        )
+        if cap:
+            parts.append(f"<caption>{cap}</caption>")
+
+    def row_html(row, tag):
+        cells = []
+        cur = 0
+        for col, span, lns in sorted(row, key=lambda t: t[0]):
+            while cur < col:
+                cells.append(f"<{tag}></{tag}>")
+                cur += 1
+            text = _join_lines(
+                _line_html(l, body_size).strip() for l, _b in lns
+            )
+            sp = f' colspan="{span}"' if span > 1 else ""
+            cells.append(f"<{tag}{sp}>{text}</{tag}>")
+            cur = col + span
+        while cur < len(region.cols):
+            cells.append(f"<{tag}></{tag}>")
+            cur += 1
+        return "".join(cells)
+
+    rows = region.rows
+    if region.header:
+        parts.append(f"<thead><tr>{row_html(rows[0], 'th')}</tr></thead>")
+        rows = rows[1:]
+    parts.append("<tbody>")
+    for row in rows:
+        parts.append(f"<tr>{row_html(row, 'td')}</tr>")
+    parts.append("</tbody></table>")
+    return "".join(parts)
+
+
 def _strip_dead_fn_links(frag, fn_nums):
     """Unlink sup-markers whose ``#fnN`` target has no note entry — links to
     real notes survive; other raised digits (years, cross-refs) revert to
@@ -196,10 +242,19 @@ def _render_page(page, page_index: int, state: PipelineState):
         if tbl is not None
         else set()
     )
+    # horizontal tables claim their cell blocks like the rotated path
+    # does, but emit real <table> markup instead of a rasterized image
+    grids = _table_regions(
+        [b for b in body_blocks if id(b) not in tbl_ids],
+        state.line_h,
+        edges,
+        page.rect.width,
+    )
+    grid_of = {bid: g for g in grids for bid in g.claimed}
     # ids of blocks that leave (or never enter) the body flow — rasterized
     # table cells, footnote-region blocks, kept furniture — none of them can
     # count as a bold-only h2's follower
-    nonbody_ids = tbl_ids | {
+    nonbody_ids = tbl_ids | set(grid_of) | {
         id(b)
         for b in ordered
         if b.get("is_furniture")
@@ -210,6 +265,7 @@ def _render_page(page, page_index: int, state: PipelineState):
         )
     }
     tbl_done = False
+    grid_done = set()
 
     def flush_par():
         if state.par:
@@ -279,6 +335,14 @@ def _render_page(page, page_index: int, state: PipelineState):
                 frags.append(
                     f'<p class="fig"><img src="{state.images[digest].file_name}" alt="table"/></p>'
                 )
+            continue
+
+        if id(block) in grid_of:
+            g = grid_of[id(block)]
+            if id(g) not in grid_done:
+                grid_done.add(id(g))
+                flush_par()
+                frags.append(_table_html(g, body_size))
             continue
 
         if block.get("is_furniture"):

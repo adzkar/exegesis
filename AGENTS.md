@@ -79,14 +79,27 @@ chapters.
   paragraphs (absorbing continuation lines); a block indented >12pt from
   its column edge AND vertically isolated (>0.7× line-height gaps on both
   sides) becomes `<blockquote>` (quotes, verse).
-- **Tables** — rotated/landscape tables (≥3 tall-narrow blocks sharing a
-  y-band) are rasterized and embedded as PNGs. `is_furniture`-flagged
+- **Tables** — two paths. Rotated/landscape tables (≥3 tall-narrow blocks
+  sharing a y-band) are rasterized and embedded as PNGs. `is_furniture`-flagged
   blocks never seed a region, so sidebar furniture kept under
   `--keep-headers` can't be rasterized into a false table. Block bboxes arrive in
   mediabox (unrotated) space; the padded clip is mapped into displayed
   space via `page.rotation_matrix`, because `get_pixmap` clips in rotated
-  coordinates — the render comes out upright and uncropped. Horizontal
-  tables are not yet detected — their cells currently flow as text.
+  coordinates — the render comes out upright and uncropped. Upright grid
+  tables emit real `<table>` markup: page text lines cluster into y-bands,
+  bands split into cells at ≥0.45×line-height x-gaps, and runs of
+  multi-cell bands that keep a permanent interior whitespace gutter
+  (crossed by no row) become regions. Columns fall out of the surviving
+  gutters; cells spanning several columns emit `colspan`; a band whose
+  occupied columns are a strict subset of the row above's (≤ ncols−2,
+  column 0 empty) merges as wrapped-cell continuation. Guards are
+  precision-first: ≥3 rows, ≥60% grid-dense rows, band/cell fill under
+  prose levels (0.88/0.9), no list-marker first column, no image overlap;
+  a region spanning a document column edge additionally needs a `Table N`
+  caption and gutters that don't just mirror the page's own columns (the
+  layout itself is not a table). A `Table N` band adjacent to the region
+  becomes `<caption>`; an all-bold first row becomes `<thead>` `<th>`s.
+  Misses degrade to ordinary text flow, never to mangled prose.
 - **Abstract** — first small-font inset block in the top half of pages 0–1
   injects an `Abstract` h2.
 - **Styles** — bold via flags or `.B`/`Bold` font-name suffix, italic via

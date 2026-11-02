@@ -876,3 +876,251 @@ def test_paragraph_merges_across_page_break(tmp_path):
     convert(pdf, out)
     text = chapter_text(out)
     assert "page bottom and the sentence continues at the top" in text
+
+
+def _grid_table(p, cols, rows, y=220, fontsize=8, header_bold=False):
+    """Draw a grid table as one textbox per cell (mirrors journal layout)."""
+    for ri, r in enumerate(rows):
+        for ci, txt in enumerate(r):
+            if txt is None:
+                continue
+            p.insert_textbox(
+                fitz.Rect(cols[ci], y, cols[ci] + 120, y + 40),
+                txt,
+                fontsize=fontsize,
+                fontname="hebo" if header_bold and ri == 0 else "helv",
+            )
+        y += 16
+    return y
+
+
+def test_horizontal_table_markup(tmp_path):
+    """Captioned 3-column grid emits real <table> markup with a header."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 110),
+        "An introductory paragraph that must stay ordinary prose.",
+        fontsize=BODY,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 120, 540, 140),
+        "Table 1  Reaction times by group",
+        fontsize=BODY,
+    )
+    _grid_table(
+        p,
+        [72, 230, 400],
+        [
+            ["Study", "N", "Mean RT"],
+            ["Alpha et al.", "42", "350 msec"],
+            ["Beta and Gamma", "108", "412 msec"],
+            ["Delta", "19", "298 msec"],
+        ],
+        y=150,
+        header_bold=True,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 260, 540, 380),
+        "A following paragraph keeps the table bounded from below.",
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "htable.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "htable.epub"
+    convert(pdf, out)
+    assert lint_epub(out) == []
+    html = " ".join(doc_html(out).values())
+    assert "<table>" in html
+    assert "<caption>Table 1 Reaction times by group</caption>" in html.replace(
+        "  ", " "
+    )
+    assert "<th><b>Study</b></th>" in html
+    assert "<td>Alpha et al.</td>" in html and "<td>298 msec</td>" in html
+    text = chapter_text(out)
+    # cell text must not also flow as body paragraphs
+    assert text.count("Alpha et al.") == 1
+
+
+def test_table_wrapped_cell_continuation(tmp_path):
+    """A wrapped cell's second line folds into the same <td>."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 120), "Table 2  Study details", fontsize=BODY
+    )
+    _grid_table(
+        p,
+        [72, 230, 430],
+        [
+            ["Study", "Sample size", "RT"],
+            ["Alpha", "42 participants total recruited", "350"],
+            ["Beta", "108", "412"],
+            ["Delta", "19", "298"],
+        ],
+        y=140,
+    )
+    pdf = tmp_path / "twrap.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "twrap.epub"
+    convert(pdf, out)
+    html = " ".join(doc_html(out).values())
+    assert "<td>42 participants total recruited</td>" in html
+
+
+def test_table_inside_column_of_two_col_page(tmp_path):
+    """A grid inside one column of a 2-col page becomes a table; the
+    other column's prose is untouched."""
+    doc = fitz.open()
+    prose = (
+        "The quick brown fox jumps over the lazy dog repeatedly and "
+        "without pause for breath. "
+    )
+    for _ in range(2):
+        p = _page(doc)
+        for i in range(3):
+            p.insert_textbox(
+                fitz.Rect(72, 90 + i * 120, 290, 200 + i * 120),
+                prose * (3 - i),
+                fontsize=BODY,
+            )
+            p.insert_textbox(
+                fitz.Rect(340, 90 + i * 120, 560, 200 + i * 120),
+                prose * (3 - i),
+                fontsize=BODY,
+            )
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 90, 290, 150),
+        "Left column prose sits above the table region here.",
+        fontsize=BODY,
+    )
+    _grid_table(
+        p,
+        [76, 140, 210],
+        [["Grp", "N", "RT"], ["A1", "42", "350"], ["B2", "108", "412"], ["C3", "19", "298"]],
+        y=220,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 310, 290, 400),
+        "Left column prose below the table continues here.",
+        fontsize=BODY,
+    )
+    for i in range(3):
+        p.insert_textbox(
+            fitz.Rect(340, 90 + i * 120, 560, 200 + i * 120),
+            prose * (3 - i),
+            fontsize=BODY,
+        )
+    pdf = tmp_path / "tincol.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tincol.epub"
+    convert(pdf, out)
+    assert lint_epub(out) == []
+    html = " ".join(doc_html(out).values())
+    assert "<td>A1</td>" in html and "<td>298</td>" in html
+    assert "prose below the table continues" in chapter_text(out)
+
+
+def test_full_width_table_spanning_columns(tmp_path):
+    """A captioned page-wide grid in a 2-col doc emits a table."""
+    doc = fitz.open()
+    prose = (
+        "The quick brown fox jumps over the lazy dog repeatedly and "
+        "without pause for breath. "
+    )
+    for _ in range(2):
+        p = _page(doc)
+        for i in range(2):
+            p.insert_textbox(
+                fitz.Rect(72, 400 + i * 120, 290, 510 + i * 120),
+                prose * (3 - i),
+                fontsize=BODY,
+            )
+            p.insert_textbox(
+                fitz.Rect(340, 400 + i * 120, 560, 510 + i * 120),
+                prose * (3 - i),
+                fontsize=BODY,
+            )
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 90, 540, 110),
+        "Table 3  Descriptive statistics across conditions",
+        fontsize=BODY,
+    )
+    _grid_table(
+        p,
+        [72, 200, 340, 470],
+        [
+            ["Measure", "Mean", "SD", "Range"],
+            ["Anxiety", "3.2", "0.8", "1-5"],
+            ["Depression", "2.7", "0.9", "1-4"],
+            ["Stress", "4.1", "1.1", "2-6"],
+        ],
+        y=130,
+        fontsize=9,
+    )
+    for i in range(2):
+        p.insert_textbox(
+            fitz.Rect(72, 400 + i * 120, 290, 510 + i * 120),
+            prose * (3 - i),
+            fontsize=BODY,
+        )
+        p.insert_textbox(
+            fitz.Rect(340, 400 + i * 120, 560, 510 + i * 120),
+            prose * (3 - i),
+            fontsize=BODY,
+        )
+    pdf = tmp_path / "twide.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "twide.epub"
+    convert(pdf, out)
+    html = " ".join(doc_html(out).values())
+    assert "<td>Anxiety</td>" in html and "<td>1-4</td>" in html
+    assert "<caption>Table 3" in html
+
+
+def test_two_column_prose_is_not_a_table(tmp_path):
+    """Two text columns of prose must not fuse into a grid region."""
+    doc = fitz.open()
+    prose_l = (
+        "Left column prose fills its measure completely and consistently "
+        "with ordinary justified sentences throughout the page. "
+    )
+    prose_r = (
+        "Right column prose does exactly the same thing on its side of "
+        "the gutter and is not table content either. "
+    )
+    p = _page(doc)
+    p.insert_textbox(fitz.Rect(72, 100, 290, 600), prose_l * 6, fontsize=BODY)
+    p.insert_textbox(fitz.Rect(340, 100, 560, 600), prose_r * 6, fontsize=BODY)
+    pdf = tmp_path / "notable.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "notable.epub"
+    convert(pdf, out)
+    html = " ".join(doc_html(out).values())
+    assert "<table>" not in html
+
+
+def test_numbered_list_is_not_a_table(tmp_path):
+    """A marker column plus text column reads as a list, not a grid."""
+    doc = fitz.open()
+    p = _page(doc)
+    for i in range(5):
+        p.insert_textbox(
+            fitz.Rect(72, 100 + i * 22, 100, 122 + i * 22),
+            f"{i + 1}.",
+            fontsize=BODY,
+        )
+        p.insert_textbox(
+            fitz.Rect(110, 100 + i * 22, 540, 122 + i * 22),
+            f"List item number {i + 1} with some explanatory text",
+            fontsize=BODY,
+        )
+    pdf = tmp_path / "listcase.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "listcase.epub"
+    convert(pdf, out)
+    html = " ".join(doc_html(out).values())
+    assert "<table>" not in html
+    assert "List item number 3" in chapter_text(out)

@@ -17,7 +17,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCTYPE_RE = re.compile(r"<!DOCTYPE[^>]*>")
-TOP_TAGS = {"h1", "h2", "h3", "p", "blockquote"}
+TOP_TAGS = {"h1", "h2", "h3", "p", "blockquote", "table"}
 OPF_NS = "{http://www.idpf.org/2007/opf}"
 CONTAINER_NS = "{urn:oasis:names:tc:opendocument:xmlns:container}"
 

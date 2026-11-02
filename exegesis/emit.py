@@ -134,7 +134,13 @@ def convert(
             "text-transform: uppercase; color: #666; } "
             "p.fig { text-align: center; } p.fig img { max-width: 100%; } "
             "p.listitem { margin-left: 2em; } "
-            "blockquote { margin: 0.8em 1.5em; font-size: 0.95em; }"
+            "blockquote { margin: 0.8em 1.5em; font-size: 0.95em; } "
+            "table { border-collapse: collapse; margin: 0.8em 0; "
+            "font-size: 0.92em; } "
+            "th, td { border: 1px solid #999; padding: 0.15em 0.4em; "
+            "vertical-align: top; text-align: left; } "
+            "caption { text-align: left; font-weight: bold; "
+            "margin-bottom: 0.3em; }"
         ),
     )
     book.add_item(css)

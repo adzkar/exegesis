@@ -22,6 +22,7 @@ flowchart TD
     J -->|image| K["Figure<br/>dedupe by hash, drop under 2KB"]
     J -->|footnote zone| L["Notes collection"]
     J -->|rotated table region| K2["Rasterize clip<br/>mediabox rect via rotation_matrix"]
+    J -->|grid table region| K3["&lt;table&gt; markup<br/>cells via line spans · caption · thead"]
     J -->|all-caps top label| M["&lt;p class=label&gt;<br/>(BREVIA etc.)"]
     J -->|heading font| N["h1/h2<br/>size-based · all-bold · named labels<br/>first p0 heading ≥1.3× promotes h1"]
     J -->|named section label| N
@@ -37,6 +38,7 @@ flowchart TD
     L --> T["Notes chapter<br/>+ sup link backfill"]
     K --> U[ebooklib packaging]
     K2 --> U
+    K3 --> U
     S --> U
     T --> U
     U --> V["EPUB<br/>spine · TOC · nav · style.css<br/>validated title/author meta"]
@@ -66,6 +68,7 @@ flowchart TD
 | List item | line starting `N.`/`N)` → `<p class="listitem">`; absorbs continuation lines |
 | Blockquote | block indented >12pt from column edge AND isolated (gap >0.7× line height both sides; kept furniture doesn't count as a neighbor) |
 | Rotated table | ≥3 tall-narrow blocks sharing a y-band → region rasterized; clip mapped mediabox→displayed via `page.rotation_matrix` |
+| Grid table | multi-cell row bands sharing a permanent interior gutter → `<table>` with `colspan`s, wrapped-cell merges, `Table N` caption, all-bold `<thead>`; edge-spanning regions need a caption and non-layout gutters |
 | Header/footer | signature repeated on ≥40% of pages in edge zone (set built at any doc length; under `--keep-headers` matches flag `is_furniture`) |
 | Furniture | pattern (`VOL`, `www.`, `ISSN`, `doi`, `©`, dates) in outer 7% edge; under `--keep-headers` flagged `is_furniture` and emitted verbatim at page edges — inert to classifiers, ordering machinery, and table regions |
 | Margin strip | <25pt wide, >4× tall, in outer 10% margin (rotated sidebars) |
