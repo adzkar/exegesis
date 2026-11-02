@@ -2068,3 +2068,49 @@ def test_single_digit_cell_not_dropped_as_rotated(tmp_path):
     assert "<td>7</td>" in table_html
     text = chapter_text(out)
     assert text.count(">7<") == 0  # the digit isn't loose body text
+
+
+def test_wide_stray_beyond_grid_stays_prose(tmp_path):
+    """A wide line beyond the grid's right edge used to hold pending
+    and commit on resume, then cover no recovered column — its block
+    was claimed for a colspan cell that never emitted, dropping the
+    text entirely. It must stay body prose."""
+    doc = fitz.open()
+    p = _page(doc)
+    _grid_table(
+        p,
+        [76, 140, 210],
+        [
+            ["Grp", "N", "RT"],
+            ["A1", "42", "350"],
+        ],
+        y=200,
+        fontsize=8,
+    )
+    # its own band, ≥0.7× union width but lying entirely beyond the
+    # grid's right edge — covers no recovered column
+    p.insert_textbox(
+        fitz.Rect(400, 240, 590, 258),
+        "A marginal aside that belongs to the body flow.",
+        fontsize=8,
+    )
+    _grid_table(
+        p,
+        [76, 140, 210],
+        [
+            ["B2", "108", "412"],
+            ["C3", "19", "298"],
+            ["D4", "77", "265"],
+        ],
+        y=264,
+        fontsize=8,
+    )
+    pdf = tmp_path / "tstray.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tstray.epub"
+    convert(pdf, out)
+    html = " ".join(doc_html(out).values())
+    assert "A marginal aside" in chapter_text(out)
+    if "<table>" in html:
+        table_html = html.split("<table>", 1)[1].split("</table>", 1)[0]
+        assert "marginal aside" not in table_html

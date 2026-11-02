@@ -296,6 +296,39 @@ def test_grid_runs_second_pending_closes_run():
     )
 
 
+def test_grid_runs_emitted_bands_keep_y_order():
+    """A pending divider flushed by a resuming band lands after stubs
+    committed while it was held — without sorting, its colspan row
+    would emit after the wrapped-cell text that follows it visually."""
+    cells = [(("a", 0, 100), 1), (("b", 140, 240), 2)]
+    pending = _band([(("divider", 10, 230), 3)], 32)
+    stub = _band([(("cont", 150, 200), 4)], 48)
+    runs = analyze._grid_runs(
+        [_band(cells, 0), _band(cells, 16), pending, stub,
+         _band(cells, 64)],
+        min_gutter=6,
+        max_gap=36,
+    )
+    assert len(runs) == 1
+    assert [b[1] for b in runs[0]] == [0, 16, 32, 48, 64]
+
+
+def test_grid_runs_pending_beyond_union_not_held():
+    """A wide band covering no recovered column can never emit a colspan
+    cell — committing it would claim its block for a row that produces
+    nothing, silently dropping the text; it stays prose."""
+    cells = [(("a", 0, 100), 1), (("b", 140, 240), 2)]
+    stray = _band([(("far right", 400, 600), 3)], 32)
+    runs = analyze._grid_runs(
+        [_band(cells, 0), _band(cells, 16), stray, _band(cells, 48)],
+        min_gutter=6,
+        max_gap=36,
+    )
+    assert len(runs) == 1
+    assert all(b is not stray for b in runs[0])
+    assert len(runs[0]) == 3
+
+
 def test_upright_lines_keeps_narrow_cells():
     """A 1-char line is taller than wide but reports dir (1, 0) — the
     direction check keeps it where an aspect-ratio proxy dropped it."""

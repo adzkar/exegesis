@@ -449,18 +449,25 @@ def _grid_runs(bands, min_gutter, max_gap):
                     cur[0].append(band)
                     cur[3] |= occ
             else:
-                # a second consecutive wide band is not a colspan
-                # candidate — it is prose infiltrating the gap; close
-                # the run so it (and the still-pending first) stays
-                # text instead of committing as colspan rows
+                # a wide band is held pending only while it can still
+                # emit as a colspan row: a second consecutive one means
+                # prose is filling the gap — close the run — and one
+                # covering no recovered column can never emit, so it is
+                # left to the body flow instead of claiming its block
+                # for a <td> that never materializes
                 if cur[2]:
                     runs.append(cur[0])
                     cur = None
-                else:
+                elif _band_occupied(
+                    band, _union_cols(cur[1], min_gutter), min_gutter
+                ):
                     cur[2].append(band)
     if cur is not None:
         runs.append(cur[0])
-    return runs
+    # bands can land out of y order — a pending divider flushed by a
+    # resuming band sits after stubs committed while it was held; sort
+    # so emitted rows follow reading order
+    return [sorted(run, key=lambda b: b[1]) for run in runs]
 
 
 def _run_layout(bands, min_gutter):

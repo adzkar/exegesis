@@ -104,9 +104,11 @@ chapters.
   folds on), so a `Note.`/`n.s.` line or prose fragment below the grid
   stays prose instead of surfacing as a fake sparse row. A wide
   lone-cell band is held pending as a colspan candidate — only a
-  resuming multi-cell band commits it, and a second consecutive wide
-  band closes the run (prose filling the gap is not a run of divider
-  rows). Footnote-region blocks are excluded from grid candidates like
+  resuming multi-cell band commits it, a second consecutive wide band
+  closes the run (prose filling the gap is not a run of divider rows),
+  and a wide band covering no recovered column is never held at all
+  (it could claim a block for a cell that can never emit).
+  Footnote-region blocks are excluded from grid candidates like
   furniture and rotated cells are, so a note band-joining the grid
   can't be swallowed into cells instead of notes.xhtml. Guards are
   precision-first: ≥3 rows (≥2 when captioned), ≥60% grid-dense rows,
