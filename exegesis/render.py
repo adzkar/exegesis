@@ -1,9 +1,12 @@
 """Per-page rendering: ordered blocks become headings, bylines,
 paragraphs, footnotes, figures, and list/quote fragments — collected into
 ``PipelineState.page_frags`` plus heading/footnote/image side channels."""
+from __future__ import annotations
+
 import hashlib
 import html
 import re
+from collections.abc import Container
 
 import fitz
 from ebooklib import epub
@@ -16,14 +19,18 @@ from .analyze import (
     _rotate_clip,
     _rotated_table_region,
     _sup_marker,
+    _table_regions,
 )
 from .const import MAX_HEADING_CHARS, MIN_HEADING_CHARS, MIN_IMAGE_BYTES
 from .order import _ordered_blocks
 from .state import PipelineState
 from .text import (
+    _CAPTION_NUM,
+    _CAPTION_TAIL,
     FN_LINK_RE,
     LIST_ITEM_RE,
     SECTION_LABEL_RE,
+    TABLE_CAPTION_RE,
     _block_lines,
     _block_median_size,
     _block_text,
@@ -36,33 +43,28 @@ from .text import (
     _span_is_italic,
 )
 
-# the label core allows a supplementary 'S' prefix ('Fig. S1'), a
-# subfigure letter ('Fig. 2b', 'Figure 1(a)'), and a dash-joined range
-# ('Figure 1–2'); the tail allows a dash-set legend ('Figure 3 — …') but
-# still demands punctuation or end-of-text — 'Figure 9 shows' stays a
-# prose citation, as does 'see Table 1–3' (labels must open the block)
+# label set + the shared caption number/tail from text.py — the same
+# 'S'-prefix, subfigure-letter, dash-range core and the same tail
+# (dash-set legend, punctuation, 2+ space layout gap, or end-of-text),
+# so a double-spaced 'Figure 3  Legend' alts exactly like a
+# double-spaced 'Table 1  Title' captions a grid
 CAPTION_RE = re.compile(
     r"(?i)^\s*(fig\.?|figure|table|plate|scheme|chart)\s*\.?\s*"
-    r"s?\d+(?:[a-z]|\s*\([a-zA-Z]\))?(?:\s*[–-]\s*s?\d+)?"
-    r"(?:\s+[—–-]|\s*[.:)]|$)"
+    + _CAPTION_NUM
+    + _CAPTION_TAIL
 )
 # the image call must not accept 'Table N.' — tables keep their legends
 # above the body, so a following 'Table N.' block belongs to a
 # text-flowed table, not to the figure
 FIGURE_CAPTION_RE = re.compile(
     r"(?i)^\s*(fig\.?|figure|plate|scheme|chart)\s*\.?\s*"
-    r"s?\d+(?:[a-z]|\s*\([a-zA-Z]\))?(?:\s*[–-]\s*s?\d+)?"
-    r"(?:\s+[—–-]|\s*[.:)]|$)"
+    + _CAPTION_NUM
+    + _CAPTION_TAIL
 )
 # the mirror for the rasterized-table call: a 'Figure N.' block *below*
 # the region is a following figure's caption, not the table's legend —
 # while the legend above may still be 'Figure N.' (a text-heavy rotated
 # figure reaches the same raster path)
-TABLE_CAPTION_RE = re.compile(
-    r"(?i)^\s*table\s*\.?\s*"
-    r"s?\d+(?:[a-z]|\s*\([a-zA-Z]\))?(?:\s*[–-]\s*s?\d+)?"
-    r"(?:\s+[—–-]|\s*[.:)]|$)"
-)
 
 
 def _section_label(text):
@@ -173,10 +175,10 @@ def _figure_alt(
     page_width,
     region=None,
     fallback="",
-    skip_ids=frozenset(),
+    skip_ids: Container[int] = frozenset(),
     pattern=CAPTION_RE,
     above_pattern=CAPTION_RE,
-    claimed=None,
+    claimed: set | None = None,
 ):
     """Alt text for a figure: the nearest foreign text block beyond the
     figure's facing edge is its caption when it opens with a caption
@@ -243,6 +245,7 @@ def _figure_alt(
             return b, _is_caption(b, pat)
         return None
 
+    stray_above = None
     if region is not None:
         # journals set 'Table N.' legends above the table body — and text
         # below a table is likelier the *next* table's legend — so the
@@ -271,7 +274,7 @@ def _figure_alt(
         lambda b: b["bbox"][1] - bbox[3],
         lambda b: b["bbox"][1] >= bbox[3] - 10,
         pattern,
-        stray=stray_above if region is not None else None,
+        stray=stray_above,
     )
     if hit is not None and hit[1] is not None:
         claimed.add(id(hit[0]))
@@ -285,6 +288,51 @@ def _footnote_text(block, body_size):
     return _sup_marker(block, body_size), _join_lines(
         [p for p in pieces if p.strip()]
     )
+
+
+def _table_html(region, body_size):
+    """Render a detected grid table to ``<table>`` markup.
+
+    Recovered rows become ``<tr>``; the first row promotes to ``<thead>``
+    when every cell is bold. Cells keep span-level markup (bold/italic/
+    sup links) via ``_line_html``; holes between occupied columns emit
+    empty cells so column positions stay aligned.
+    """
+    parts = ["<table>"]
+    if region.caption:
+        cap = _join_lines(
+            _line_html(l, body_size).strip() for l in region.caption
+        )
+        if cap:
+            parts.append(f"<caption>{cap}</caption>")
+
+    def row_html(row, tag):
+        cells = []
+        cur = 0
+        for col, span, lns in sorted(row, key=lambda t: t[0]):
+            while cur < col:
+                cells.append(f"<{tag}></{tag}>")
+                cur += 1
+            text = _join_lines(
+                _line_html(l, body_size).strip() for l, _b in lns
+            )
+            sp = f' colspan="{span}"' if span > 1 else ""
+            cells.append(f"<{tag}{sp}>{text}</{tag}>")
+            cur = col + span
+        while cur < len(region.cols):
+            cells.append(f"<{tag}></{tag}>")
+            cur += 1
+        return "".join(cells)
+
+    rows = region.rows
+    if region.header:
+        parts.append(f"<thead><tr>{row_html(rows[0], 'th')}</tr></thead>")
+        rows = rows[1:]
+    parts.append("<tbody>")
+    for row in rows:
+        parts.append(f"<tr>{row_html(row, 'td')}</tr>")
+    parts.append("</tbody></table>")
+    return "".join(parts)
 
 
 def _strip_dead_fn_links(frag, fn_nums):
@@ -338,20 +386,35 @@ def _render_page(page, page_index: int, state: PipelineState):
         if tbl is not None
         else set()
     )
+    # footnote-region blocks leave the flow like rasterized cells and
+    # kept furniture do — excluded up front, a note can't seed a grid
+    # and can't be claimed into <td>s (the emit loop tests grid_of
+    # before foot_tops, so a swallowed note would never reach
+    # notes.xhtml)
+    foot_ids = {
+        id(b)
+        for b in body_blocks
+        if b["type"] == 0
+        and (fc := _assign_column(b, edges)) in foot_tops
+        and b["bbox"][1] >= foot_tops[fc] - 5
+    }
+    # horizontal tables claim their cell blocks like the rotated path
+    # does, but emit real <table> markup instead of a rasterized image
+    grids = _table_regions(
+        [b for b in body_blocks if id(b) not in tbl_ids | foot_ids],
+        state.line_h,
+        edges,
+        page.rect.width,
+    )
+    grid_of = {bid: g for g in grids for bid in g.claimed}
     # ids of blocks that leave (or never enter) the body flow — rasterized
     # table cells, footnote-region blocks, kept furniture — none of them can
     # count as a bold-only h2's follower or donate alt text to a figure
-    nonbody_ids = tbl_ids | {
-        id(b)
-        for b in ordered
-        if b.get("is_furniture")
-        or (
-            b["type"] == 0
-            and (fc := _assign_column(b, edges)) in foot_tops
-            and b["bbox"][1] >= foot_tops[fc] - 5
-        )
+    nonbody_ids = tbl_ids | set(grid_of) | foot_ids | {
+        id(b) for b in ordered if b.get("is_furniture")
     }
     tbl_done = False
+    grid_done = set()
     claimed_caps = set()
 
     def flush_par():
@@ -444,6 +507,14 @@ def _render_page(page, page_index: int, state: PipelineState):
                     f'<p class="fig"><img src="{state.images[digest].file_name}"'
                     f' alt="{alt}"/></p>'
                 )
+            continue
+
+        if id(block) in grid_of:
+            g = grid_of[id(block)]
+            if id(g) not in grid_done:
+                grid_done.add(id(g))
+                flush_par()
+                frags.append(_table_html(g, body_size))
             continue
 
         if block.get("is_furniture"):

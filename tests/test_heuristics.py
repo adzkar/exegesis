@@ -246,3 +246,295 @@ def test_first_line_indent():
 def test_block_median_size():
     b = block([line("a", size=10), line("bb", size=12), line("ccc", size=8)])
     assert text._block_median_size(b) == 10
+
+
+# --- grid tables --------------------------------------------------------
+
+
+def _band(pairs, y, h=11):
+    """A row band: ``[(line, block_id)]`` entries plus the y-extent."""
+    return [[(line(s, size=8, x0=a, y0=y, x1=b, y1=y + h), bid)
+             for (s, a, b), bid in pairs], y, y + h]
+
+
+def test_grid_runs_pending_band_bridges_the_gap():
+    """A pending wide band keeps the run's gap window alive — measuring
+    max_gap only from the last committed band would close the run early
+    and sever the trailing rows into a second run."""
+    cells = [(("a", 0, 100), 1), (("b", 140, 240), 2)]
+    runs = analyze._grid_runs(
+        [
+            _band(cells, 0),
+            _band(cells, 16),
+            _band([(("section", 10, 230), 3)], 34),   # pending (wide)
+            _band(cells, 66),
+        ],
+        min_gutter=6,
+        max_gap=36,
+    )
+    assert len(runs) == 1 and len(runs[0]) == 4
+
+
+def test_grid_runs_second_pending_closes_run():
+    """One wide band is a colspan candidate; a second consecutive one
+    means prose is filling the gap between two grid fragments — the
+    run closes so the paragraph lines stay text instead of committing
+    as a run of colspan rows."""
+    cells = [(("a", 0, 100), 1), (("b", 140, 240), 2)]
+    wide1 = _band([(("line one", 10, 230), 3)], 34)
+    wide2 = _band([(("line two", 10, 230), 4)], 50)
+    runs = analyze._grid_runs(
+        [_band(cells, 0), _band(cells, 16), wide1, wide2,
+         _band(cells, 68)],
+        min_gutter=6,
+        max_gap=36,
+    )
+    assert len(runs) == 2
+    assert [len(r) for r in runs] == [2, 1]
+    assert all(
+        b is not wide1 and b is not wide2 for run in runs for b in run
+    )
+
+
+def test_grid_runs_emitted_bands_keep_y_order():
+    """A pending divider flushed by a resuming band lands after stubs
+    committed while it was held — without sorting, its colspan row
+    would emit after the wrapped-cell text that follows it visually."""
+    cells = [(("a", 0, 100), 1), (("b", 140, 240), 2)]
+    pending = _band([(("divider", 10, 230), 3)], 32)
+    stub = _band([(("cont", 150, 200), 4)], 48)
+    runs = analyze._grid_runs(
+        [_band(cells, 0), _band(cells, 16), pending, stub,
+         _band(cells, 64)],
+        min_gutter=6,
+        max_gap=36,
+    )
+    assert len(runs) == 1
+    assert [b[1] for b in runs[0]] == [0, 16, 32, 48, 64]
+
+
+def test_grid_runs_pending_beyond_union_not_held():
+    """A wide band covering no recovered column can never emit a colspan
+    cell — committing it would claim its block for a row that produces
+    nothing, silently dropping the text; it stays prose."""
+    cells = [(("a", 0, 100), 1), (("b", 140, 240), 2)]
+    stray = _band([(("far right", 400, 600), 3)], 32)
+    runs = analyze._grid_runs(
+        [_band(cells, 0), _band(cells, 16), stray, _band(cells, 48)],
+        min_gutter=6,
+        max_gap=36,
+    )
+    assert len(runs) == 1
+    assert all(b is not stray for b in runs[0])
+    assert len(runs[0]) == 3
+
+
+def test_grid_runs_gap_from_latest_kept_y():
+    """The gap measures from the later of the last committed band and
+    the pending one — a stub committed after a pending extends the
+    kept-band bottom, and measuring from the pending overstates the
+    gap by up to a row's height and severs the run."""
+    cells = [(("a", 0, 100), 1), (("b", 140, 240), 2)]
+    pending = _band([(("divider", 10, 230), 3)], 32)   # y1 = 43
+    stub = _band([(("cont", 150, 200), 4)], 48)        # y1 = 59
+    runs = analyze._grid_runs(
+        [_band(cells, 0), _band(cells, 16), pending, stub,
+         _band(cells, 90)],
+        min_gutter=6,
+        max_gap=36,
+    )
+    # true gap from the stub's y1 is 31 ≤ 36; the pending's y1 says 47
+    assert len(runs) == 1
+
+
+def test_cells_cols_merges_overlapping_assigns():
+    """A wide internal gap splits '3.2   (0.4–0.9)' into two band cells
+    that both cover the same column — they must merge into one assign
+    or the row emits more <td>s than the table has columns."""
+    cols = [(0, 100), (140, 240)]
+    band = _band(
+        [
+            (("3.2", 10, 30), 1),
+            (("(0.4-0.9)", 60, 95), 1),
+            (("b", 140, 240), 2),
+        ],
+        0,
+    )
+    assigns = analyze._cells_cols(band, cols, 6)
+    assert [(col, span) for col, span, _c in assigns] == [(0, 1), (1, 1)]
+    assert len(assigns[0][2][2]) == 2
+
+
+def test_table_caption_below_legend_belongs_to_next_run():
+    """A 'Table N' band between two stacked grids is the lower table's
+    legend (legends sit above their table) — the upper run must not
+    adopt it, while a lone run may still take a below-run caption."""
+    cells = [(("a", 0, 100), 1), (("b", 140, 240), 2)]
+    cap = _band([(("Table 5  Results", 0, 100), 3)], 48)
+    run_a = [_band(cells, 0), _band(cells, 16), _band(cells, 32)]
+    run_b = [_band(cells, 64), _band(cells, 80), _band(cells, 96)]
+    sbands = run_a + [cap] + run_b
+    runs = [run_a, run_b]
+    assert analyze._table_caption(sbands, run_a, runs, 12) is None
+    assert analyze._table_caption(sbands, run_b, runs, 12) is cap
+    # with no following run, the below legend is still a caption
+    assert analyze._table_caption(sbands, run_a, [run_a], 12) is cap
+
+
+def test_upright_lines_keeps_narrow_cells():
+    """A 1-char line is taller than wide but reports dir (1, 0) — the
+    direction check keeps it where an aspect-ratio proxy dropped it."""
+    upright = line("7", size=8, x0=0, y0=0, x1=5, y1=11)
+    upright["dir"] = (1.0, 0.0)
+    rotated = line("v", size=8, x0=5, y0=0, x1=9, y1=30)
+    rotated["dir"] = (0.0, 1.0)
+    out = analyze._upright_lines([block([upright, rotated], 0, 0, 9, 30)])
+    assert [l["spans"][0]["text"] for l, _ in out] == ["7"]
+
+
+def test_grid_runs_caption_band_never_joins():
+    """A 'Table N …' band — even a multi-cell one sharing text with a
+    foreign line — is the caption machinery's to claim: it must neither
+    seed nor join a run, or the legend and its band-mate mangle into
+    <td> cells while _table_caption stays blind to it. A caption band
+    is a boundary, so the open run closes at it."""
+    cells = [(("a", 0, 100), 1), (("b", 140, 240), 2)]
+    cap = _band(
+        [
+            (("Table 3  Results", 0, 100), 1),
+            (("a sidenote", 140, 240), 3),
+        ],
+        32,
+    )
+    runs = analyze._grid_runs(
+        [
+            _band(cells, 0),
+            _band(cells, 16),
+            cap,
+            _band(cells, 50),
+        ],
+        min_gutter=6,
+        max_gap=36,
+    )
+    assert len(runs) == 2
+    assert all(b is not cap for run in runs for b in run)
+    assert [len(r) for r in runs] == [2, 1]
+
+
+def test_grid_runs_table_legend_not_folded():
+    """A 'Table N' legend under the grid starting in a later column
+    would pass the wrapped-cell fold (col 0 empty, strict subset) and
+    merge into the last row's cell — it must stay a caption
+    candidate instead."""
+    cells = [
+        (("a", 0, 60), 1),
+        (("b", 100, 160), 2),
+        (("c", 200, 260), 3),
+    ]
+    legend = _band([(("Table 3  Summary", 100, 160), 4)], 48)
+    runs = analyze._grid_runs(
+        [_band(cells, 0), _band(cells, 16), _band(cells, 32), legend],
+        min_gutter=6,
+        max_gap=36,
+    )
+    assert len(runs) == 1
+    assert all(b is not legend for b in runs[0])
+
+
+def test_grid_runs_stub_does_not_commit_pending():
+    """A pending wide band is a colspan candidate only a resuming
+    multi-cell band may commit — a narrow continuation stub must not
+    flush it into the run, or intervening prose becomes a merged row."""
+    cells = [(("a", 0, 100), 1), (("b", 140, 240), 2)]
+    pending = _band([(("section", 10, 230), 3)], 32)   # wide → pending
+    stub = _band([(("cont", 150, 200), 4)], 48)       # narrow stub
+    runs = analyze._grid_runs(
+        [_band(cells, 0), _band(cells, 16), pending, stub],
+        min_gutter=6,
+        max_gap=36,
+    )
+    assert len(runs) == 1
+    assert stub in runs[0]
+    assert all(b is not pending for b in runs[0])
+
+
+def _edge_grid():
+    """Blocks + run bands for a 3-col grid straddling a document edge —
+    cell columns at 60-120/200-260/340-460 with the page edge at 300."""
+    blocks, bands = [], []
+    for ri, tag in enumerate(["head", "r1", "r2", "r3"]):
+        y = 140 + ri * 14
+        pairs = []
+        for tag2, a, b in [(tag, 60, 120), ("m", 200, 260), ("v", 340, 460)]:
+            l = line(tag2, size=8, x0=a, y0=y, x1=b, y1=y + 11)
+            bl = block([l], a, y, b, y + 11)
+            blocks.append(bl)
+            pairs.append((l, id(bl)))
+        bands.append([pairs, y, y + 11])
+    return blocks, bands
+
+
+def _region(run, blocks, sbands):
+    return analyze._region_from_run(
+        run, [run], blocks, sbands, [0.0, 300.0], 6.0, 12.0, True
+    )
+
+
+def test_edge_region_accepts_wrapped_claimable_caption():
+    """A 2-line legend block claims whole; its neighbour stays out."""
+    blocks, bands = _edge_grid()
+    cap = block(
+        [
+            line("Table 3  Stats", size=10, x0=60, y0=118, x1=160, y1=129),
+            line("and strata", size=10, x0=60, y0=129, x1=120, y1=140),
+        ],
+        60, 118, 160, 140,
+    )
+    fx = block(
+        [line("foreign prose", size=10, x0=200, y0=150, x1=280, y1=161)],
+        200, 150, 280, 161,
+    )
+    cap_l1, cap_l2 = cap["lines"]
+    fx_l = fx["lines"][0]
+    sbands = (
+        [[[(cap_l1, id(cap))], 118, 129],
+         [[(cap_l2, id(cap))], 129, 140],
+         [[(fx_l, id(fx))], 150, 161]]
+        + bands
+    )
+    region = _region(bands, blocks + [cap, fx], sbands)
+    assert region is not None
+    assert len(region.caption) == 2
+    assert id(fx) not in region.claimed
+
+
+def test_edge_region_rejects_mixed_caption_band():
+    """A caption band sharing a foreign block is no valid legend — an
+    edge-spanning grid must reject rather than emit uncaptioned."""
+    blocks, bands = _edge_grid()
+    cap = block(
+        [line("Table 3  Stats", size=10, x0=60, y0=118, x1=160, y1=129)],
+        60, 118, 160, 129,
+    )
+    fx = block(
+        [line("foreign prose", size=10, x0=200, y0=120, x1=280, y1=131)],
+        200, 120, 280, 131,
+    )
+    mixed = [[(cap["lines"][0], id(cap)), (fx["lines"][0], id(fx))], 118, 131]
+    sbands = [mixed] + bands
+    assert _region(bands, blocks + [cap, fx], sbands) is None
+    # a claimable caption in the same position rescues it
+    clean = [[(cap["lines"][0], id(cap))], 118, 129]
+    sbands = [clean, [[(fx["lines"][0], id(fx))], 120, 131]] + bands
+    assert _region(bands, blocks + [cap, fx], sbands) is not None
+
+
+def test_caption_res_accept_double_space_legends():
+    """Springer-style double-spaced legends match every caption
+    pattern — the shared number/tail keeps the three regexes in step."""
+    assert text.TABLE_CAPTION_RE.match("Table 9  Legend without colon")
+    assert render.CAPTION_RE.match("Table 9  Legend without colon")
+    assert render.FIGURE_CAPTION_RE.match("Figure 3  A spaced caption")
+    # single-spaced citations still don't match
+    assert not render.FIGURE_CAPTION_RE.match("Figure 3 shows a trend")
+    assert not text.TABLE_CAPTION_RE.match("Table 9 shows the legend")
