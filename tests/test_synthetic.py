@@ -1337,6 +1337,62 @@ def test_figure_alt_ignores_gutter_bleed_caption(tmp_path):
     assert 'alt="Table 3' not in figs and 'alt=""' in figs
 
 
+def test_figure_alt_never_from_footnote_zone(tmp_path):
+    """A caption-shaped block in the footnote zone is note material — it
+    must not alt the image while also emitting in notes.xhtml."""
+    data = _noise_png()
+    doc = fitz.open()
+    p = _page(doc)
+    # enough 10pt text that it outweighs the 8pt note's char count — the
+    # body size is the modal span size, so a thin body would set it to 8
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 140),
+        " ".join(["Body text fills the column above the figure."] * 4),
+        fontsize=BODY,
+    )
+    p.insert_image(fitz.Rect(80, 200, 260, 390), stream=data)
+    # smaller-than-body block in the bottom 40% under a >2xline-height
+    # gap lands in the footnote zone — its 'Figure 9.' opener must not
+    # be adopted as alt text even though it sits within 120pt below
+    p.insert_textbox(
+        fitz.Rect(72, 490, 540, 515),
+        "Figure 9. Adapted with permission.",
+        fontsize=8,
+    )
+    pdf = tmp_path / "fncap.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "fncap.epub"
+    convert(pdf, out)
+    figs = "\n".join(h for h in doc_html(out).values() if "<img" in h)
+    assert 'alt="Figure 9' not in figs and 'alt=""' in figs
+    assert "Adapted with permission" in doc_texts(out)["notes.xhtml"]
+
+
+def test_table_alt_never_from_kept_furniture(tmp_path):
+    """A caption-shaped running head kept under --keep-headers is
+    furniture — the above-region legend scan must skip it too."""
+    doc = fitz.open()
+    p = _page(doc)
+    # 'www.' inside the top 7% edge flags furniture; kept verbatim, but
+    # its 'Table 7.' opener must not be adopted as the table's legend
+    p.insert_textbox(
+        fitz.Rect(72, 24, 540, 46), "Table 7. www.journal.org", fontsize=9
+    )
+    for x in (100, 180, 260):
+        p.insert_textbox(
+            fitz.Rect(x, 60, x + 40, 620),
+            " ".join(["col word"] * 40),
+            fontsize=BODY,
+        )
+    pdf = tmp_path / "furncap.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "furncap.epub"
+    convert(pdf, out, drop_edges=False)
+    figs = "\n".join(h for h in doc_html(out).values() if "<img" in h)
+    assert 'alt="table"' in figs and 'alt="Table 7' not in figs
+    assert "www.journal.org" in chapter_text(out)
+
+
 def test_headingless_doc_still_gets_a_toc_entry(tmp_path):
     """No headings and no notes must not leave an empty nav <ol/> or
     navMap — one entry is seeded pointing at the first chapter."""

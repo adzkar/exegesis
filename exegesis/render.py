@@ -193,9 +193,13 @@ def _figure_alt(
     adjacent column's 'Table 3.' caption. ``region`` is the figure's true
     extent — the rotated table's region, since an arbitrary member cell
     would skew both the gap origin and the column band; it defaults to
-    the block at ``b_i``. ``skip_ids`` lets the rotated-table call step
-    over its own cells — the loop still ends at the first candidate, so
-    caption reach does not depend on cell count. ``claimed`` is a
+    the block at ``b_i``. ``skip_ids`` steps over blocks that can't
+    donate a caption — callers pass the page's non-body set (rasterized
+    table cells, footnote-zone blocks, kept furniture), so a 'Figure N.'
+    bound for notes.xhtml or a caption-shaped running head can't alt an
+    image while still emitting in the flow. The loop still ends at the
+    first candidate, so caption reach does not depend on cell count.
+    ``claimed`` is a
     page-shared set of already-adopted caption blocks — one caption
     cannot alt two images (a figure's 'Figure N.' directly above a
     rotated table would otherwise caption the table too).
@@ -336,7 +340,7 @@ def _render_page(page, page_index: int, state: PipelineState):
     )
     # ids of blocks that leave (or never enter) the body flow — rasterized
     # table cells, footnote-region blocks, kept furniture — none of them can
-    # count as a bold-only h2's follower
+    # count as a bold-only h2's follower or donate alt text to a figure
     nonbody_ids = tbl_ids | {
         id(b)
         for b in ordered
@@ -394,6 +398,7 @@ def _render_page(page, page_index: int, state: PipelineState):
                     edges,
                     page.rect.width,
                     pattern=FIGURE_CAPTION_RE,
+                    skip_ids=nonbody_ids,
                     claimed=claimed_caps,
                 )
                 frags.append(
@@ -415,7 +420,7 @@ def _render_page(page, page_index: int, state: PipelineState):
                     page.rect.width,
                     region=tbl,
                     fallback="table",
-                    skip_ids=tbl_ids,
+                    skip_ids=nonbody_ids,
                     pattern=TABLE_CAPTION_RE,
                     claimed=claimed_caps,
                 )
