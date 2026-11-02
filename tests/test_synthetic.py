@@ -2114,3 +2114,47 @@ def test_wide_stray_beyond_grid_stays_prose(tmp_path):
     if "<table>" in html:
         table_html = html.split("<table>", 1)[1].split("</table>", 1)[0]
         assert "marginal aside" not in table_html
+
+
+def test_stacked_tables_legend_belongs_to_lower(tmp_path):
+    """A 'Table N' legend between two stacked grids is the lower
+    table's legend — the upper grid must emit uncaptioned rather than
+    steal it, and the shared caption block must not sink the lower
+    region in the claimed-overlap dedupe."""
+    doc = fitz.open()
+    p = _page(doc)
+    _grid_table(
+        p,
+        [76, 140, 210],
+        [["Grp", "N", "RT"], ["A1", "42", "350"], ["B2", "108", "412"]],
+        y=140,
+        fontsize=8,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 196, 340, 214),
+        "Table 5  Lower estimates",
+        fontsize=BODY,
+    )
+    _grid_table(
+        p,
+        [76, 140, 210],
+        [["Grp", "N", "RT"], ["C3", "19", "298"], ["D4", "77", "265"]],
+        y=220,
+        fontsize=8,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 280, 540, 310),
+        "A closing paragraph bounds the lower grid.",
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "tstacked.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tstacked.epub"
+    convert(pdf, out)
+    assert lint_epub(out) == []
+    html = " ".join(doc_html(out).values())
+    parts = html.split("<table>")
+    assert len(parts) == 3
+    assert "<caption>" not in parts[1]
+    assert parts[2].startswith("<caption>")
+    assert "Table 5  Lower estimates" in parts[2]

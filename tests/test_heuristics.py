@@ -329,6 +329,22 @@ def test_grid_runs_pending_beyond_union_not_held():
     assert len(runs[0]) == 3
 
 
+def test_table_caption_below_legend_belongs_to_next_run():
+    """A 'Table N' band between two stacked grids is the lower table's
+    legend (legends sit above their table) — the upper run must not
+    adopt it, while a lone run may still take a below-run caption."""
+    cells = [(("a", 0, 100), 1), (("b", 140, 240), 2)]
+    cap = _band([(("Table 5  Results", 0, 100), 3)], 48)
+    run_a = [_band(cells, 0), _band(cells, 16), _band(cells, 32)]
+    run_b = [_band(cells, 64), _band(cells, 80), _band(cells, 96)]
+    sbands = run_a + [cap] + run_b
+    runs = [run_a, run_b]
+    assert analyze._table_caption(sbands, run_a, runs, 12) is None
+    assert analyze._table_caption(sbands, run_b, runs, 12) is cap
+    # with no following run, the below legend is still a caption
+    assert analyze._table_caption(sbands, run_a, [run_a], 12) is cap
+
+
 def test_upright_lines_keeps_narrow_cells():
     """A 1-char line is taller than wide but reports dir (1, 0) — the
     direction check keeps it where an aspect-ratio proxy dropped it."""
@@ -424,7 +440,7 @@ def _edge_grid():
 
 def _region(run, blocks, sbands):
     return analyze._region_from_run(
-        run, blocks, sbands, [0.0, 300.0], 6.0, 12.0, True
+        run, [run], blocks, sbands, [0.0, 300.0], 6.0, 12.0, True
     )
 
 

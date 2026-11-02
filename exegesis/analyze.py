@@ -244,7 +244,10 @@ class _TableRegion:
     (cells plus caption); ``cols`` are the recovered column x-bounds;
     ``rows`` are emitted in order, each a list of ``(col, span, lines)``
     cells — ``lines`` are raw dict lines so the renderer can reuse
-    ``_line_html`` for bold/italic/sup markers.
+    ``_line_html`` for bold/italic/sup markers. ``cap_ids``/``cap_above``
+    record which claimed blocks are caption material and whether the
+    legend sits above the run — regions contending for one caption
+    block resolve by ownership, not by dropping the weaker grid.
     """
 
     rect: fitz.Rect
@@ -253,6 +256,8 @@ class _TableRegion:
     rows: list = field(default_factory=list)
     header: bool = False
     caption: list | None = None
+    cap_ids: set = field(default_factory=set)
+    cap_above: bool = False
 
 
 def _upright_lines(blocks):
@@ -581,28 +586,35 @@ def _join_cell_text(lns):
     ).strip()
 
 
-def _table_caption(sbands, run, line_h):
+def _table_caption(sbands, run, runs, line_h):
     """The band directly above or below the run if it reads as
     ``Table N ...`` — used as the ``<caption>`` and dropped from text.
-    Bands iterate top-down, so an above-run match wins over a below one.
+    Bands iterate top-down, so an above-run match wins over a below one;
+    and a below-run band that is itself within the caption window of a
+    following run belongs to that table (legends conventionally sit
+    above the grid they label — stacked grids share them downward).
     """
     ry0 = min(b[1] for b in run)
     ry1 = max(b[2] for b in run)
+    starts = [min(b[1] for b in r) for r in runs if r is not run]
     for band in sbands:
         _l, y0, y1 = band
         text = " ".join(
             "".join(s["text"] for s in l["spans"]) for l, _ in band[0]
         )
-        if (
-            0 <= ry0 - y1 <= 2.5 * line_h
-            or 0 <= y0 - ry1 <= 2.5 * line_h
-        ) and TABLE_CAPTION_RE.match(text):
+        if not TABLE_CAPTION_RE.match(text):
+            continue
+        if 0 <= ry0 - y1 <= 2.5 * line_h:
+            return band
+        if 0 <= y0 - ry1 <= 2.5 * line_h and not any(
+            0 <= o0 - y1 <= 2.5 * line_h for o0 in starts
+        ):
             return band
     return None
 
 
-def _region_from_run(run, blocks, sbands, edges, min_gutter, line_h,
-                     multi_col):
+def _region_from_run(run, runs, blocks, sbands, edges, min_gutter,
+                     line_h, multi_col):
     """Validate one grid run into a ``_TableRegion`` or reject it.
 
     Guards (precision-first — a miss degrades to ordinary text flow, a
@@ -630,7 +642,7 @@ def _region_from_run(run, blocks, sbands, edges, min_gutter, line_h,
         for i in range(len(cols) - 1)
     ):
         return None
-    caption_band = _table_caption(sbands, run, line_h)
+    caption_band = _table_caption(sbands, run, runs, line_h)
     if spans_edge and caption_band is None:
         return None
 
@@ -786,6 +798,14 @@ def _region_from_run(run, blocks, sbands, edges, min_gutter, line_h,
             )
         ),
         caption=caption,
+        cap_ids={
+            bid for band in caption_bands for _l, bid in band[0]
+        }
+        & claimed,
+        cap_above=bool(
+            caption_band is not None
+            and caption_band[2] <= min(b[1] for b in run)
+        ),
     )
 
 
@@ -820,9 +840,10 @@ def _table_regions(blocks, line_h, edges, page_width):
             if l["bbox"][0] >= bx0 and l["bbox"][2] <= bx1
         ]
         sbands = _line_bands(sel, line_h)
-        for run in _grid_runs(sbands, min_gutter, max_gap):
+        runs = _grid_runs(sbands, min_gutter, max_gap)
+        for run in runs:
             region = _region_from_run(
-                run, blocks, sbands, edges, min_gutter, line_h,
+                run, runs, blocks, sbands, edges, min_gutter, line_h,
                 len(edges) > 1,
             )
             if region is not None:
@@ -831,13 +852,30 @@ def _table_regions(blocks, line_h, edges, page_width):
     # full-width scan — on overlapping claims keep the richer region;
     # a column-local subset of a page-wide grid yields the same row
     # count, so break ties on recovered columns (scan order alone would
-    # keep the poorer partial region, which is appended first)
+    # keep the poorer partial region, which is appended first). When
+    # regions contend only for a shared caption block, the legend stays
+    # with the run it sits above — the other keeps its grid, caption
+    # stripped, rather than the whole region being discarded
     regions.sort(key=lambda r: (-len(r.rows), -len(r.cols)))
     kept = []
     for r in regions:
-        if any(r.claimed & k.claimed for k in kept):
-            continue
-        kept.append(r)
+        drop = False
+        for k in kept:
+            shared = r.claimed & k.claimed
+            if not shared:
+                continue
+            if shared <= r.cap_ids | k.cap_ids:
+                if k.cap_above or not r.cap_above:
+                    r.claimed -= shared
+                    r.caption = None
+                else:
+                    k.claimed -= shared
+                    k.caption = None
+            else:
+                drop = True
+                break
+        if not drop:
+            kept.append(r)
     return kept
 
 
