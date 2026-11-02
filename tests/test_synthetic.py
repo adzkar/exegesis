@@ -1990,3 +1990,47 @@ def test_below_table_legend_is_caption_not_merged_cell(tmp_path):
     assert "<td>Table" not in html and "Table 9" not in html.split(
         "<caption>", 1
     )[1].split("</caption>", 1)[1].split("</table>", 1)[0]
+
+
+def test_footnote_zone_block_not_swallowed_into_cells(tmp_path):
+    """A footnote-region block whose lines all land in grid member
+    bands used to be claimed into <td>s — the emit loop tests grid_of
+    before foot_tops, so the note never reached notes.xhtml. Footnote
+    blocks are now excluded from grid candidates up front, like
+    furniture and rotated-table cells are."""
+    doc = fitz.open()
+    p = _page(doc)
+    _grid_table(
+        p,
+        [76, 140, 210],
+        [
+            ["Grp", "N", "RT"],
+            ["A1", "42", "350"],
+            ["B2", "108", "412"],
+            ["C3", "19", "298"],
+            ["D4", "77", "265"],
+            ["E5", "91", "311"],
+        ],
+        y=360,
+        fontsize=8,
+    )
+    # smaller-than-body 'Supported by' opener in the bottom 55% just
+    # under the last row — footnote-zone material whose narrow band
+    # passes the wrapped-cell fold and used to merge into the last
+    # row's <td>
+    p.insert_textbox(
+        fitz.Rect(210, 464, 560, 482),
+        "Supported by NIH grant R01-GM123.",
+        fontsize=6.5,
+    )
+    pdf = tmp_path / "tfoot.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tfoot.epub"
+    convert(pdf, out)
+    texts = doc_texts(out)
+    assert "Supported by NIH grant" in texts["notes.xhtml"]
+    html = " ".join(doc_html(out).values())
+    assert "<table>" in html
+    table_html = html.split("<table>", 1)[1].split("</table>", 1)[0]
+    assert "Supported by" not in table_html
+    assert "<td>412</td>" in table_html

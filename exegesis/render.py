@@ -386,10 +386,22 @@ def _render_page(page, page_index: int, state: PipelineState):
         if tbl is not None
         else set()
     )
+    # footnote-region blocks leave the flow like rasterized cells and
+    # kept furniture do — excluded up front, a note can't seed a grid
+    # and can't be claimed into <td>s (the emit loop tests grid_of
+    # before foot_tops, so a swallowed note would never reach
+    # notes.xhtml)
+    foot_ids = {
+        id(b)
+        for b in body_blocks
+        if b["type"] == 0
+        and (fc := _assign_column(b, edges)) in foot_tops
+        and b["bbox"][1] >= foot_tops[fc] - 5
+    }
     # horizontal tables claim their cell blocks like the rotated path
     # does, but emit real <table> markup instead of a rasterized image
     grids = _table_regions(
-        [b for b in body_blocks if id(b) not in tbl_ids],
+        [b for b in body_blocks if id(b) not in tbl_ids | foot_ids],
         state.line_h,
         edges,
         page.rect.width,
@@ -398,15 +410,8 @@ def _render_page(page, page_index: int, state: PipelineState):
     # ids of blocks that leave (or never enter) the body flow — rasterized
     # table cells, footnote-region blocks, kept furniture — none of them can
     # count as a bold-only h2's follower or donate alt text to a figure
-    nonbody_ids = tbl_ids | set(grid_of) | {
-        id(b)
-        for b in ordered
-        if b.get("is_furniture")
-        or (
-            b["type"] == 0
-            and (fc := _assign_column(b, edges)) in foot_tops
-            and b["bbox"][1] >= foot_tops[fc] - 5
-        )
+    nonbody_ids = tbl_ids | set(grid_of) | foot_ids | {
+        id(b) for b in ordered if b.get("is_furniture")
     }
     tbl_done = False
     grid_done = set()
