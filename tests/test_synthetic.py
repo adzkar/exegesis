@@ -1821,6 +1821,52 @@ def test_gutter_straddling_stub_does_not_kill_table(tmp_path):
     assert "not significant" in chapter_text(out)
 
 
+def test_spanning_row_emits_colspan_not_rejection(tmp_path):
+    """A full-width 'Group B' divider row inside the grid is a colspan
+    row — it must neither erase the permanent gutters (killing the
+    region) nor merge adjacent columns."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 120), "Table 7  Cohort results", fontsize=BODY
+    )
+    _grid_table(
+        p,
+        [72, 230, 400],
+        [
+            ["Study", "N", "Estimate"],
+            ["Alpha", "42", "0.31"],
+            ["Beta", "108", "0.47"],
+        ],
+        y=140,
+    )
+    # one wide single-cell band spanning the whole grid — a section
+    # divider that must survive as <td colspan="3">
+    p.insert_textbox(
+        fitz.Rect(72, 192, 500, 208),
+        "Group B — participants from the second recruitment cohort "
+        "including all follow-up visits scheduled for analysis",
+        fontsize=8,
+    )
+    _grid_table(
+        p,
+        [72, 230, 400],
+        [
+            ["Gamma", "19", "0.29"],
+            ["Delta", "77", "0.35"],
+        ],
+        y=214,
+    )
+    pdf = tmp_path / "tspan.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "tspan.epub"
+    convert(pdf, out)
+    assert lint_epub(out) == []
+    html = " ".join(doc_html(out).values())
+    assert "<table>" in html and "<td>0.35</td>" in html
+    assert 'colspan="3"' in html
+
+
 def test_two_column_prose_is_not_a_table(tmp_path):
     """Two text columns of prose must not fuse into a grid region."""
     doc = fitz.open()

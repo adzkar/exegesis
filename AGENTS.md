@@ -117,7 +117,9 @@ chapters.
   text block beyond the region's facing edge as `alt` when it opens with
   a caption label (`Fig.`/`Figure`/`Table`/`Plate`/`Scheme`/`Chart` +
   number, incl. `S`-prefixed supplementary labels, subfigure letters,
-  and dash-joined ranges) within 120pt and shares a column band
+  dash-joined ranges, and 2+-space layout-gap tails — the number core
+  and terminator are shared across all three caption regexes so the
+  patterns can't drift) within 120pt and shares a column band
   (`_overlap_cols`, so a few points of gutter bleed can't claim both
   columns). The first candidate ends the scan, image blocks break it,
   and a page-shared `claimed` set keeps one caption from alting two

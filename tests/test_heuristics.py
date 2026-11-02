@@ -246,3 +246,113 @@ def test_first_line_indent():
 def test_block_median_size():
     b = block([line("a", size=10), line("bb", size=12), line("ccc", size=8)])
     assert text._block_median_size(b) == 10
+
+
+# --- grid tables --------------------------------------------------------
+
+
+def _band(pairs, y, h=11):
+    """A row band: ``[(line, block_id)]`` entries plus the y-extent."""
+    return [[(line(s, size=8, x0=a, y0=y, x1=b, y1=y + h), bid)
+             for (s, a, b), bid in pairs], y, y + h]
+
+
+def test_grid_runs_pending_bands_do_not_drift_gap():
+    """A chain of pending wide bands keeps the run's gap window alive —
+    measuring max_gap only from the last committed band would close the
+    run early and sever the trailing rows into a second run."""
+    cells = [(("a", 0, 100), 1), (("b", 140, 240), 2)]
+    runs = analyze._grid_runs(
+        [
+            _band(cells, 0),
+            _band(cells, 16),
+            _band([(("section", 10, 230), 3)], 34),   # pending (wide)
+            _band([(("section", 10, 230), 4)], 66),   # still pending
+            _band(cells, 84),
+        ],
+        min_gutter=6,
+        max_gap=36,
+    )
+    assert len(runs) == 1 and len(runs[0]) == 5
+
+
+def _edge_grid():
+    """Blocks + run bands for a 3-col grid straddling a document edge —
+    cell columns at 60-120/200-260/340-460 with the page edge at 300."""
+    blocks, bands = [], []
+    for ri, tag in enumerate(["head", "r1", "r2", "r3"]):
+        y = 140 + ri * 14
+        pairs = []
+        for tag2, a, b in [(tag, 60, 120), ("m", 200, 260), ("v", 340, 460)]:
+            l = line(tag2, size=8, x0=a, y0=y, x1=b, y1=y + 11)
+            bl = block([l], a, y, b, y + 11)
+            blocks.append(bl)
+            pairs.append((l, id(bl)))
+        bands.append([pairs, y, y + 11])
+    return blocks, bands
+
+
+def _region(run, blocks, sbands):
+    return analyze._region_from_run(
+        run, blocks, sbands, [0.0, 300.0], 6.0, 12.0, True
+    )
+
+
+def test_edge_region_accepts_wrapped_claimable_caption():
+    """A 2-line legend block claims whole; its neighbour stays out."""
+    blocks, bands = _edge_grid()
+    cap = block(
+        [
+            line("Table 3  Stats", size=10, x0=60, y0=118, x1=160, y1=129),
+            line("and strata", size=10, x0=60, y0=129, x1=120, y1=140),
+        ],
+        60, 118, 160, 140,
+    )
+    fx = block(
+        [line("foreign prose", size=10, x0=200, y0=150, x1=280, y1=161)],
+        200, 150, 280, 161,
+    )
+    cap_l1, cap_l2 = cap["lines"]
+    fx_l = fx["lines"][0]
+    sbands = (
+        [[[(cap_l1, id(cap))], 118, 129],
+         [[(cap_l2, id(cap))], 129, 140],
+         [[(fx_l, id(fx))], 150, 161]]
+        + bands
+    )
+    region = _region(bands, blocks + [cap, fx], sbands)
+    assert region is not None
+    assert len(region.caption) == 2
+    assert id(fx) not in region.claimed
+
+
+def test_edge_region_rejects_mixed_caption_band():
+    """A caption band sharing a foreign block is no valid legend — an
+    edge-spanning grid must reject rather than emit uncaptioned."""
+    blocks, bands = _edge_grid()
+    cap = block(
+        [line("Table 3  Stats", size=10, x0=60, y0=118, x1=160, y1=129)],
+        60, 118, 160, 129,
+    )
+    fx = block(
+        [line("foreign prose", size=10, x0=200, y0=120, x1=280, y1=131)],
+        200, 120, 280, 131,
+    )
+    mixed = [[(cap["lines"][0], id(cap)), (fx["lines"][0], id(fx))], 118, 131]
+    sbands = [mixed] + bands
+    assert _region(bands, blocks + [cap, fx], sbands) is None
+    # a claimable caption in the same position rescues it
+    clean = [[(cap["lines"][0], id(cap))], 118, 129]
+    sbands = [clean, [[(fx["lines"][0], id(fx))], 120, 131]] + bands
+    assert _region(bands, blocks + [cap, fx], sbands) is not None
+
+
+def test_caption_res_accept_double_space_legends():
+    """Springer-style double-spaced legends match every caption
+    pattern — the shared number/tail keeps the three regexes in step."""
+    assert text.TABLE_CAPTION_RE.match("Table 9  Legend without colon")
+    assert render.CAPTION_RE.match("Table 9  Legend without colon")
+    assert render.FIGURE_CAPTION_RE.match("Figure 3  A spaced caption")
+    # single-spaced citations still don't match
+    assert not render.FIGURE_CAPTION_RE.match("Figure 3 shows a trend")
+    assert not text.TABLE_CAPTION_RE.match("Table 9 shows the legend")

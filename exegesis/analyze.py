@@ -362,9 +362,15 @@ def _grid_runs(bands, min_gutter, max_gap):
     for band in bands:
         lines, y0, _y1 = band
         cells = _band_cells(lines, min_gutter)
-        if cur is not None and y0 - cur[0][-1][2] > max_gap:
-            runs.append(cur[0])
-            cur = None
+        if cur is not None:
+            # gap measured from the last *kept* band — pending wide bands
+            # count too, or a chain of them drifts the window past
+            # max_gap and closes the run early (a spanning row followed
+            # by more rows would sever the table in two)
+            prev = cur[2][-1] if cur[2] else cur[0][-1]
+            if y0 - prev[2] > max_gap:
+                runs.append(cur[0])
+                cur = None
         if len(cells) >= 2:
             ivs = [(c[0], c[1]) for c in cells]
             if cur is None:
@@ -600,19 +606,28 @@ def _region_from_run(run, blocks, sbands, edges, min_gutter, line_h,
     caption_bands = []
     if caption_band is not None:
         # a wrapped 'Table N …' legend puts its continuation in its own
-        # band(s) — every band made purely of caption-block lines joins
-        # the member set so the block can be claimed whole and the full
-        # legend reaches <caption> instead of losing its tail
+        # band(s) — only bands made purely of the block whose line
+        # actually opens with the label may join: a band shared with a
+        # foreign block disqualifies the legend (straddler rule), which
+        # also keeps the foreign block's own bands out of the caption
+        cbid = next(
+            (
+                bid
+                for l, bid in caption_band[0]
+                if TABLE_CAPTION_RE.match(
+                    "".join(s["text"] for s in l["spans"])
+                )
+            ),
+            caption_band[0][0][1],
+        )
         run_ids = {id(band) for band in run}
-        cbids = {bid for _l, bid in caption_band[0]}
         caption_bands = [caption_band] + [
             band
             for band in sbands
             if band is not caption_band
             and id(band) not in run_ids
-            and all(bid in cbids for _l, bid in band[0])
+            and all(bid == cbid for _l, bid in band[0])
         ]
-        member_bands += caption_bands
         for cb in caption_bands:
             claim_rect.y0 = min(claim_rect.y0, cb[1] - 0.3 * line_h)
             claim_rect.y1 = max(claim_rect.y1, cb[2] + 0.3 * line_h)
@@ -637,18 +652,40 @@ def _region_from_run(run, blocks, sbands, edges, min_gutter, line_h,
         if lids and lids <= member_lines:
             claimed.add(id(b))
     caption = None
-    if caption_band is not None and {
-        bid for _l, bid in caption_band[0]
-    } <= claimed:
-        caption = sorted(
-            (
-                l
-                for band in caption_bands
-                for l, bid in band[0]
-                if bid in claimed
-            ),
-            key=lambda l: (l["bbox"][1], l["bbox"][0]),
-        )
+    if caption_band is not None:
+        # caption bands count toward claiming only when the legend
+        # itself validates — every block in its band claimable. If it
+        # fails, they stay non-member and the legend remains in the
+        # body flow instead of being swallowed un-emitted
+        cap_lines = {
+            id(l) for band in caption_bands for l, _bid in band[0]
+        }
+        all_lines = member_lines | cap_lines
+        cand = set(claimed)
+        for b in blocks:
+            if b["type"] != 0 or fitz.Rect(b["bbox"]) not in claim_rect:
+                continue
+            lids = {id(l) for l in _block_lines(b)}
+            if lids and lids <= all_lines:
+                cand.add(id(b))
+        # the legend must be a single claimable block — a caption band
+        # mixing in foreign lines is ambiguous attribution, so it
+        # degrades to prose rather than emit a polluted caption
+        if {bid for _l, bid in caption_band[0]} == {cbid} and cbid in cand:
+            claimed = cand
+            caption = sorted(
+                (
+                    l
+                    for band in caption_bands
+                    for l, bid in band[0]
+                    if bid in claimed
+                ),
+                key=lambda l: (l["bbox"][1], l["bbox"][0]),
+            )
+    # an edge-spanning grid needs the *validated* caption, not just a
+    # matching band — a straddler legend is no proof this isn't layout
+    if spans_edge and caption is None:
+        return None
     rows = _assemble_rows(run, cols, min_gutter, claimed)
     if len(rows) < (2 if caption is not None else 3):
         return None
