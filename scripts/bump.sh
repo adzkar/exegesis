@@ -33,6 +33,12 @@ pdfs=(*.pdf)
 [ ${#pdfs[@]} -gt 0 ] \
     || die "no *.pdf corpus — docs/report cannot be regenerated"
 
+# same for the python env — a worktree can carry the corpus but lack a
+# `pip3 install -r requirements.txt`; `import exegesis` pulls the whole
+# pymupdf/ebooklib chain build_report.py will need
+python3 -c 'import exegesis' >/dev/null 2>&1 \
+    || die "python deps missing — pip3 install -r requirements.txt"
+
 # seed changelog bullets from the commits since the last tag — merge
 # commits excluded so the list reads as changes, not integration noise
 prev="$(git describe --tags --abbrev=0 2>/dev/null || true)"
