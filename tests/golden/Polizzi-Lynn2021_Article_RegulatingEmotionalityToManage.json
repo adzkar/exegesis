@@ -663,10 +663,13 @@
   ],
   "stats": {
     "chapters": 25,
+    "columns": 2,
     "footnotes": 1,
+    "grid_tables": 0,
     "headings": 24,
     "images": 5,
     "pages": 21,
+    "raster_tables": 4,
     "title": "Regulating Emotionality to Manage Adversity: A Systematic Review of the Relation Between Emotion Regulation and Psychological Resilience"
   },
   "toc": [

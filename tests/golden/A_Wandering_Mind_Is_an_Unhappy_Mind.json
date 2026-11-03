@@ -233,10 +233,13 @@
   ],
   "stats": {
     "chapters": 4,
+    "columns": 3,
     "footnotes": 1,
+    "grid_tables": 0,
     "headings": 3,
     "images": 1,
     "pages": 1,
+    "raster_tables": 0,
     "title": "A Wandering Mind Is an Unhappy Mind"
   },
   "toc": [

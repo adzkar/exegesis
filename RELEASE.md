@@ -12,7 +12,8 @@ Releases are cut locally via `scripts/release.sh` — there is no CI.
 ## Steps
 
 1. Bump `__version__` in `exegesis/__init__.py` and update `CHANGELOG.md`.
-2. Commit the bump.
+2. Refresh the published report: `python3 scripts/build_report.py`,
+   then commit `docs/report/` together with the bump.
 3. Run `scripts/release.sh X.Y.Z`.
 
 The script verifies the branch, tree cleanliness, sync with

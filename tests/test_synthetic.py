@@ -2195,3 +2195,53 @@ def test_cell_internal_gap_merges_one_td(tmp_path):
     ).split("</tr>", 1)[0]
     assert row.count("<td") == 3
     assert "3.2 (0.4)" in row
+
+
+def test_stats_columns_and_table_counts(tmp_path):
+    """convert() stats report the detected column count and both table
+    kinds — the conversion report consumes these."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 120), "Table 1  Scores", fontsize=BODY
+    )
+    _grid_table(
+        p,
+        [72, 230, 400],
+        [
+            ["Study", "N", "Mean"],
+            ["Alpha", "42", "350"],
+            ["Beta", "108", "412"],
+            ["Delta", "19", "298"],
+        ],
+        y=140,
+    )
+    pdf = tmp_path / "stats1.pdf"
+    _save(doc, pdf)
+    stats = convert(pdf, tmp_path / "stats1.epub")
+    assert stats["columns"] == 1
+    assert stats["grid_tables"] == 1
+    assert stats["raster_tables"] == 0
+
+    doc = fitz.open()
+    for _ in range(2):
+        p = _page(doc)
+        # two blocks per column — a lone x0 cluster can't form an edge
+        p.insert_textbox(
+            fitz.Rect(72, 180, 290, 300), "Left column text.", fontsize=BODY
+        )
+        p.insert_textbox(
+            fitz.Rect(72, 340, 290, 460), "More left column text.", fontsize=BODY
+        )
+        p.insert_textbox(
+            fitz.Rect(340, 180, 560, 300), "Right column text.", fontsize=BODY
+        )
+        p.insert_textbox(
+            fitz.Rect(340, 340, 560, 460), "More right column text.",
+            fontsize=BODY,
+        )
+    pdf = tmp_path / "stats2.pdf"
+    _save(doc, pdf)
+    stats = convert(pdf, tmp_path / "stats2.epub")
+    assert stats["columns"] == 2
+    assert stats["grid_tables"] == 0

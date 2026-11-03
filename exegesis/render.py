@@ -381,6 +381,8 @@ def _render_page(page, page_index: int, state: PipelineState):
     frags = state.page_frags[page_index]
 
     tbl = _rotated_table_region(body_blocks)
+    if tbl is not None:
+        state.raster_tables += 1
     tbl_ids = (
         {id(b) for b in body_blocks if fitz.Rect(b["bbox"]).intersects(tbl)}
         if tbl is not None
@@ -406,6 +408,7 @@ def _render_page(page, page_index: int, state: PipelineState):
         edges,
         page.rect.width,
     )
+    state.grid_tables += len(grids)
     grid_of = {bid: g for g in grids for bid in g.claimed}
     # ids of blocks that leave (or never enter) the body flow — rasterized
     # table cells, footnote-region blocks, kept furniture — none of them can
