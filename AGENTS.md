@@ -11,8 +11,8 @@ layout analysis over PyMuPDF blocks — no OCR, no ML dependencies.
   then spot-check a chapter's XHTML for reading order
 - Report: `python3 scripts/build_report.py` (converts root `*.pdf` corpus
   → `docs/report/` for GitHub Pages)
-- Release: `scripts/release.sh X.Y.Z` (gates on ruff + non-slow pytest; see
-  `RELEASE.md`)
+- Release: `scripts/bump.sh X.Y.Z` then `scripts/release.sh X.Y.Z`
+  (prep + tag/publish; see `RELEASE.md`)
 
 ## Architecture (`exegesis` package)
 
