@@ -212,3 +212,12 @@ chapters.
 
 - `*.pdf`, `*.epub`, `__pycache__/` are covered by a **local** `.gitignore`.
 - Do NOT commit `.gitignore`, PDFs, or EPUB outputs — stage files explicitly.
+
+## Branches
+
+- Feature/fix work branches from `origin/master` as `feat/<slug>` or
+  `fix/<slug>`; deliver through a PR.
+- Small doc/tooling tweaks may go straight to `master`.
+- `git worktree` works for parallel checkouts, but the gitignored corpus
+  (`*.pdf`, `*.epub`) does not travel — copy or symlink it into the
+  worktree or golden tests skip and `build_report.py` finds no PDFs.
