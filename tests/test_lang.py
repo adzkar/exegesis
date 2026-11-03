@@ -13,6 +13,7 @@ import fitz
 import pytest
 from helpers import doc_html, lint_epub
 
+import exegesis
 from exegesis import convert, text
 from exegesis.lang import DE, EN, ES, FR, LANGS, LangProfile, get_lang
 
@@ -239,6 +240,13 @@ def test_single_letter_word_sets():
     # EN unchanged
     assert text._join_lines(["I", "went"]) == "I went"
     assert text._join_lines(["T", "he cat"]) == "The cat"
+
+
+def test_root_reexports_profile_api():
+    """README's documented custom-profile path — ``from exegesis import
+    LangProfile`` / ``get_lang`` — resolves at the package root."""
+    assert exegesis.LangProfile is LangProfile
+    assert exegesis.get_lang is get_lang
 
 
 def test_singular_author_note_arms():

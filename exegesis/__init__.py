@@ -5,5 +5,6 @@ order, font/position heuristics for headings/bylines/footnotes, image and
 rotated-table extraction, then ebooklib packaging.
 """
 from .emit import convert
+from .lang import LangProfile, get_lang
 
-__all__ = ["convert"]
+__all__ = ["LangProfile", "convert", "get_lang"]
