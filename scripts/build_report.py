@@ -100,12 +100,15 @@ def _render_html(rows: list[dict], generated: str) -> str:
                 "title": html.escape(r.get("error", "failed")),
             }
             tds = "".join(
-                f'<td data-label="{label}">{vals.get(k, "")}</td>'
+                f'<td data-label="{label}" class="wrap">{vals.get(k, "")}</td>'
+                if k in ("pdf", "title")
+                else f'<td data-label="{label}"></td>'
                 for k, label in _COLUMNS[:-1]
             )
             body.append(
                 f'<tr class="err">{tds}'
-                f'<td data-label="Sec" class="num">{r["seconds"]}</td></tr>'
+                f'<td data-label="{_COLUMNS[-1][1]}" class="num">'
+                f'{r["seconds"]}</td></tr>'
             )
             continue
         tds = "".join(
