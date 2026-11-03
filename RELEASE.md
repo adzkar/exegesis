@@ -1,6 +1,7 @@
 # Releasing
 
-Releases are cut locally via `scripts/release.sh` — there is no CI.
+Releases are cut locally via `scripts/bump.sh` + `scripts/release.sh` —
+there is no CI. Full walkthrough: [docs/releasing.md](docs/releasing.md).
 
 ## Prerequisites
 
@@ -11,9 +12,11 @@ Releases are cut locally via `scripts/release.sh` — there is no CI.
 
 ## Steps
 
-1. Bump `__version__` in `exegesis/__init__.py` and update `CHANGELOG.md`.
-2. Refresh the published report: `python3 scripts/build_report.py`,
-   then commit `docs/report/` together with the bump.
+1. Run `scripts/bump.sh X.Y.Z` — bumps `__version__`, seeds a
+   `CHANGELOG.md` entry from the commits since the last tag, regenerates
+   `docs/report/`, and commits the prep (unpushed).
+2. Review `CHANGELOG.md`; amend the prep commit if needed
+   (`git add CHANGELOG.md && git commit --amend`), then `git push`.
 3. Run `scripts/release.sh X.Y.Z`.
 
 The script verifies the branch, tree cleanliness, sync with
