@@ -7,4 +7,6 @@ no OCR, no ML dependencies.
 - [Conversion report](report/index.html) — per-paper layout and stats
   from the local corpus
 - [Pipeline diagram](pipeline.md) — how a page flows through the stages
+- [Release process](releasing.md) — how a version goes from bump to
+  GitHub Release
 - [Repository](https://github.com/adzkar/exegesis)

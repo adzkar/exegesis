@@ -1,6 +1,7 @@
 # Releasing
 
-Releases are cut locally via `scripts/release.sh` — there is no CI.
+Releases are cut locally via `scripts/bump.sh` + `scripts/release.sh` —
+there is no CI. Full walkthrough: [docs/releasing.md](docs/releasing.md).
 
 ## Prerequisites
 
