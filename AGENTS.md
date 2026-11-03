@@ -209,8 +209,9 @@ chapters.
   scanned-image PDFs are a documented limitation.
 - Release scripts (`scripts/*.sh`) hold every precondition in the guard
   block ahead of any mutation — e.g. `bump.sh` pre-flights the gitignored
-  `*.pdf` corpus (absent in worktrees/fresh clones) so a missing
-  dependency can't strand a dirty tree mid-prep.
+  `*.pdf` corpus and the python env (either can be absent in a
+  worktree/fresh clone) so a missing dependency can't strand a dirty
+  tree mid-prep.
 
 ## Git hygiene
 
