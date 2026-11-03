@@ -259,5 +259,8 @@ def convert(
         "headings": len(state.headings),
         "footnotes": len(state.footnotes),
         "images": len(state.images),
+        "columns": len(state.edges),
+        "grid_tables": state.grid_tables,
+        "raster_tables": state.raster_tables,
         "output": str(out_path),
     }

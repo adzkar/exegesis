@@ -863,10 +863,13 @@
   ],
   "stats": {
     "chapters": 33,
+    "columns": 2,
     "footnotes": 1,
+    "grid_tables": 0,
     "headings": 32,
     "images": 2,
     "pages": 26,
+    "raster_tables": 1,
     "title": "Negativity Bias, Negativity Dominance, and Contagion"
   },
   "toc": [

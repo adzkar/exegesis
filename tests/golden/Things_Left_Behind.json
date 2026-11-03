@@ -1238,10 +1238,13 @@
   ],
   "stats": {
     "chapters": 23,
+    "columns": 1,
     "footnotes": 0,
+    "grid_tables": 0,
     "headings": 0,
     "images": 224,
     "pages": 224,
+    "raster_tables": 0,
     "title": "Things Left Behind"
   },
   "toc": [

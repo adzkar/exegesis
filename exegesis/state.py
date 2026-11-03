@@ -33,3 +33,7 @@ class PipelineState:
     item: list[str] = field(default_factory=list)
     par_page: int = 0
     heading_seq: int = 0
+    # detected-table counters for the convert() stats dict — grid tables
+    # emit real <table> markup, raster tables are region-clipped PNGs
+    grid_tables: int = 0
+    raster_tables: int = 0

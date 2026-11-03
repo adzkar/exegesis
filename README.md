@@ -56,6 +56,14 @@ python3 pdf_to_epub.py paper.pdf --keep-headers       # keep headers/footers
 See the [pipeline diagram](docs/pipeline.md) for a visual walkthrough and
 [AGENTS.md](AGENTS.md) for the detailed heuristics.
 
+## Conversion report
+
+`python3 scripts/build_report.py` converts every `*.pdf` at the repo
+root (PDFs are gitignored — supply your own corpus) and regenerates
+`docs/report/index.html` + `report.json`, the per-paper layout/stats
+table served by GitHub Pages. Run it before a release to refresh the
+published numbers.
+
 ## Limitations
 
 - **No OCR.** Scanned PDFs without a text layer produce image-only output —
