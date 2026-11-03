@@ -7,10 +7,13 @@ from .analyze import (
     _is_signature_furniture,
     _is_spanning,
 )
+from .lang import EN, LangProfile
 from .text import _block_text
 
 
-def _ordered_blocks(page, blocks, boilerplate, edges, drop_furniture=True):
+def _ordered_blocks(
+    page, blocks, boilerplate, edges, drop_furniture=True, lang: LangProfile = EN
+):
     """Return page blocks in reading order for any column layout.
 
     ``blocks`` is the page's pre-extracted ``get_text("dict")["blocks"]``;
@@ -33,13 +36,13 @@ def _ordered_blocks(page, blocks, boilerplate, edges, drop_furniture=True):
     furniture_items = []
     for block in blocks:
         if block["type"] == 0:
-            text = _block_text(block)
+            text = _block_text(block, lang)
             if not text:
                 continue
             sig_furniture = _is_signature_furniture(
                 block, rect.height, boilerplate
             )
-            if sig_furniture or _is_furniture(block, rect, text):
+            if sig_furniture or _is_furniture(block, rect, text, lang):
                 if drop_furniture:
                     continue
                 block["is_furniture"] = True

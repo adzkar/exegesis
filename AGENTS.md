@@ -6,7 +6,7 @@ layout analysis over PyMuPDF blocks — no OCR, no ML dependencies.
 ## Commands
 
 - Setup: `pip3 install -r requirements.txt` (pymupdf, ebooklib)
-- Convert: `python3 pdf_to_epub.py <input.pdf> [-o output.epub] [--title T] [--author A] [--keep-headers]`
+- Convert: `python3 pdf_to_epub.py <input.pdf> [-o output.epub] [--title T] [--author A] [--lang en|de|fr|es] [--keep-headers]`
 - Verify output: `unzip -l out.epub` (chapters, notes.xhtml, images, nav present),
   then spot-check a chapter's XHTML for reading order
 - Report: `python3 scripts/build_report.py` (converts root `*.pdf` corpus
@@ -62,8 +62,8 @@ chapters.
   document seeds one entry at chapter one so nav/NCX are never empty.
 - **Bylines** — blocks ≥1.15× body, or the block right after an h1 when it
   looks like a name list; merge into one `<p class="byline">` with short
-  single-line followers. A trailing drop-cap letter moves into the body
-  paragraph. The merged text feeds the author metadata fallback.
+  single-line followers. A trailing drop-cap letter (one not in the
+  profile's `single_letter_words`) moves into the body paragraph. The merged text feeds the author metadata fallback.
 - **Headers/footers** — two layers: signatures repeated on ≥40% of pages in
   edge zones, and pattern furniture (`VOL`, `www.`, `ISSN`, `doi`, `©`,
   dates) in the outer 7% edge (works on 1-page docs). Narrow+tall blocks in
@@ -140,7 +140,8 @@ chapters.
   Misses degrade to ordinary text flow, never to mangled prose.
 - **Caption alt text** — images and rasterized tables adopt the nearest
   text block beyond the region's facing edge as `alt` when it opens with
-  a caption label (`Fig.`/`Figure`/`Table`/`Plate`/`Scheme`/`Chart` +
+  a caption label from the language profile (EN:
+  `Fig.`/`Figure`/`Table`/`Plate`/`Scheme`/`Chart` +
   number, incl. `S`-prefixed supplementary labels, subfigure letters,
   dash-joined ranges, and 2+-space layout-gap tails — the number core
   and terminator are shared across all three caption regexes so the
@@ -159,7 +160,35 @@ chapters.
   and rescues a later column's `Table N.` legend that column-major
   order emits after the cells.
 - **Abstract** — first small-font inset block in the top half of pages 0–1
-  injects an `Abstract` h2.
+  injects an `Abstract` h2 (title from the language profile's
+  `abstract_title`).
+- **Language** — `convert(lang=)` / `--lang` selects a `LangProfile`
+  (`exegesis/lang.py`: `en` default, `de`, `fr`, `es`) carried on
+  `state.lang`; every language-bound scan reads it — furniture content
+  patterns, note openers, section labels, the three caption patterns
+  (`caption` union, `figure_caption` no-tables, `table_caption`
+  tables-only), plus the localized `abstract_title`, `notes_title`,
+  byline `name_joiner`, the `affiliation` tail-split for author
+  metadata, the `section_fallback` untitled-chapter name, the
+  fallback literals `table_alt`/`unknown_author`/`start_title`, and
+  the `single_letter_words` drop-cap exclusion set (lone letters that
+  are words when sentence-initial — DE's is empty so every lone
+  letter fuses; FR a/à/y, ES a/y/o — pre-vocalic allomorphs like
+  e/u never open a sentence, so they stay drop-caps) — every
+  user-visible string rides the profile so nothing leaks English.
+  Unknown codes raise; the API accepts a custom
+  `LangProfile` for unsupported languages. Non-Latin scripts (CJK, RTL)
+  are out of scope — word shaping, vertical text, and direction
+  attributes are unhandled. `section_label` reads its label from capture
+  group 1, falling back to the whole match — a custom group-less pattern
+  (`r"^Bibliografia\b"`) can't IndexError mid-conversion. In
+  `section_label` alternations always list
+  longest-first (`Références bibliographiques|Références`, `Literaturverzeichnis|Literatur`) — a shorter arm that fully matches
+  leaves a lowercase rest the caller rejects, silently dead-labeling the
+  long form. Caption label alternations carry the abbreviated forms
+  beside the spelled-out word (`Abb.`, `Fig.`, `Tab.`) — keep the fig
+  and table arms in parity: a journal that abbreviates `Abbildung`
+  sets `Tabelle` as `Tab.` just as often.
 - **Styles** — bold via flags or `.B`/`Bold` font-name suffix, italic via
   `.I`/`Italic`/`Oblique` suffix → `<b>`/`<i>` spans.
 - **Metadata** — title/author from PDF metadata are validated (must contain

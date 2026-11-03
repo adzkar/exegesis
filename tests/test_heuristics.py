@@ -4,6 +4,7 @@ import fitz
 import pytest
 
 from exegesis import analyze, emit, render, text
+from exegesis.lang import EN
 
 
 def span(s, size=10.0, flags=0, font="helv"):
@@ -532,9 +533,9 @@ def test_edge_region_rejects_mixed_caption_band():
 def test_caption_res_accept_double_space_legends():
     """Springer-style double-spaced legends match every caption
     pattern — the shared number/tail keeps the three regexes in step."""
-    assert text.TABLE_CAPTION_RE.match("Table 9  Legend without colon")
-    assert render.CAPTION_RE.match("Table 9  Legend without colon")
-    assert render.FIGURE_CAPTION_RE.match("Figure 3  A spaced caption")
+    assert EN.table_caption.match("Table 9  Legend without colon")
+    assert EN.caption.match("Table 9  Legend without colon")
+    assert EN.figure_caption.match("Figure 3  A spaced caption")
     # single-spaced citations still don't match
-    assert not render.FIGURE_CAPTION_RE.match("Figure 3 shows a trend")
-    assert not text.TABLE_CAPTION_RE.match("Table 9 shows the legend")
+    assert not EN.figure_caption.match("Figure 3 shows a trend")
+    assert not EN.table_caption.match("Table 9 shows the legend")

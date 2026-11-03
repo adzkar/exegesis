@@ -7,5 +7,6 @@ rotated-table extraction, then ebooklib packaging.
 __version__ = "0.1.0"
 
 from .emit import convert
+from .lang import LangProfile, get_lang
 
-__all__ = ["convert"]
+__all__ = ["LangProfile", "convert", "get_lang"]

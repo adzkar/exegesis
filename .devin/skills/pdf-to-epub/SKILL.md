@@ -31,12 +31,16 @@ pip3 install -r requirements.txt
 ## Usage
 
 ```bash
-python3 pdf_to_epub.py <input.pdf> [-o output.epub] [--title "..."] [--author "..."]
+python3 pdf_to_epub.py <input.pdf> [-o output.epub] [--title "..."] [--author "..."] [--lang en|de|fr|es]
 ```
 
 - Output defaults to the input name with a `.epub` suffix, next to the input.
 - Title/author come from PDF metadata, falling back to the filename; override
   with `--title` / `--author`.
+- `--lang` selects the pattern profile for furniture, notes, section labels,
+  and captions plus the EPUB's language metadata: `en` (default), `de`,
+  `fr`, `es`. Non-Latin scripts (CJK, RTL) are out of scope — converting
+  them under the English default degrades detection quality.
 - `--keep-headers` disables stripping of page headers/footers (page numbers,
   running heads). Enabled by default for documents over 3 pages.
 

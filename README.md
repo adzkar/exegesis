@@ -40,8 +40,14 @@ pip3 install -r requirements.txt   # pymupdf, ebooklib
 python3 pdf_to_epub.py paper.pdf                      # -> paper.epub
 python3 pdf_to_epub.py paper.pdf -o out.epub
 python3 pdf_to_epub.py paper.pdf --title "My Paper" --author "J. Doe"
+python3 pdf_to_epub.py paper.pdf --lang de            # German patterns + metadata
 python3 pdf_to_epub.py paper.pdf --keep-headers       # keep headers/footers
 ```
+
+`--lang` selects the pattern profile for furniture, note openers, section
+labels, and figure/table captions — `en` (default), `de`, `fr`, `es` — and
+stamps the EPUB's language metadata. The API also accepts a custom
+`LangProfile` for unsupported languages.
 
 ## How it works
 
@@ -68,8 +74,11 @@ published numbers.
 
 - **No OCR.** Scanned PDFs without a text layer produce image-only output —
   an OCR pass (e.g. tesseract) would be needed as a separate step.
-- **English-oriented heuristics** — furniture, note-opener, and section-label
-  patterns are English regexes; the EPUB `lang` is fixed to `en`.
+- **Latin-script languages** — profiles exist for English, German, French,
+  and Spanish (`--lang`); other languages are rejected by `--lang` but can
+  still be converted under the default English profile (detection quality
+  degrades) or a custom `LangProfile` via `convert()`. CJK and RTL scripts
+  need word-shaping/vertical-text and direction review — out of scope today.
 - Complex layouts (dense figures, equations, tables) may read imperfectly.
 - Degraded PDFs with jittery fonts or OCR-layer artifacts can yield imperfect
   heading detection; source artifacts are reproduced faithfully.

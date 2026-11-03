@@ -22,15 +22,12 @@ from .analyze import (
     _table_regions,
 )
 from .const import MAX_HEADING_CHARS, MIN_HEADING_CHARS, MIN_IMAGE_BYTES
+from .lang import EN, LangProfile
 from .order import _ordered_blocks
 from .state import PipelineState
 from .text import (
-    _CAPTION_NUM,
-    _CAPTION_TAIL,
     FN_LINK_RE,
     LIST_ITEM_RE,
-    SECTION_LABEL_RE,
-    TABLE_CAPTION_RE,
     _block_lines,
     _block_median_size,
     _block_text,
@@ -43,52 +40,35 @@ from .text import (
     _span_is_italic,
 )
 
-# label set + the shared caption number/tail from text.py — the same
-# 'S'-prefix, subfigure-letter, dash-range core and the same tail
-# (dash-set legend, punctuation, 2+ space layout gap, or end-of-text),
-# so a double-spaced 'Figure 3  Legend' alts exactly like a
-# double-spaced 'Table 1  Title' captions a grid
-CAPTION_RE = re.compile(
-    r"(?i)^\s*(fig\.?|figure|table|plate|scheme|chart)\s*\.?\s*"
-    + _CAPTION_NUM
-    + _CAPTION_TAIL
-)
-# the image call must not accept 'Table N.' — tables keep their legends
-# above the body, so a following 'Table N.' block belongs to a
-# text-flowed table, not to the figure
-FIGURE_CAPTION_RE = re.compile(
-    r"(?i)^\s*(fig\.?|figure|plate|scheme|chart)\s*\.?\s*"
-    + _CAPTION_NUM
-    + _CAPTION_TAIL
-)
-# the mirror for the rasterized-table call: a 'Figure N.' block *below*
-# the region is a following figure's caption, not the table's legend —
-# while the legend above may still be 'Figure N.' (a text-heavy rotated
-# figure reaches the same raster path)
 
-
-def _section_label(text):
+def _section_label(text, lang: LangProfile = EN):
     """Leading section label if a text starts with a known heading phrase.
 
     Labels like 'References and Notes' often share a block/line with the
     first entry, so font-size heading detection can't see them. The rest of
-    the text is returned separately to continue as a paragraph.
+    the text is returned separately to continue as a paragraph. The label
+    set comes from the document's language profile.
     """
-    m = SECTION_LABEL_RE.match(text)
+    m = lang.section_label.match(text)
     if not m:
         return None
     rest = text[m.end():].strip()
     if rest and not (rest[0].isdigit() or rest[0].isupper()):
         return None
-    return m.group(1), rest
+    # group 1 is the documented label slot, but a custom profile whose
+    # pattern captures nothing — or whose first group sat out this
+    # alternative — still yields the whole match
+    label = m.group(1) if m.re.groups and m.group(1) else m.group(0)
+    return label, rest
 
 
-def _authorish(text):
-    """True if a short block plausibly lists author names (not a sentence)."""
+def _authorish(text, joiner=" and "):
+    """True if a short block plausibly lists author names (not a sentence).
+    ``joiner`` is the language's 'and' inside a name list."""
     t = text.strip()
     return (
         3 < len(t) < 170
-        and (", " in t or " and " in t)
+        and (", " in t or joiner in t)
         and not t.endswith((".", ":", ";", "?", "!"))
     )
 
@@ -176,9 +156,10 @@ def _figure_alt(
     region=None,
     fallback="",
     skip_ids: Container[int] = frozenset(),
-    pattern=CAPTION_RE,
-    above_pattern=CAPTION_RE,
+    pattern=EN.caption,
+    above_pattern=EN.caption,
     claimed: set | None = None,
+    lang: LangProfile = EN,
 ):
     """Alt text for a figure: the nearest foreign text block beyond the
     figure's facing edge is its caption when it opens with a caption
@@ -213,7 +194,7 @@ def _figure_alt(
     def _is_caption(b, pat):
         """The block's escaped text if it is a ``pat`` caption in the
         figure's column band, else None."""
-        t = _block_text(b)
+        t = _block_text(b, lang)
         if not pat.match(t):
             return None
         if not img_cols & _overlap_cols(b["bbox"], edges, page_width):
@@ -282,15 +263,15 @@ def _figure_alt(
     return fallback
 
 
-def _footnote_text(block, body_size):
+def _footnote_text(block, body_size, lang: LangProfile = EN):
     """Render a footnote block's text; returns (marker_number, html)."""
     pieces = [_line_html(l, body_size) for l in _block_lines(block)]
     return _sup_marker(block, body_size), _join_lines(
-        [p for p in pieces if p.strip()]
+        [p for p in pieces if p.strip()], lang
     )
 
 
-def _table_html(region, body_size):
+def _table_html(region, body_size, lang: LangProfile = EN):
     """Render a detected grid table to ``<table>`` markup.
 
     Recovered rows become ``<tr>``; the first row promotes to ``<thead>``
@@ -301,7 +282,8 @@ def _table_html(region, body_size):
     parts = ["<table>"]
     if region.caption:
         cap = _join_lines(
-            _line_html(l, body_size).strip() for l in region.caption
+            (_line_html(l, body_size).strip() for l in region.caption),
+            lang,
         )
         if cap:
             parts.append(f"<caption>{cap}</caption>")
@@ -314,7 +296,8 @@ def _table_html(region, body_size):
                 cells.append(f"<{tag}></{tag}>")
                 cur += 1
             text = _join_lines(
-                _line_html(l, body_size).strip() for l, _b in lns
+                (_line_html(l, body_size).strip() for l, _b in lns),
+                lang,
             )
             sp = f' colspan="{span}"' if span > 1 else ""
             cells.append(f"<{tag}{sp}>{text}</{tag}>")
@@ -371,12 +354,14 @@ def _render_page(page, page_index: int, state: PipelineState):
         state.boilerplate,
         edges,
         state.drop_edges,
+        lang=state.lang,
     )
     # kept furniture is render-only: it never feeds footnote-zone detection
     # or rotated-table candidate sets
     body_blocks = [b for b in ordered if not b.get("is_furniture")]
     foot_tops = _footnote_tops(
-        body_blocks, edges, body_size, page.rect.height, state.line_h
+        body_blocks, edges, body_size, page.rect.height, state.line_h,
+        lang=state.lang,
     )
     frags = state.page_frags[page_index]
 
@@ -407,6 +392,7 @@ def _render_page(page, page_index: int, state: PipelineState):
         state.line_h,
         edges,
         page.rect.width,
+        state.lang,
     )
     state.grid_tables += len(grids)
     grid_of = {bid: g for g in grids for bid in g.claimed}
@@ -423,7 +409,7 @@ def _render_page(page, page_index: int, state: PipelineState):
     def flush_par():
         if state.par:
             state.page_frags[state.par_page].append(
-                f"<p>{_join_lines(state.par)}</p>"
+                f"<p>{_join_lines(state.par, state.lang)}</p>"
             )
             state.par = []
         flush_item()
@@ -431,7 +417,7 @@ def _render_page(page, page_index: int, state: PipelineState):
     def flush_item():
         if state.item:
             frags.append(
-                f'<p class="listitem">{_join_lines(state.item)}</p>'
+                f'<p class="listitem">{_join_lines(state.item, state.lang)}</p>'
             )
             state.item = []
 
@@ -463,9 +449,10 @@ def _render_page(page, page_index: int, state: PipelineState):
                     b_i,
                     edges,
                     page.rect.width,
-                    pattern=FIGURE_CAPTION_RE,
+                    pattern=state.lang.figure_caption,
                     skip_ids=nonbody_ids,
                     claimed=claimed_caps,
+                    lang=state.lang,
                 )
                 frags.append(
                     f'<p class="fig"><img src="{state.images[digest].file_name}"'
@@ -485,10 +472,12 @@ def _render_page(page, page_index: int, state: PipelineState):
                     edges,
                     page.rect.width,
                     region=tbl,
-                    fallback="table",
+                    fallback=state.lang.table_alt,
                     skip_ids=nonbody_ids,
-                    pattern=TABLE_CAPTION_RE,
+                    pattern=state.lang.table_caption,
+                    above_pattern=state.lang.caption,
                     claimed=claimed_caps,
+                    lang=state.lang,
                 )
                 mb = page.mediabox
                 tbl = fitz.Rect(
@@ -517,7 +506,7 @@ def _render_page(page, page_index: int, state: PipelineState):
             if id(g) not in grid_done:
                 grid_done.add(id(g))
                 flush_par()
-                frags.append(_table_html(g, body_size))
+                frags.append(_table_html(g, body_size, state.lang))
             continue
 
         if block.get("is_furniture"):
@@ -529,15 +518,19 @@ def _render_page(page, page_index: int, state: PipelineState):
             # split it mid-sentence around every running head)
             if state.par_page == page_index:
                 flush_par()
-            frags.append(f"<p>{html.escape(_block_text(block))}</p>")
+            frags.append(
+                f"<p>{html.escape(_block_text(block, state.lang))}</p>"
+            )
             continue
 
         col = _assign_column(block, edges)
         if col in foot_tops and block["bbox"][1] >= foot_tops[col] - 5:
-            state.footnotes.append(_footnote_text(block, body_size))
+            state.footnotes.append(
+                _footnote_text(block, body_size, state.lang)
+            )
             continue
 
-        btext = _block_text(block)
+        btext = _block_text(block, state.lang)
         if (
             block["bbox"][1] < page.rect.height * 0.12
             and btext.isupper()
@@ -598,7 +591,9 @@ def _render_page(page, page_index: int, state: PipelineState):
 
         med = _block_median_size(block)
         is_byline = med >= body_size * 1.15
-        if is_byline or (state.after_h1 and _authorish(btext)) or (
+        if is_byline or (
+            state.after_h1 and _authorish(btext, state.lang.name_joiner)
+        ) or (
             frags
             and frags[-1].startswith('<p class="byline">')
             and len(_block_lines(block)) == 1
@@ -607,12 +602,17 @@ def _render_page(page, page_index: int, state: PipelineState):
             flush_par()
             blines = [l for l in _block_lines(block) if _line_text(l).strip()]
             tail = _line_text(blines[-1]).strip() if blines else ""
-            if len(tail) == 1 and tail.isupper() and tail not in "IA":
+            if (
+                len(tail) == 1
+                and tail.isupper()
+                and tail not in state.lang.single_letter_words
+            ):
                 blines = blines[:-1]
                 state.par = [html.escape(tail)]
                 state.par_page = page_index
             text = _join_lines(
-                _line_html(l, body_size).strip() for l in blines
+                (_line_html(l, body_size).strip() for l in blines),
+                state.lang,
             )
             if frags and frags[-1].startswith('<p class="byline">'):
                 frags[-1] = frags[-1][:-4] + " " + text + "</p>"
@@ -630,7 +630,7 @@ def _render_page(page, page_index: int, state: PipelineState):
             and block["bbox"][0] > page.rect.width * 0.15
             and block["bbox"][1] < page.rect.height * 0.5
         ):
-            emit_heading(2, "Abstract")
+            emit_heading(2, state.lang.abstract_title)
             state.abstract_done = True
 
         if (
@@ -669,9 +669,12 @@ def _render_page(page, page_index: int, state: PipelineState):
             if isolated:
                 flush_par()
                 qhtml = _join_lines(
-                    _line_html(l, body_size).strip()
-                    for l in _block_lines(block)
-                    if _line_text(l).strip()
+                    (
+                        _line_html(l, body_size).strip()
+                        for l in _block_lines(block)
+                        if _line_text(l).strip()
+                    ),
+                    state.lang,
                 )
                 frags.append(f"<blockquote><p>{qhtml}</p></blockquote>")
                 continue
@@ -689,7 +692,9 @@ def _render_page(page, page_index: int, state: PipelineState):
             # tails are plausible notes, not section heads; a page-final
             # "References" stays demoted when its body isn't visible
             if li == 0 and not demoted:
-                m = _section_label(_line_text(line).strip())
+                m = _section_label(
+                    _line_text(line).strip(), state.lang
+                )
                 if m:
                     emit_heading(2, m[0])
                     if m[1]:

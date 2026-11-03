@@ -13,10 +13,8 @@ from statistics import median
 import fitz
 
 from .const import BOILERPLATE_COVERAGE, EDGE_ZONE
+from .lang import EN, LangProfile
 from .text import (
-    FURNITURE_RE,
-    NOTE_START_RE,
-    TABLE_CAPTION_RE,
     _block_lines,
     _block_median_size,
     _block_text,
@@ -92,7 +90,11 @@ def _column_edges(items):
     return [median(c) for c in clusters if len(c) >= 2] or [0.0]
 
 
-def _doc_column_edges(pages, boilerplate: Container[str] = frozenset()):
+def _doc_column_edges(
+    pages,
+    boilerplate: Container[str] = frozenset(),
+    lang: LangProfile = EN,
+):
     """Column edges for the document: edges found on ≥half of all pages.
 
     Per-page clustering produces phantom edges from bylines, headings, and
@@ -110,7 +112,9 @@ def _doc_column_edges(pages, boilerplate: Container[str] = frozenset()):
             b
             for b in pdict["blocks"]
             if b["type"] == 0
-            and not _is_furniture(b, page.rect, _block_text(b))
+            and not _is_furniture(
+                b, page.rect, _block_text(b, lang), lang
+            )
             and not _is_signature_furniture(
                 b, page.rect.height, boilerplate
             )
@@ -180,14 +184,17 @@ def _is_margin_strip(block, rect):
     )
 
 
-def _is_furniture(block, rect, text):
+def _is_furniture(block, rect, text, lang: LangProfile = EN):
     """Edge furniture by shape or content: narrow+tall margin strips in
     the outer 10% margins, or pattern furniture/page numbers in the outer
-    7% edge."""
+    7% edge. Content patterns come from the document's language profile."""
     _, y0, _, y1 = block["bbox"]
     return _is_margin_strip(block, rect) or (
         (y0 > rect.height * 0.93 or y1 < rect.height * 0.07)
-        and (FURNITURE_RE.search(text) or re.fullmatch(r"\d{1,4}", text))
+        and (
+            lang.furniture.search(text)
+            or re.fullmatch(r"\d{1,4}", text)
+        )
     )
 
 
@@ -351,7 +358,7 @@ def _union_cols(ivs, min_gutter):
     return cols
 
 
-def _grid_runs(bands, min_gutter, max_gap):
+def _grid_runs(bands, min_gutter, max_gap, lang: LangProfile = EN):
     """Group consecutive bands into runs whose union keeps ≥1 gutter.
 
     A band joins the open run only if its cells preserve a permanent
@@ -382,7 +389,7 @@ def _grid_runs(bands, min_gutter, max_gap):
         # Check every line — band order isn't x-sorted, so a legend
         # sharing its band with stray text may not open the band
         if any(
-            TABLE_CAPTION_RE.match(
+            lang.table_caption.match(
                 "".join(s["text"] for s in l["spans"])
             )
             for l, _ in lines
@@ -605,7 +612,7 @@ def _join_cell_text(lns):
     ).strip()
 
 
-def _table_caption(sbands, run, runs, line_h):
+def _table_caption(sbands, run, runs, line_h, lang: LangProfile = EN):
     """The band directly above or below the run if it reads as
     ``Table N ...`` — used as the ``<caption>`` and dropped from text.
     Bands iterate top-down, so an above-run match wins over a below one;
@@ -621,7 +628,7 @@ def _table_caption(sbands, run, runs, line_h):
         text = " ".join(
             "".join(s["text"] for s in l["spans"]) for l, _ in band[0]
         )
-        if not TABLE_CAPTION_RE.match(text):
+        if not lang.table_caption.match(text):
             continue
         if 0 <= ry0 - y1 <= 2.5 * line_h:
             return band
@@ -633,7 +640,7 @@ def _table_caption(sbands, run, runs, line_h):
 
 
 def _region_from_run(run, runs, blocks, sbands, edges, min_gutter,
-                     line_h, multi_col):
+                     line_h, multi_col, lang: LangProfile = EN):
     """Validate one grid run into a ``_TableRegion`` or reject it.
 
     Guards (precision-first — a miss degrades to ordinary text flow, a
@@ -661,7 +668,7 @@ def _region_from_run(run, runs, blocks, sbands, edges, min_gutter,
         for i in range(len(cols) - 1)
     ):
         return None
-    caption_band = _table_caption(sbands, run, runs, line_h)
+    caption_band = _table_caption(sbands, run, runs, line_h, lang)
     if spans_edge and caption_band is None:
         return None
 
@@ -681,7 +688,7 @@ def _region_from_run(run, runs, blocks, sbands, edges, min_gutter,
             (
                 bid
                 for l, bid in caption_band[0]
-                if TABLE_CAPTION_RE.match(
+                if lang.table_caption.match(
                     "".join(s["text"] for s in l["spans"])
                 )
             ),
@@ -825,7 +832,8 @@ def _line_is_boldish(line):
     return bool(spans) and all(_span_is_bold(s) for s in spans)
 
 
-def _table_regions(blocks, line_h, edges, page_width):
+def _table_regions(blocks, line_h, edges, page_width,
+                   lang: LangProfile = EN):
     """Detect upright grid tables; returns a list of ``_TableRegion``.
 
     Candidate row bands must share permanent interior whitespace (the
@@ -850,11 +858,11 @@ def _table_regions(blocks, line_h, edges, page_width):
             if l["bbox"][0] >= bx0 and l["bbox"][2] <= bx1
         ]
         sbands = _line_bands(sel, line_h)
-        runs = _grid_runs(sbands, min_gutter, max_gap)
+        runs = _grid_runs(sbands, min_gutter, max_gap, lang)
         for run in runs:
             region = _region_from_run(
                 run, runs, blocks, sbands, edges, min_gutter, line_h,
-                len(edges) > 1,
+                len(edges) > 1, lang,
             )
             if region is not None:
                 regions.append(region)
@@ -915,7 +923,9 @@ def _sup_marker(block, body_size):
     return None
 
 
-def _footnote_tops(blocks, edges, body_size, page_height, line_h):
+def _footnote_tops(
+    blocks, edges, body_size, page_height, line_h, lang: LangProfile = EN
+):
     """Map each column index to the y where its footnote region starts.
 
     Two detection paths: (a) blocks opening with a superscript digit in the
@@ -947,7 +957,7 @@ def _footnote_tops(blocks, edges, body_size, page_height, line_h):
             if (
                 b["bbox"][1] > page_height * 0.55
                 and _block_median_size(b) < body_size * 0.95
-                and NOTE_START_RE.match(_block_text(b))
+                and lang.note_start.match(_block_text(b, lang))
             ):
                 tops[col] = min(tops.get(col, b["bbox"][1]), b["bbox"][1])
     return tops

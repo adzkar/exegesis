@@ -1,46 +1,18 @@
 """Pure helpers over PyMuPDF ``get_text("dict")`` structures, plus the
-shared text patterns (font-name suffixes, furniture, note openers, list
-items, named section labels)."""
+language-agnostic text patterns (font-name suffixes, list items). The
+language-bound patterns — furniture, note openers, section labels,
+caption labels — live in ``lang.LangProfile``, as does the
+``single_letter_words`` drop-cap set ``_join_lines`` consults."""
 import re
 from statistics import median
 
+from .lang import EN, LangProfile
+
 BOLD_FONT_RE = re.compile(r"(?i)(bold|\.b\d*$|-b\d*$|/b\d*$)")
 ITAL_FONT_RE = re.compile(r"(?i)(italic|oblique|\.i\d*$|-i\d*$|/i\d*$)")
-FURNITURE_RE = re.compile(
-    r"(?i)(www\.|downloaded from|vol\.?\s*\d|issn|doi[:\s]|©|copyright|"
-    r"\b\d{2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))"
-)
-NOTE_START_RE = re.compile(
-    r"(?i)^[*\s]*(preparation of (?:this|the)|requests? for reprints|"
-    r"correspondence (?:concerning|should be|addressed)|"
-    r"(?:this (?:paper|article|work) was )?supported by|"
-    r"the author[s]? (?:thank|acknowledge|wish)|to whom correspondence)"
-)
 LIST_ITEM_RE = re.compile(r"^\d{1,2}[.)]\s+\S")
 FN_LINK_RE = re.compile(
     r'<sup><a href="notes\.xhtml#fn(\d+)">(\d+)</a></sup>'
-)
-SECTION_LABEL_RE = re.compile(
-    r"^(References and Notes|Notes and References|References|Bibliography|"
-    r"Supporting Online Material|Supplementary Materials?|Acknowledg?ements|"
-    r"Acknowledgments|Materials and Methods|Appendix|Funding|"
-    r"Author Contributions|Data Availability)\b"
-)
-# caption-label number core and terminator, shared by every caption
-# pattern (TABLE_CAPTION_RE here, CAPTION_RE/FIGURE_CAPTION_RE in
-# render.py): a supplementary 'S' prefix ('Table S1'), a subfigure
-# letter or parenthesised index ('Fig. 2b', 'Figure 1(a)'), a
-# dash-joined range ('Figure 1–2'). The tail allows a dash-set legend
-# ('Figure 3 — …') or a run of 2+ spaces — journals like Springer set
-# bare 'Table 1  Title' legends with a layout gap instead of
-# punctuation, while flowing prose never double-spaces there — but
-# still demands punctuation or end-of-text so mid-sentence citations
-# ('see Table 1–3', 'Figure 9 shows') never match. The label must
-# always open the text.
-_CAPTION_NUM = r"s?\d+(?:[a-z]|\s*\([a-zA-Z]\))?(?:\s*[–-]\s*s?\d+)?"
-_CAPTION_TAIL = r"(?:\s+[—–-]|\s*[.:)]|\s{2,}|$)"
-TABLE_CAPTION_RE = re.compile(
-    r"(?i)^\s*table\s*\.?\s*" + _CAPTION_NUM + _CAPTION_TAIL
 )
 
 
@@ -54,14 +26,14 @@ def _line_text(line):
     return "".join(s["text"] for s in line["spans"])
 
 
-def _block_text(block):
+def _block_text(block, lang: LangProfile = EN):
     """Join all lines of a text block, undoing soft hyphenation."""
     parts = [
         t
         for line in _block_lines(block)
         if (t := _line_text(line).strip())
     ]
-    return _join_lines(parts)
+    return _join_lines(parts, lang)
 
 
 def _line_max_size(line):
@@ -97,8 +69,14 @@ def _block_median_size(block):
     return median(sizes) if sizes else 0
 
 
-def _join_lines(parts):
-    """Join line fragments, merging words split by a soft hyphen."""
+def _join_lines(parts, lang: LangProfile = EN):
+    """Join line fragments, merging words split by a soft hyphen.
+
+    A lone uppercase fragment fuses into a lowercase continuation — a
+    drop cap — unless the letter is a real single-letter word in the
+    document's language: ``lang.single_letter_words`` holds the set
+    ('I'/'A' in English; German has none, so every lone letter fuses).
+    """
     out = []
     for t in parts:
         t = t.strip()
@@ -108,7 +86,7 @@ def _join_lines(parts):
             out
             and len(out[-1]) == 1
             and out[-1].isupper()
-            and out[-1] not in "IA"
+            and out[-1] not in lang.single_letter_words
             and t[:1].islower()
         ):
             out[-1] += t

@@ -58,6 +58,7 @@ flowchart TD
 | Top zone | blocks fully above the first spanning element |
 | h1 | single-line ≥1.6× body, multi-line block all-lines ≥1.6×, or first p0 heading ≥1.3× (promoted) |
 | h2 | standalone ≥1.08× body, or all-bold line/block ≥0.9× body outside edge zones that precedes body-flow text in its column (a heading terminates the follower scan; demotion silences bold-band lines per line and in mixed blocks, though a demoted block's ≥1.3× lines may still emit; the scan is column- and page-local so a column- or page-final bold line stays demoted); no sentence periods, no `*†‡§` opener |
+| Language profile | `--lang`/`convert(lang=)` picks a `LangProfile` (`en`/`de`/`fr`/`es`); furniture, note, section-label, and caption patterns + `abstract_title`/`notes_title`/byline joiner all come from it; unknown codes raise |
 | Section label | `References`, `Supporting Online Material`, `Methods`, … at block start → h2 (respects bold-gate demotion — `Funding …` tails are notes) |
 | Top label | all-caps short text in top 12% of page → `<p class="label">` |
 | Byline | median ≥1.15× body, or directly after h1 + name-like (` and `/`,`); short single-line followers merge; trailing drop-cap letter relocates into the paragraph |
@@ -69,7 +70,7 @@ flowchart TD
 | Blockquote | block indented >12pt from column edge AND isolated (gap >0.7× line height both sides; kept furniture doesn't count as a neighbor) |
 | Rotated table | ≥3 tall-narrow blocks sharing a y-band → region rasterized; clip mapped mediabox→displayed via `page.rotation_matrix` |
 | Grid table | multi-cell row bands sharing a permanent interior gutter → `<table>` with `colspan`s, wrapped-cell merges, `Table N` caption, all-bold `<thead>`; edge-spanning regions need a caption and non-layout gutters |
-| Figure/table alt text | nearest text block past the region's facing edge within 120pt that opens with a caption label (`Fig.`/`Figure`/`Table`/`Plate`/`Scheme`/`Chart` + number; `S`-prefix, subfigure letter, and dash-joined range allowed) in the same `_overlap_cols` band — first candidate ends the scan, footnote-zone/kept-furniture/cell blocks can't donate, images never take `Table N.`; a page-shared `claimed` set stops one caption alting two images |
+| Figure/table alt text | nearest text block past the region's facing edge within 120pt that opens with a caption label from the language profile (EN: `Fig.`/`Figure`/`Table`/`Plate`/`Scheme`/`Chart` + number; `S`-prefix, subfigure letter, and dash-joined range allowed) in the same `_overlap_cols` band — first candidate ends the scan, footnote-zone/kept-furniture/cell blocks can't donate, images never take `Table N.`; a page-shared `claimed` set stops one caption alting two images |
 | Header/footer | signature repeated on ≥40% of pages in edge zone (set built at any doc length; under `--keep-headers` matches flag `is_furniture`) |
 | Furniture | pattern (`VOL`, `www.`, `ISSN`, `doi`, `©`, dates) in outer 7% edge; under `--keep-headers` flagged `is_furniture` and emitted verbatim at page edges — inert to classifiers, ordering machinery, and table regions |
 | Margin strip | <25pt wide, >4× tall, in outer 10% margin (rotated sidebars) |
