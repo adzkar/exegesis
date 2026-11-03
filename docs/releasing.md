@@ -15,8 +15,8 @@ them:
   `origin/master` (`git pull --ff-only`)
 - `gh` CLI authenticated: `gh auth login`
 - Tooling installed: `pip3 install -r requirements.txt -r requirements-dev.txt`
-- Corpus PDFs at the repo root if the published report should refresh
-  (`bump.sh` runs `build_report.py`, which needs `*.pdf` locally)
+- Corpus PDFs at the repo root (`bump.sh` always runs `build_report.py`,
+  which needs `*.pdf` locally — absent in fresh clones/worktrees)
 
 ## Walkthrough
 
@@ -39,7 +39,7 @@ git log v0.1.0..HEAD --oneline      # what ships in the new one
 ./scripts/bump.sh 0.2.0
 ```
 
-This validates the argument (semver shape, differs from
+This validates the argument (semver shape, newer than
 `__version__`), rewrites `exegesis/__init__.py`, inserts a dated
 `## [0.2.0]` section into `CHANGELOG.md` seeded with the non-merge
 commit subjects since the last tag, regenerates `docs/report/` for the
@@ -80,14 +80,16 @@ with generated notes.
 |---|---|
 | `must be on master` | `git checkout master` |
 | `working tree not clean` | commit or stash the changes first |
-| `not in sync with origin/master` | `git pull --ff-only` |
+| `not in sync with origin/master` | `git pull --ff-only` (behind) or `git push` (ahead) |
 | `gh not authenticated` | `gh auth login` |
 | `argument != __version__` | run `bump.sh` first, or fix the version arg |
 | `CHANGELOG.md has no '## [X.Y.Z]'` | keep the entry `bump.sh` seeded |
 | `tag vX.Y.Z already exists` | pick a new version; retagging is manual |
 | `already at X.Y.Z` (bump) | the bump is already done — go to step 4 |
+| `not newer than` (bump) | the version must be above `__version__` |
 | `version must look like X.Y.Z` | pass a semver, e.g. `0.2.0` |
-| `no *.pdf corpus files` (report) | place the corpus PDFs at the repo root |
+| `no *.pdf corpus — docs/report cannot be regenerated` (bump) | place the corpus PDFs at the repo root |
+| `python deps missing` (bump) | `pip3 install -r requirements.txt` |
 
 ## Notes
 
