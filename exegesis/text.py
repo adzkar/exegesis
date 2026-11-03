@@ -1,9 +1,12 @@
 """Pure helpers over PyMuPDF ``get_text("dict")`` structures, plus the
 language-agnostic text patterns (font-name suffixes, list items). The
 language-bound patterns — furniture, note openers, section labels,
-caption labels — live in ``lang.LangProfile``."""
+caption labels — live in ``lang.LangProfile``, as does the
+``single_letter_words`` drop-cap set ``_join_lines`` consults."""
 import re
 from statistics import median
+
+from .lang import EN, LangProfile
 
 BOLD_FONT_RE = re.compile(r"(?i)(bold|\.b\d*$|-b\d*$|/b\d*$)")
 ITAL_FONT_RE = re.compile(r"(?i)(italic|oblique|\.i\d*$|-i\d*$|/i\d*$)")
@@ -23,14 +26,14 @@ def _line_text(line):
     return "".join(s["text"] for s in line["spans"])
 
 
-def _block_text(block):
+def _block_text(block, lang: LangProfile = EN):
     """Join all lines of a text block, undoing soft hyphenation."""
     parts = [
         t
         for line in _block_lines(block)
         if (t := _line_text(line).strip())
     ]
-    return _join_lines(parts)
+    return _join_lines(parts, lang)
 
 
 def _line_max_size(line):
@@ -66,8 +69,14 @@ def _block_median_size(block):
     return median(sizes) if sizes else 0
 
 
-def _join_lines(parts):
-    """Join line fragments, merging words split by a soft hyphen."""
+def _join_lines(parts, lang: LangProfile = EN):
+    """Join line fragments, merging words split by a soft hyphen.
+
+    A lone uppercase fragment fuses into a lowercase continuation — a
+    drop cap — unless the letter is a real single-letter word in the
+    document's language: ``lang.single_letter_words`` holds the set
+    ('I'/'A' in English; German has none, so every lone letter fuses).
+    """
     out = []
     for t in parts:
         t = t.strip()
@@ -77,7 +86,7 @@ def _join_lines(parts):
             out
             and len(out[-1]) == 1
             and out[-1].isupper()
-            and out[-1] not in "IA"
+            and out[-1] not in lang.single_letter_words
             and t[:1].islower()
         ):
             out[-1] += t

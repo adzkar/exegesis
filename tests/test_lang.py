@@ -13,7 +13,7 @@ import fitz
 import pytest
 from helpers import doc_html, lint_epub
 
-from exegesis import convert
+from exegesis import convert, text
 from exegesis.lang import DE, EN, ES, FR, LANGS, LangProfile, get_lang
 
 BODY = 10
@@ -210,6 +210,31 @@ def test_table_label_abbreviations():
     # plural label forms stay unmatched, like EN's 'Tables N'
     assert not DE.table_caption.match("Tabellen 3: Werte")
     assert not FR.table_caption.match("Tableaux 3: Résultats")
+
+
+def test_single_letter_word_sets():
+    """The drop-cap exclusion rides the profile: EN 'I'/'A' are words
+    and stay unfused; DE has no single-letter words so every lone
+    letter fuses ('I'/'A' fragments were emitting 'I n…'/'A b…'
+    splits); FR a/à/y and ES a/y/o are the sentence-initial singles —
+    the 'e'/'u' pre-vocalic allomorphs never open a sentence, so those
+    letters stay drop-caps rather than blocking common fusions."""
+    assert EN.single_letter_words == "IA"
+    assert DE.single_letter_words == ""
+    assert FR.single_letter_words == "AÀY"
+    assert ES.single_letter_words == "AYO"
+    # DE fuses every lone letter
+    assert text._join_lines(["I", "n den Jahren"], DE) == "In den Jahren"
+    assert text._join_lines(["A", "uch"], DE) == "Auch"
+    # FR/ES keep their word letters unfused, fuse the rest
+    assert text._join_lines(["Y", "compris"], FR) == "Y compris"
+    assert text._join_lines(["À", "partir"], FR) == "À partir"
+    assert text._join_lines(["L", "a méthode"], FR) == "La méthode"
+    assert text._join_lines(["O", "sea"], ES) == "O sea"
+    assert text._join_lines(["U", "n estudio"], ES) == "Un estudio"
+    # EN unchanged
+    assert text._join_lines(["I", "went"]) == "I went"
+    assert text._join_lines(["T", "he cat"]) == "The cat"
 
 
 def test_singular_author_note_arms():

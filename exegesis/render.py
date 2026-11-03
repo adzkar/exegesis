@@ -159,6 +159,7 @@ def _figure_alt(
     pattern=EN.caption,
     above_pattern=EN.caption,
     claimed: set | None = None,
+    lang: LangProfile = EN,
 ):
     """Alt text for a figure: the nearest foreign text block beyond the
     figure's facing edge is its caption when it opens with a caption
@@ -193,7 +194,7 @@ def _figure_alt(
     def _is_caption(b, pat):
         """The block's escaped text if it is a ``pat`` caption in the
         figure's column band, else None."""
-        t = _block_text(b)
+        t = _block_text(b, lang)
         if not pat.match(t):
             return None
         if not img_cols & _overlap_cols(b["bbox"], edges, page_width):
@@ -262,15 +263,15 @@ def _figure_alt(
     return fallback
 
 
-def _footnote_text(block, body_size):
+def _footnote_text(block, body_size, lang: LangProfile = EN):
     """Render a footnote block's text; returns (marker_number, html)."""
     pieces = [_line_html(l, body_size) for l in _block_lines(block)]
     return _sup_marker(block, body_size), _join_lines(
-        [p for p in pieces if p.strip()]
+        [p for p in pieces if p.strip()], lang
     )
 
 
-def _table_html(region, body_size):
+def _table_html(region, body_size, lang: LangProfile = EN):
     """Render a detected grid table to ``<table>`` markup.
 
     Recovered rows become ``<tr>``; the first row promotes to ``<thead>``
@@ -281,7 +282,8 @@ def _table_html(region, body_size):
     parts = ["<table>"]
     if region.caption:
         cap = _join_lines(
-            _line_html(l, body_size).strip() for l in region.caption
+            (_line_html(l, body_size).strip() for l in region.caption),
+            lang,
         )
         if cap:
             parts.append(f"<caption>{cap}</caption>")
@@ -294,7 +296,8 @@ def _table_html(region, body_size):
                 cells.append(f"<{tag}></{tag}>")
                 cur += 1
             text = _join_lines(
-                _line_html(l, body_size).strip() for l, _b in lns
+                (_line_html(l, body_size).strip() for l, _b in lns),
+                lang,
             )
             sp = f' colspan="{span}"' if span > 1 else ""
             cells.append(f"<{tag}{sp}>{text}</{tag}>")
@@ -403,7 +406,7 @@ def _render_page(page, page_index: int, state: PipelineState):
     def flush_par():
         if state.par:
             state.page_frags[state.par_page].append(
-                f"<p>{_join_lines(state.par)}</p>"
+                f"<p>{_join_lines(state.par, state.lang)}</p>"
             )
             state.par = []
         flush_item()
@@ -411,7 +414,7 @@ def _render_page(page, page_index: int, state: PipelineState):
     def flush_item():
         if state.item:
             frags.append(
-                f'<p class="listitem">{_join_lines(state.item)}</p>'
+                f'<p class="listitem">{_join_lines(state.item, state.lang)}</p>'
             )
             state.item = []
 
@@ -446,6 +449,7 @@ def _render_page(page, page_index: int, state: PipelineState):
                     pattern=state.lang.figure_caption,
                     skip_ids=nonbody_ids,
                     claimed=claimed_caps,
+                    lang=state.lang,
                 )
                 frags.append(
                     f'<p class="fig"><img src="{state.images[digest].file_name}"'
@@ -470,6 +474,7 @@ def _render_page(page, page_index: int, state: PipelineState):
                     pattern=state.lang.table_caption,
                     above_pattern=state.lang.caption,
                     claimed=claimed_caps,
+                    lang=state.lang,
                 )
                 mb = page.mediabox
                 tbl = fitz.Rect(
@@ -498,7 +503,7 @@ def _render_page(page, page_index: int, state: PipelineState):
             if id(g) not in grid_done:
                 grid_done.add(id(g))
                 flush_par()
-                frags.append(_table_html(g, body_size))
+                frags.append(_table_html(g, body_size, state.lang))
             continue
 
         if block.get("is_furniture"):
@@ -510,15 +515,19 @@ def _render_page(page, page_index: int, state: PipelineState):
             # split it mid-sentence around every running head)
             if state.par_page == page_index:
                 flush_par()
-            frags.append(f"<p>{html.escape(_block_text(block))}</p>")
+            frags.append(
+                f"<p>{html.escape(_block_text(block, state.lang))}</p>"
+            )
             continue
 
         col = _assign_column(block, edges)
         if col in foot_tops and block["bbox"][1] >= foot_tops[col] - 5:
-            state.footnotes.append(_footnote_text(block, body_size))
+            state.footnotes.append(
+                _footnote_text(block, body_size, state.lang)
+            )
             continue
 
-        btext = _block_text(block)
+        btext = _block_text(block, state.lang)
         if (
             block["bbox"][1] < page.rect.height * 0.12
             and btext.isupper()
@@ -590,12 +599,17 @@ def _render_page(page, page_index: int, state: PipelineState):
             flush_par()
             blines = [l for l in _block_lines(block) if _line_text(l).strip()]
             tail = _line_text(blines[-1]).strip() if blines else ""
-            if len(tail) == 1 and tail.isupper() and tail not in "IA":
+            if (
+                len(tail) == 1
+                and tail.isupper()
+                and tail not in state.lang.single_letter_words
+            ):
                 blines = blines[:-1]
                 state.par = [html.escape(tail)]
                 state.par_page = page_index
             text = _join_lines(
-                _line_html(l, body_size).strip() for l in blines
+                (_line_html(l, body_size).strip() for l in blines),
+                state.lang,
             )
             if frags and frags[-1].startswith('<p class="byline">'):
                 frags[-1] = frags[-1][:-4] + " " + text + "</p>"
@@ -652,9 +666,12 @@ def _render_page(page, page_index: int, state: PipelineState):
             if isolated:
                 flush_par()
                 qhtml = _join_lines(
-                    _line_html(l, body_size).strip()
-                    for l in _block_lines(block)
-                    if _line_text(l).strip()
+                    (
+                        _line_html(l, body_size).strip()
+                        for l in _block_lines(block)
+                        if _line_text(l).strip()
+                    ),
+                    state.lang,
                 )
                 frags.append(f"<blockquote><p>{qhtml}</p></blockquote>")
                 continue

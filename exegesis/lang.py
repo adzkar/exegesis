@@ -56,6 +56,13 @@ class LangProfile:
     the dc:creator when neither metadata nor a byline yields a name;
     ``start_title`` labels the seeded TOC entry of a headingless,
     noteless document — none should leak English into a localized EPUB.
+    ``single_letter_words`` names the lone letters that are real words
+    when sentence-initial, so the drop-cap merges in ``_join_lines``
+    and the byline tail relocation don't fuse them — English 'I'/'A';
+    German has none (every lone letter is a drop-cap); FR/ES carry
+    their sentence-initial singles (a/à/y, a/y/o — the 'e'/'u'
+    pre-vocalic allomorphs only occur inside a phrase, never sentence-
+    initial, so those letters stay drop-caps).
     """
 
     code: str
@@ -73,6 +80,7 @@ class LangProfile:
     table_alt: str
     unknown_author: str
     start_title: str
+    single_letter_words: str
 
 
 def _profile(
@@ -91,6 +99,7 @@ def _profile(
     table_alt,
     unknown_author,
     start_title,
+    letters,
 ):
     """Assemble a frozen profile from per-language pattern strings.
 
@@ -115,6 +124,7 @@ def _profile(
         table_alt=table_alt,
         unknown_author=unknown_author,
         start_title=start_title,
+        single_letter_words=letters,
     )
 
 
@@ -146,6 +156,7 @@ EN = _profile(
     table_alt="table",
     unknown_author="Unknown",
     start_title="Start",
+    letters="IA",
 )
 
 DE = _profile(
@@ -183,6 +194,7 @@ DE = _profile(
     table_alt="Tabelle",
     unknown_author="Unbekannt",
     start_title="Anfang",
+    letters="",
 )
 
 FR = _profile(
@@ -218,6 +230,7 @@ FR = _profile(
     table_alt="tableau",
     unknown_author="Inconnu",
     start_title="Début",
+    letters="AÀY",
 )
 
 ES = _profile(
@@ -251,6 +264,7 @@ ES = _profile(
     table_alt="tabla",
     unknown_author="Desconocido",
     start_title="Inicio",
+    letters="AYO",
 )
 
 LANGS = {p.code: p for p in (EN, DE, FR, ES)}

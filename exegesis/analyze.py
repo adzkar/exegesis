@@ -112,7 +112,9 @@ def _doc_column_edges(
             b
             for b in pdict["blocks"]
             if b["type"] == 0
-            and not _is_furniture(b, page.rect, _block_text(b), lang)
+            and not _is_furniture(
+                b, page.rect, _block_text(b, lang), lang
+            )
             and not _is_signature_furniture(
                 b, page.rect.height, boilerplate
             )
@@ -955,7 +957,7 @@ def _footnote_tops(
             if (
                 b["bbox"][1] > page_height * 0.55
                 and _block_median_size(b) < body_size * 0.95
-                and lang.note_start.match(_block_text(b))
+                and lang.note_start.match(_block_text(b, lang))
             ):
                 tops[col] = min(tops.get(col, b["bbox"][1]), b["bbox"][1])
     return tops

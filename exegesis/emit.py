@@ -84,7 +84,7 @@ def convert(
         state.page_items[i] = []
     if state.par:
         state.page_frags[state.par_page].append(
-            f"<p>{_join_lines(state.par)}</p>"
+            f"<p>{_join_lines(state.par, state.lang)}</p>"
         )
     fn_nums = {n for n, _ in state.footnotes if n is not None}
     for frags in state.page_frags:

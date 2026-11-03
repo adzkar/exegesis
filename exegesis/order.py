@@ -36,7 +36,7 @@ def _ordered_blocks(
     furniture_items = []
     for block in blocks:
         if block["type"] == 0:
-            text = _block_text(block)
+            text = _block_text(block, lang)
             if not text:
                 continue
             sig_furniture = _is_signature_furniture(

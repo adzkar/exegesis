@@ -58,8 +58,8 @@ chapters.
   document seeds one entry at chapter one so nav/NCX are never empty.
 - **Bylines** — blocks ≥1.15× body, or the block right after an h1 when it
   looks like a name list; merge into one `<p class="byline">` with short
-  single-line followers. A trailing drop-cap letter moves into the body
-  paragraph. The merged text feeds the author metadata fallback.
+  single-line followers. A trailing drop-cap letter (one not in the
+  profile's `single_letter_words`) moves into the body paragraph. The merged text feeds the author metadata fallback.
 - **Headers/footers** — two layers: signatures repeated on ≥40% of pages in
   edge zones, and pattern furniture (`VOL`, `www.`, `ISSN`, `doi`, `©`,
   dates) in the outer 7% edge (works on 1-page docs). Narrow+tall blocks in
@@ -165,8 +165,12 @@ chapters.
   (`caption` union, `figure_caption` no-tables, `table_caption`
   tables-only), plus the localized `abstract_title`, `notes_title`,
   byline `name_joiner`, the `affiliation` tail-split for author
-  metadata, the `section_fallback` untitled-chapter name, and the
-  fallback literals `table_alt`/`unknown_author`/`start_title` — every
+  metadata, the `section_fallback` untitled-chapter name, the
+  fallback literals `table_alt`/`unknown_author`/`start_title`, and
+  the `single_letter_words` drop-cap exclusion set (lone letters that
+  are words when sentence-initial — DE's is empty so every lone
+  letter fuses; FR a/à/y, ES a/y/o — pre-vocalic allomorphs like
+  e/u never open a sentence, so they stay drop-caps) — every
   user-visible string rides the profile so nothing leaks English.
   Unknown codes raise; the API accepts a custom
   `LangProfile` for unsupported languages. Non-Latin scripts (CJK, RTL)
