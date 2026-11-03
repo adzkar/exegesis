@@ -180,19 +180,22 @@ def test_german_furniture_jahrg_abbreviation():
 
 
 def test_table_label_abbreviations():
-    """DE/ES journals set table legends as 'Tab. N' as often as the
-    spelled-out word — the table arm must carry the abbreviation like
-    the figure arm already does ('Abb.'/'Fig.'), or those legends miss
-    caption adoption, grid boundaries, and <caption>. The union picks
-    them up; figure_caption stays blind (images never take tables)."""
-    for profile in (DE, ES):
+    """Non-English journals set table legends as 'Tab. N' as often as
+    the spelled-out word — the table arm must carry the abbreviation
+    like the figure arm already does ('Abb.'/'Fig.'), or those legends
+    miss caption adoption, grid boundaries, and <caption>. The union
+    picks them up; figure_caption stays blind (images never take
+    tables)."""
+    for profile in (DE, ES, FR):
         assert profile.table_caption.match("Tab. 3  Ergebnisse")
         assert profile.caption.match("Tab. 3  Ergebnisse")
         assert not profile.figure_caption.match("Tab. 3  Ergebnisse")
     assert DE.table_caption.match("Tabelle 3: Ergebnisse")
     assert ES.table_caption.match("Tabla 3: Resultados")
+    assert FR.table_caption.match("Tableau 3: Résultats")
     # plural label forms stay unmatched, like EN's 'Tables N'
     assert not DE.table_caption.match("Tabellen 3: Werte")
+    assert not FR.table_caption.match("Tableaux 3: Résultats")
 
 
 def test_singular_author_note_arms():

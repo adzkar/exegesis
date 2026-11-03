@@ -205,7 +205,7 @@ FR = _profile(
         r"Contributions des auteurs|Disponibilité des données)\b"
     ),
     fig_labels=r"fig\.?|figure|planche|schéma|graphique",
-    table_label=r"tableau",
+    table_label=r"tab(?:leau|\.)?",
     abstract="Résumé",
     notes_title="Notes",
     joiner=" et ",
