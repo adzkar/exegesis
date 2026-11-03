@@ -26,6 +26,14 @@ pkg_ver="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' exegesis/__init__.py)"
 [ -n "$pkg_ver" ] || die "no __version__ found in exegesis/__init__.py"
 [ "$ver" != "$pkg_ver" ] || die "already at $ver"
 
+# reject a downgrade too — a smaller arg would seed its entry above the
+# current release and could ship as 'latest' (sort -t. -k is the
+# portable form; BSD sort has no -V)
+newest="$(printf '%s\n%s\n' "$pkg_ver" "$ver" \
+    | sort -t. -k1,1n -k2,2n -k3,3n | tail -n1)"
+[ "$newest" = "$ver" ] \
+    || die "version $ver is not newer than $pkg_ver"
+
 # build_report.py needs the root *.pdf corpus — gitignored, so absent
 # from worktrees and fresh clones; fail here rather than mid-prep
 shopt -s nullglob
