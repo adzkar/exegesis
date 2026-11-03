@@ -20,11 +20,18 @@ ver="${1#v}"
 
 git fetch origin master --quiet
 [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/master)" ] \
-    || die "master is not in sync with origin/master — pull first"
+    || die "master is not in sync with origin/master — pull or push first"
 
 pkg_ver="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' exegesis/__init__.py)"
 [ -n "$pkg_ver" ] || die "no __version__ found in exegesis/__init__.py"
 [ "$ver" != "$pkg_ver" ] || die "already at $ver"
+
+# build_report.py needs the root *.pdf corpus — gitignored, so absent
+# from worktrees and fresh clones; fail here rather than mid-prep
+shopt -s nullglob
+pdfs=(*.pdf)
+[ ${#pdfs[@]} -gt 0 ] \
+    || die "no *.pdf corpus — docs/report cannot be regenerated"
 
 # seed changelog bullets from the commits since the last tag — merge
 # commits excluded so the list reads as changes, not integration noise
