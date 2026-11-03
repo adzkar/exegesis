@@ -37,7 +37,9 @@ class LangProfile:
     ``furniture`` marks running heads/footers by content; ``note_start``
     marks acknowledgment/correspondence openers that divert a bottom-zone
     block into the notes chapter (and join split notes in the chapter);
-    ``section_label`` promotes leading section names to h2; the three
+    ``section_label`` promotes leading section names to h2 — its capture
+    group 1 becomes the heading text (the whole match when the pattern
+    has no groups, so a custom ``r"^Bibliografia\b"`` can't crash); the three
     caption patterns drive both figure/table alt-text scans (``caption``
     is the full label union, ``figure_caption`` excludes table labels —
     table legends sit above the body so a caption *below* an image

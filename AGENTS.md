@@ -167,7 +167,10 @@ chapters.
   byline `name_joiner`. Unknown codes raise; the API accepts a custom
   `LangProfile` for unsupported languages. Non-Latin scripts (CJK, RTL)
   are out of scope — word shaping, vertical text, and direction
-  attributes are unhandled. In `section_label` alternations always list
+  attributes are unhandled. `section_label` reads its label from capture
+  group 1, falling back to the whole match — a custom group-less pattern
+  (`r"^Bibliografia\b"`) can't IndexError mid-conversion. In
+  `section_label` alternations always list
   longest-first (`Références bibliographiques|Références`, `Literaturverzeichnis|Literatur`) — a shorter arm that fully matches
   leaves a lowercase rest the caller rejects, silently dead-labeling the
   long form.

@@ -7,6 +7,7 @@ heading, pattern furniture, and the language stamp on the output.
 """
 import re
 import zipfile
+from dataclasses import replace
 
 import fitz
 import pytest
@@ -210,6 +211,31 @@ def test_profile_object_accepted(tmp_path):
     _out, html = _convert_epub(doc, tmp_path, "custom", lang=LANGS["de"])
     assert isinstance(EN, LangProfile)
     assert 'xml:lang="de"' in html
+
+
+def test_groupless_section_label_falls_back(tmp_path):
+    """A custom profile whose section_label has no capture group still
+    heads its section — _section_label falls back to the whole match
+    rather than IndexError-ing mid-conversion."""
+    lang = replace(
+        EN, section_label=re.compile(r"^Bibliografia\b")
+    )
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 200),
+        "Cuerpo del artículo que precede a la bibliografía.",
+        fontsize=BODY,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 500, 540, 520), "Bibliografia", fontsize=BODY
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 530, 540, 560), "Uno, D. Una entrada.",
+        fontsize=BODY,
+    )
+    _out, html = _convert_epub(doc, tmp_path, "groupless", lang=lang)
+    assert re.search(r"<h2[^>]*>Bibliografia<", html)
 
 
 def test_english_default_unchanged(tmp_path):

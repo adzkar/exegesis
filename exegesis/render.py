@@ -55,7 +55,11 @@ def _section_label(text, lang: LangProfile = EN):
     rest = text[m.end():].strip()
     if rest and not (rest[0].isdigit() or rest[0].isupper()):
         return None
-    return m.group(1), rest
+    # group 1 is the documented label slot, but a custom profile whose
+    # pattern captures nothing — or whose first group sat out this
+    # alternative — still yields the whole match
+    label = m.group(1) if m.re.groups and m.group(1) else m.group(0)
+    return label, rest
 
 
 def _authorish(text, joiner=" and "):
