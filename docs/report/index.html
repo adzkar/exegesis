@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>exegesis — conversion report</title>
 <style>
 body { font-family: -apple-system, Helvetica, Arial, sans-serif;
@@ -11,14 +12,28 @@ th, td { border: 1px solid #ccc; padding: 0.3rem 0.5rem;
          text-align: left; vertical-align: top; }
 th { background: #f2f2f2; }
 td.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.wrap { overflow-wrap: anywhere; }
 tr.err td { background: #fdeeee; }
 .meta { color: #666; font-size: 0.8rem; }
+.scroll { overflow-x: auto; }
+@media (max-width: 640px) {
+  /* each record becomes a stacked card; data-label attrs carry the
+     column names into td::before so no <th> row is needed */
+  .scroll { overflow-x: visible; }
+  table, tbody, tr, td { display: block; }
+  thead { display: none; }
+  tr { border: 1px solid #ccc; margin-bottom: 0.6rem; }
+  td, td.num { border: none; text-align: left;
+               padding: 0.15rem 0.5rem; }
+  td::before { content: attr(data-label) ": "; font-weight: bold;
+               color: #555; }
+}
 </style></head><body>
 <h1>exegesis conversion report</h1>
-<p class="meta">Generated 2026-11-03 22:34 · exegesis 0.1.0 ·
+<p class="meta">Generated 2026-11-03 23:06 · exegesis 0.1.0 ·
 4/4 converted</p>
-<table><thead><tr><th>PDF</th><th>Title</th><th>Pages</th><th>Cols</th><th>Chap</th><th>Head</th><th>Notes</th><th>Img</th><th>Grid</th><th>Raster</th><th>Sec</th></tr></thead>
-<tbody><tr><td>2000_Biobehavioral-responses-to-stress-in-females_tend-and-befriend.pdf</td><td>Biobehavioral Responses to Stress in Females: Tend-and-Befriend, not Fight-or-Flight</td><td class="num">19</td><td class="num">2</td><td class="num">14</td><td class="num">13</td><td class="num">29</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0.5</td></tr><tr><td>A Wandering Mind Is an Unhappy Mind.pdf</td><td>A Wandering Mind Is an Unhappy Mind</td><td class="num">1</td><td class="num">3</td><td class="num">4</td><td class="num">3</td><td class="num">1</td><td class="num">1</td><td class="num">0</td><td class="num">0</td><td class="num">0.1</td></tr><tr><td>Negativity_Bias_Negativity_Dominance_and_Contagion.pdf</td><td>Negativity Bias, Negativity Dominance, and Contagion</td><td class="num">26</td><td class="num">2</td><td class="num">33</td><td class="num">32</td><td class="num">1</td><td class="num">2</td><td class="num">0</td><td class="num">1</td><td class="num">0.4</td></tr><tr><td>Polizzi-Lynn2021_Article_RegulatingEmotionalityToManage.pdf</td><td>Regulating Emotionality to Manage Adversity: A Systematic Review of the Relation Between Emotion Regulation and Psychological Resilience</td><td class="num">21</td><td class="num">2</td><td class="num">25</td><td class="num">24</td><td class="num">1</td><td class="num">5</td><td class="num">0</td><td class="num">4</td><td class="num">0.5</td></tr></tbody></table>
+<div class="scroll"><table><thead><tr><th>PDF</th><th>Title</th><th>Pages</th><th>Cols</th><th>Chap</th><th>Head</th><th>Notes</th><th>Img</th><th>Grid</th><th>Raster</th><th>Sec</th></tr></thead>
+<tbody><tr><td data-label="PDF" class="wrap">2000_Biobehavioral-responses-to-stress-in-females_tend-and-befriend.pdf</td><td data-label="Title" class="wrap">Biobehavioral Responses to Stress in Females: Tend-and-Befriend, not Fight-or-Flight</td><td data-label="Pages" class="num">19</td><td data-label="Cols" class="num">2</td><td data-label="Chap" class="num">14</td><td data-label="Head" class="num">13</td><td data-label="Notes" class="num">29</td><td data-label="Img" class="num">0</td><td data-label="Grid" class="num">0</td><td data-label="Raster" class="num">0</td><td data-label="Sec" class="num">0.5</td></tr><tr><td data-label="PDF" class="wrap">A Wandering Mind Is an Unhappy Mind.pdf</td><td data-label="Title" class="wrap">A Wandering Mind Is an Unhappy Mind</td><td data-label="Pages" class="num">1</td><td data-label="Cols" class="num">3</td><td data-label="Chap" class="num">4</td><td data-label="Head" class="num">3</td><td data-label="Notes" class="num">1</td><td data-label="Img" class="num">1</td><td data-label="Grid" class="num">0</td><td data-label="Raster" class="num">0</td><td data-label="Sec" class="num">0.1</td></tr><tr><td data-label="PDF" class="wrap">Negativity_Bias_Negativity_Dominance_and_Contagion.pdf</td><td data-label="Title" class="wrap">Negativity Bias, Negativity Dominance, and Contagion</td><td data-label="Pages" class="num">26</td><td data-label="Cols" class="num">2</td><td data-label="Chap" class="num">33</td><td data-label="Head" class="num">32</td><td data-label="Notes" class="num">1</td><td data-label="Img" class="num">2</td><td data-label="Grid" class="num">0</td><td data-label="Raster" class="num">1</td><td data-label="Sec" class="num">0.3</td></tr><tr><td data-label="PDF" class="wrap">Polizzi-Lynn2021_Article_RegulatingEmotionalityToManage.pdf</td><td data-label="Title" class="wrap">Regulating Emotionality to Manage Adversity: A Systematic Review of the Relation Between Emotion Regulation and Psychological Resilience</td><td data-label="Pages" class="num">21</td><td data-label="Cols" class="num">2</td><td data-label="Chap" class="num">25</td><td data-label="Head" class="num">24</td><td data-label="Notes" class="num">1</td><td data-label="Img" class="num">5</td><td data-label="Grid" class="num">0</td><td data-label="Raster" class="num">4</td><td data-label="Sec" class="num">0.5</td></tr></tbody></table></div>
 <p class="meta">Cols = detected text columns; Grid = upright tables
 emitted as &lt;table&gt;; Raster = rotated tables embedded as images.</p>
 </body></html>
