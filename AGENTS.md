@@ -9,6 +9,8 @@ layout analysis over PyMuPDF blocks — no OCR, no ML dependencies.
 - Convert: `python3 pdf_to_epub.py <input.pdf> [-o output.epub] [--title T] [--author A] [--keep-headers]`
 - Verify output: `unzip -l out.epub` (chapters, notes.xhtml, images, nav present),
   then spot-check a chapter's XHTML for reading order
+- Release: `scripts/release.sh X.Y.Z` (gates on ruff + non-slow pytest; see
+  `RELEASE.md`)
 
 ## Architecture (`exegesis` package)
 

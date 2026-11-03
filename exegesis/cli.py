@@ -5,6 +5,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from . import __version__
 from .emit import convert
 
 
@@ -25,6 +26,9 @@ def main(argv: list[str] | None = None) -> None:
         "--keep-headers",
         action="store_true",
         help="keep header/footer strips (page numbers, running heads)",
+    )
+    parser.add_argument(
+        "--version", action="version", version=f"%(prog)s {__version__}"
     )
     args = parser.parse_args(argv)
 
