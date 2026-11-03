@@ -51,7 +51,11 @@ class LangProfile:
     byline's institution tail off for author metadata (case-sensitive —
     affiliation words keep their capitals, so a lowercase 'center' inside
     a name never splits); ``section_fallback`` is the untitled-chapter
-    name, a ``str.format`` template taking ``n``.
+    name, a ``str.format`` template taking ``n``. ``table_alt`` is the
+    alt text for an uncaptioned rasterized table; ``unknown_author`` is
+    the dc:creator when neither metadata nor a byline yields a name;
+    ``start_title`` labels the seeded TOC entry of a headingless,
+    noteless document — none should leak English into a localized EPUB.
     """
 
     code: str
@@ -66,6 +70,9 @@ class LangProfile:
     name_joiner: str
     affiliation: re.Pattern
     section_fallback: str
+    table_alt: str
+    unknown_author: str
+    start_title: str
 
 
 def _profile(
@@ -81,6 +88,9 @@ def _profile(
     joiner,
     affils,
     section,
+    table_alt,
+    unknown_author,
+    start_title,
 ):
     """Assemble a frozen profile from per-language pattern strings.
 
@@ -102,6 +112,9 @@ def _profile(
         name_joiner=joiner,
         affiliation=re.compile(rf"\s+(?:{affils})\b"),
         section_fallback=section,
+        table_alt=table_alt,
+        unknown_author=unknown_author,
+        start_title=start_title,
     )
 
 
@@ -130,6 +143,9 @@ EN = _profile(
     joiner=" and ",
     affils=r"Department|University|Institute|Center|College|School of",
     section="Section {n}",
+    table_alt="table",
+    unknown_author="Unknown",
+    start_title="Start",
 )
 
 DE = _profile(
@@ -163,6 +179,9 @@ DE = _profile(
         r"Universität|Institut|Fakultät|Fachbereich|Abteilung|Hochschule"
     ),
     section="Abschnitt {n}",
+    table_alt="Tabelle",
+    unknown_author="Unbekannt",
+    start_title="Anfang",
 )
 
 FR = _profile(
@@ -195,6 +214,9 @@ FR = _profile(
         r"Centre"
     ),
     section="Section {n}",
+    table_alt="tableau",
+    unknown_author="Inconnu",
+    start_title="Début",
 )
 
 ES = _profile(
@@ -225,6 +247,9 @@ ES = _profile(
     joiner=" y ",
     affils=r"Universidad|Instituto|Departamento|Facultad|Escuela|Centro",
     section="Sección {n}",
+    table_alt="tabla",
+    unknown_author="Desconocido",
+    start_title="Inicio",
 )
 
 LANGS = {p.code: p for p in (EN, DE, FR, ES)}

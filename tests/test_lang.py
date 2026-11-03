@@ -316,3 +316,28 @@ def test_section_fallback_localized(tmp_path):
     out, _html = _convert_epub(doc, tmp_path, "de_sec", lang="de")
     chap = zipfile.ZipFile(out).read("EPUB/chap_1.xhtml").decode()
     assert "<title>Abschnitt 1</title>" in chap
+
+
+def test_fallback_literals_localized(tmp_path):
+    """An uncaptioned rasterized table and a missing author take profile
+    strings — 'alt="Tabelle"' and dc:creator 'Unbekannt' under de, not
+    the English defaults."""
+    doc = fitz.open()
+    p = _page(doc)
+    for i, x in enumerate((200, 260, 320)):
+        p.insert_textbox(
+            fitz.Rect(x, 400, x + 15, 520),
+            f"r1c{i} r2c{i} r3c{i}",
+            fontsize=BODY,
+        )
+    p.insert_textbox(
+        fitz.Rect(72, 560, 540, 700),
+        "Fließtext unterhalb der Tabelle.",
+        fontsize=BODY,
+    )
+    out, _html = _convert_epub(doc, tmp_path, "de_talt", lang="de")
+    htmls = " ".join(doc_html(out).values())
+    assert 'alt="Tabelle"' in htmls
+    opf = zipfile.ZipFile(out).read("EPUB/content.opf").decode()
+    creator = re.search(r"<dc:creator[^>]*>([^<]+)<", opf).group(1)
+    assert creator == "Unbekannt"

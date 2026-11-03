@@ -165,8 +165,10 @@ chapters.
   (`caption` union, `figure_caption` no-tables, `table_caption`
   tables-only), plus the localized `abstract_title`, `notes_title`,
   byline `name_joiner`, the `affiliation` tail-split for author
-  metadata, and the `section_fallback` untitled-chapter name. Unknown
-  codes raise; the API accepts a custom
+  metadata, the `section_fallback` untitled-chapter name, and the
+  fallback literals `table_alt`/`unknown_author`/`start_title` — every
+  user-visible string rides the profile so nothing leaks English.
+  Unknown codes raise; the API accepts a custom
   `LangProfile` for unsupported languages. Non-Latin scripts (CJK, RTL)
   are out of scope — word shaping, vertical text, and direction
   attributes are unhandled. `section_label` reads its label from capture

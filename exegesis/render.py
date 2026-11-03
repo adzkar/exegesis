@@ -465,7 +465,7 @@ def _render_page(page, page_index: int, state: PipelineState):
                     edges,
                     page.rect.width,
                     region=tbl,
-                    fallback="table",
+                    fallback=state.lang.table_alt,
                     skip_ids=nonbody_ids,
                     pattern=state.lang.table_caption,
                     above_pattern=state.lang.caption,
