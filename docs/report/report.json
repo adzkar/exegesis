@@ -1,6 +1,6 @@
 {
-  "generated": "2026-11-03 23:55",
-  "version": "0.1.1",
+  "generated": "2026-11-04 00:04",
+  "version": "0.1.2",
   "results": [
     {
       "pdf": "2000_Biobehavioral-responses-to-stress-in-females_tend-and-befriend.pdf",
@@ -14,7 +14,7 @@
       "columns": 2,
       "grid_tables": 0,
       "raster_tables": 0,
-      "seconds": 0.6
+      "seconds": 0.5
     },
     {
       "pdf": "A Wandering Mind Is an Unhappy Mind.pdf",
@@ -42,7 +42,7 @@
       "columns": 2,
       "grid_tables": 0,
       "raster_tables": 1,
-      "seconds": 0.4
+      "seconds": 0.3
     },
     {
       "pdf": "Polizzi-Lynn2021_Article_RegulatingEmotionalityToManage.pdf",

@@ -4,6 +4,10 @@ All notable changes to exegesis are documented here. Versions follow
 [Semantic Versioning](https://semver.org); per-release notes are
 generated on each GitHub Release (see `RELEASE.md`).
 
+## [0.1.2] — 2026-11-04
+
+- Pages: publish only the report — dev docs move to dev/
+
 ## [0.1.1] — 2026-11-03
 
 - Docs: releasing.md — corpus unconditional, real die strings
