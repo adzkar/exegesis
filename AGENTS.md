@@ -177,7 +177,10 @@ chapters.
   `section_label` alternations always list
   longest-first (`Références bibliographiques|Références`, `Literaturverzeichnis|Literatur`) — a shorter arm that fully matches
   leaves a lowercase rest the caller rejects, silently dead-labeling the
-  long form.
+  long form. Caption label alternations carry the abbreviated forms
+  beside the spelled-out word (`Abb.`, `Fig.`, `Tab.`) — keep the fig
+  and table arms in parity: a journal that abbreviates `Abbildung`
+  sets `Tabelle` as `Tab.` just as often.
 - **Styles** — bold via flags or `.B`/`Bold` font-name suffix, italic via
   `.I`/`Italic`/`Oblique` suffix → `<b>`/`<i>` spans.
 - **Metadata** — title/author from PDF metadata are validated (must contain

@@ -171,7 +171,7 @@ DE = _profile(
         r"Datenverfügbarkeit)\b"
     ),
     fig_labels=r"abb\.?|abbildung|tafel|schema|diagramm|grafik",
-    table_label=r"tabelle",
+    table_label=r"tab(?:elle|\.)?",
     abstract="Zusammenfassung",
     notes_title="Anmerkungen",
     joiner=" und ",
@@ -241,7 +241,7 @@ ES = _profile(
         r"Disponibilidad de datos)\b"
     ),
     fig_labels=r"fig\.?|figura|lámina|esquema|gráfico",
-    table_label=r"tabla",
+    table_label=r"tab(?:la|\.)?",
     abstract="Resumen",
     notes_title="Notas",
     joiner=" y ",
