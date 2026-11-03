@@ -163,8 +163,10 @@ chapters.
   `state.lang`; every language-bound scan reads it — furniture content
   patterns, note openers, section labels, the three caption patterns
   (`caption` union, `figure_caption` no-tables, `table_caption`
-  tables-only), plus the localized `abstract_title`, `notes_title`, and
-  byline `name_joiner`. Unknown codes raise; the API accepts a custom
+  tables-only), plus the localized `abstract_title`, `notes_title`,
+  byline `name_joiner`, the `affiliation` tail-split for author
+  metadata, and the `section_fallback` untitled-chapter name. Unknown
+  codes raise; the API accepts a custom
   `LangProfile` for unsupported languages. Non-Latin scripts (CJK, RTL)
   are out of scope — word shaping, vertical text, and direction
   attributes are unhandled. `section_label` reads its label from capture

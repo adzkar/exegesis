@@ -47,7 +47,11 @@ class LangProfile:
     labels alone, for the rotated-table scan and grid-table ``<caption>``).
     ``abstract_title`` is the injected heading for the detected abstract;
     ``notes_title`` names the notes chapter; ``name_joiner`` is the
-    language's 'and' inside a byline name list.
+    language's 'and' inside a byline name list. ``affiliation`` splits a
+    byline's institution tail off for author metadata (case-sensitive —
+    affiliation words keep their capitals, so a lowercase 'center' inside
+    a name never splits); ``section_fallback`` is the untitled-chapter
+    name, a ``str.format`` template taking ``n``.
     """
 
     code: str
@@ -60,6 +64,8 @@ class LangProfile:
     abstract_title: str
     notes_title: str
     name_joiner: str
+    affiliation: re.Pattern
+    section_fallback: str
 
 
 def _profile(
@@ -73,6 +79,8 @@ def _profile(
     abstract,
     notes_title,
     joiner,
+    affils,
+    section,
 ):
     """Assemble a frozen profile from per-language pattern strings.
 
@@ -92,6 +100,8 @@ def _profile(
         abstract_title=abstract,
         notes_title=notes_title,
         name_joiner=joiner,
+        affiliation=re.compile(rf"\s+(?:{affils})\b"),
+        section_fallback=section,
     )
 
 
@@ -118,6 +128,8 @@ EN = _profile(
     abstract="Abstract",
     notes_title="Notes",
     joiner=" and ",
+    affils=r"Department|University|Institute|Center|College|School of",
+    section="Section {n}",
 )
 
 DE = _profile(
@@ -130,7 +142,7 @@ DE = _profile(
     ),
     notes=(
         r"^[*\s]*(danksagung|wir danken|"
-        r"(?:der|die|den) autor(?:en|innen)? dank(?:t|en)|"
+        r"(?:der|die|den) autor(?:innen|en|in)? dank(?:t|en)|"
         r"gefördert (?:durch|von)|unterstützt (?:durch|von)|"
         r"korrespondenz (?:an|richtet|bitte)|anfragen (?:an|richtet)|"
         r"diese (?:arbeit|studie) wurde(?:n)? (?:von|durch))"
@@ -147,6 +159,10 @@ DE = _profile(
     abstract="Zusammenfassung",
     notes_title="Anmerkungen",
     joiner=" und ",
+    affils=(
+        r"Universität|Institut|Fakultät|Fachbereich|Abteilung|Hochschule"
+    ),
+    section="Abschnitt {n}",
 )
 
 FR = _profile(
@@ -159,6 +175,7 @@ FR = _profile(
     ),
     notes=(
         r"^[*\s]*(remerciements|nous remercions|les auteurs remercient|"
+        r"l['’]auteur(?:e)? remercie|"
         r"financ[ée]e? (?:par|grâce)|soutenue? (?:par|grâce)|"
         r"correspondance (?:à|adresser)|ce travail (?:a été|fut))"
     ),
@@ -173,6 +190,11 @@ FR = _profile(
     abstract="Résumé",
     notes_title="Notes",
     joiner=" et ",
+    affils=(
+        r"Université|Institut|Département|Laboratoire|École|Faculté|"
+        r"Centre"
+    ),
+    section="Section {n}",
 )
 
 ES = _profile(
@@ -185,6 +207,7 @@ ES = _profile(
     ),
     notes=(
         r"^[*\s]*(agradecimientos|agradecemos|los autores agradecen|"
+        r"(?:el autor|la autora) agradece|"
         r"financiad[oa] (?:por|gracias)|apoyad[oa] por|"
         r"correspondencia (?:a|dirigir)|este trabajo (?:fue|ha sido))"
     ),
@@ -200,6 +223,8 @@ ES = _profile(
     abstract="Resumen",
     notes_title="Notas",
     joiner=" y ",
+    affils=r"Universidad|Instituto|Departamento|Facultad|Escuela|Centro",
+    section="Sección {n}",
 )
 
 LANGS = {p.code: p for p in (EN, DE, FR, ES)}

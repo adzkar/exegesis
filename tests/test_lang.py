@@ -14,7 +14,7 @@ import pytest
 from helpers import doc_html, lint_epub
 
 from exegesis import convert
-from exegesis.lang import DE, EN, LANGS, LangProfile, get_lang
+from exegesis.lang import DE, EN, ES, FR, LANGS, LangProfile, get_lang
 
 BODY = 10
 
@@ -179,6 +179,18 @@ def test_german_furniture_jahrg_abbreviation():
     assert DE.furniture.search("Jahrgang 89")
 
 
+def test_singular_author_note_arms():
+    """Singular-author acknowledgments divert like EN's 'the author'
+    arm — DE Autorin, FR l'auteur (either apostrophe or gender), ES
+    el/la autor(a) — so a lone-author note doesn't stay in body flow."""
+    assert DE.note_start.match("Die Autorin dankt der DFG")
+    assert DE.note_start.match("Der Autor dankt der DFG")
+    assert FR.note_start.match("L'auteur remercie le CNRS")
+    assert FR.note_start.match("L’auteur remercie le CNRS")
+    assert ES.note_start.match("El autor agradece el apoyo")
+    assert ES.note_start.match("La autora agradece el apoyo")
+
+
 def test_german_notes_chapter_title(tmp_path):
     """A 'Danksagung' opener lands in a notes chapter titled 'Anmerkungen'."""
     doc = fitz.open()
@@ -261,3 +273,46 @@ def test_english_default_unchanged(tmp_path):
     _out, html = _convert_epub(doc, tmp_path, "en_def")
     assert 'xml:lang="en"' in html
     assert 'alt="Figure 1. A caption."' in html
+
+
+def test_affiliation_tail_stripped_by_profile(tmp_path):
+    """The byline→author metadata fallback splits the institution tail
+    on profile vocabulary — 'Universidad …' under es, not just English
+    'University …' — keeping dc:creator to the name list."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 120),
+        "Un estudio sobre la lengua",
+        fontsize=18,  # ≥1.6× body → h1
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 130, 540, 160),
+        "M. García y J. López, Universidad de Granada",
+        fontsize=BODY,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 200, 540, 640),
+        "Texto del artículo con contenido suficiente para el análisis. " * 4,
+        fontsize=BODY,
+    )
+    out, _html = _convert_epub(doc, tmp_path, "es_affil", lang="es")
+    opf = zipfile.ZipFile(out).read("EPUB/content.opf").decode()
+    creator = re.search(r"<dc:creator[^>]*>([^<]+)<", opf).group(1)
+    assert "Universidad" not in creator
+    assert "García" in creator
+
+
+def test_section_fallback_localized(tmp_path):
+    """A headingless document's fallback chapter title comes from the
+    profile — 'Abschnitt 1' under de, not English 'Section 1'."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 640),
+        "Fließtext ohne jede Überschrift auf dieser Seite. " * 8,
+        fontsize=BODY,
+    )
+    out, _html = _convert_epub(doc, tmp_path, "de_sec", lang="de")
+    chap = zipfile.ZipFile(out).read("EPUB/chap_1.xhtml").decode()
+    assert "<title>Abschnitt 1</title>" in chap

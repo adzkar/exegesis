@@ -120,10 +120,7 @@ def convert(
         author = meta.get("author") or ""
         if not _valid_title(author):
             name: str = state.byline_text or "Unknown"
-            name = re.split(
-                r"\s+(?:Department|University|Institute|Center|College|School of)\b",
-                name,
-            )[0]
+            name = profile.affiliation.split(name)[0]
             author = re.sub(r"[*†‡§]", "", name).strip(" ,")
         else:
             author = author.strip()
@@ -172,7 +169,7 @@ def convert(
             None,
         )
         chap = epub.EpubHtml(
-            title=heading or f"Section {idx + 1}",
+            title=heading or profile.section_fallback.format(n=idx + 1),
             file_name=f"chap_{idx + 1}.xhtml",
             lang=profile.code,
         )
