@@ -152,7 +152,8 @@ DE = _profile(
     "de",
     furniture=(
         r"www\.|issn|doi[:\s]|©|copyright|urheberrecht|"
-        r"band\s*\.?\s*\d|jahrg(?:ang)?\.?|seite\s*\.?\s*\d|"
+        r"\b(?:band|bd)\s*\.?\s*\d|jahrg(?:ang)?\.?|"
+        r"\b(?:seite|s\.)\s*\.?\s*\d|"
         r"\b\d{1,2}\.\s*(?:januar|februar|märz|april|mai|juni|juli|"
         r"august|september|oktober|november|dezember)"
     ),

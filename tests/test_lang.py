@@ -179,6 +179,20 @@ def test_german_furniture_jahrg_abbreviation():
     assert DE.furniture.search("Jahrgang 89")
 
 
+def test_german_furniture_bd_s_abbreviations():
+    """'Bd. N'/'S. N' are the standard abbreviated running-head forms —
+    short docs can't accumulate the ≥40%-page signature recurrence, so
+    both must flag edge furniture like the spelled-out arms do. The
+    \b guards keep 'bd'/'s.' from matching mid-word — 'ebd. N' (ebenda,
+    a footnote citation marker) and 'Figs. N' stay unfurniture."""
+    assert DE.furniture.search("Bd. 89, S. 12–30")
+    assert DE.furniture.search("S. 45")
+    assert DE.furniture.search("Band 89")
+    assert DE.furniture.search("Seite 45")
+    assert not DE.furniture.search("Figs. 45")
+    assert not DE.furniture.search("ebd. 45")
+
+
 def test_table_label_abbreviations():
     """Non-English journals set table legends as 'Tab. N' as often as
     the spelled-out word — the table arm must carry the abbreviation
