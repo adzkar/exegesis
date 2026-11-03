@@ -124,12 +124,13 @@ DE = _profile(
     "de",
     furniture=(
         r"www\.|issn|doi[:\s]|©|copyright|urheberrecht|"
-        r"band\s*\.?\s*\d|jahrgang|seite\s*\.?\s*\d|"
+        r"band\s*\.?\s*\d|jahrg(?:ang)?\.?|seite\s*\.?\s*\d|"
         r"\b\d{1,2}\.\s*(?:januar|februar|märz|april|mai|juni|juli|"
         r"august|september|oktober|november|dezember)"
     ),
     notes=(
-        r"^[*\s]*(danksagung|wir danken|de[rn] autor(?:en)? dankt|"
+        r"^[*\s]*(danksagung|wir danken|"
+        r"(?:der|die|den) autor(?:en|innen)? dank(?:t|en)|"
         r"gefördert (?:durch|von)|unterstützt (?:durch|von)|"
         r"korrespondenz (?:an|richtet|bitte)|anfragen (?:an|richtet)|"
         r"diese (?:arbeit|studie) wurde(?:n)? (?:von|durch))"

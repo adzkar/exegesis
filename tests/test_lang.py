@@ -14,7 +14,7 @@ import pytest
 from helpers import doc_html, lint_epub
 
 from exegesis import convert
-from exegesis.lang import EN, LANGS, LangProfile, get_lang
+from exegesis.lang import DE, EN, LANGS, LangProfile, get_lang
 
 BODY = 10
 
@@ -160,6 +160,23 @@ def test_spanish_caption_and_abstract_title(tmp_path):
     )
     _out, html = _convert_epub(doc, tmp_path, "es_abs", lang="es")
     assert "<h2" in html and "Resumen" in html
+
+
+def test_german_note_start_plural_acknowledgment():
+    """'Die Autoren danken …' is the canonical plural acknowledgment —
+    the der/die/den x dankt/danken grid covers it like EN/FR/ES's
+    plural arms do; article-less 'Autoren danken' stays unmatched."""
+    assert DE.note_start.match("Die Autoren danken der DFG")
+    assert DE.note_start.match("Der Autor dankt den Gutachtern")
+    assert DE.note_start.match("Die Autorinnen danken der DFG")
+    assert not DE.note_start.match("Autoren danken niemandem")
+
+
+def test_german_furniture_jahrg_abbreviation():
+    """Running heads abbreviate 'Jahrgang' as 'Jahrg.' — both forms
+    flag edge furniture."""
+    assert DE.furniture.search("Jahrg. 89")
+    assert DE.furniture.search("Jahrgang 89")
 
 
 def test_german_notes_chapter_title(tmp_path):
