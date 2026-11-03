@@ -207,9 +207,13 @@ def test_table_label_abbreviations():
     assert DE.table_caption.match("Tabelle 3: Ergebnisse")
     assert ES.table_caption.match("Tabla 3: Resultados")
     assert FR.table_caption.match("Tableau 3: Résultats")
+    # francophone journals also set plain 'Table N' legends
+    assert FR.table_caption.match("Table 3: Résultats")
+    assert FR.caption.match("Table 3: Résultats")
     # plural label forms stay unmatched, like EN's 'Tables N'
     assert not DE.table_caption.match("Tabellen 3: Werte")
     assert not FR.table_caption.match("Tableaux 3: Résultats")
+    assert not FR.table_caption.match("Tables 3: Résultats")
 
 
 def test_single_letter_word_sets():
