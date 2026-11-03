@@ -59,7 +59,7 @@ stamps the EPUB's language metadata. The API also accepts a custom
 4. **Emit** — fragments are chunked into chapters at headings, footnotes are
    collected into a Notes section, and everything is packaged via ebooklib.
 
-See the [pipeline diagram](docs/pipeline.md) for a visual walkthrough and
+See the [pipeline diagram](dev/pipeline.md) for a visual walkthrough and
 [AGENTS.md](AGENTS.md) for the detailed heuristics.
 
 ## Conversion report
