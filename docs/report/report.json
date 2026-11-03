@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-03 22:34",
+  "generated": "2026-11-03 23:06",
   "version": "0.1.0",
   "results": [
     {
@@ -42,7 +42,7 @@
       "columns": 2,
       "grid_tables": 0,
       "raster_tables": 1,
-      "seconds": 0.4
+      "seconds": 0.3
     },
     {
       "pdf": "Polizzi-Lynn2021_Article_RegulatingEmotionalityToManage.pdf",

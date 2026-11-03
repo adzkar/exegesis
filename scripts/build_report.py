@@ -36,8 +36,22 @@ th, td { border: 1px solid #ccc; padding: 0.3rem 0.5rem;
          text-align: left; vertical-align: top; }
 th { background: #f2f2f2; }
 td.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.wrap { overflow-wrap: anywhere; }
 tr.err td { background: #fdeeee; }
 .meta { color: #666; font-size: 0.8rem; }
+.scroll { overflow-x: auto; }
+@media (max-width: 640px) {
+  /* each record becomes a stacked card; data-label attrs carry the
+     column names into td::before so no <th> row is needed */
+  .scroll { overflow-x: visible; }
+  table, tbody, tr, td { display: block; }
+  thead { display: none; }
+  tr { border: 1px solid #ccc; margin-bottom: 0.6rem; }
+  td, td.num { border: none; text-align: left;
+               padding: 0.15rem 0.5rem; }
+  td::before { content: attr(data-label) ": "; font-weight: bold;
+               color: #555; }
+}
 """
 
 _COLUMNS = [
@@ -86,28 +100,34 @@ def _render_html(rows: list[dict], generated: str) -> str:
                 "title": html.escape(r.get("error", "failed")),
             }
             tds = "".join(
-                f"<td>{vals.get(k, '')}</td>" for k, _l in _COLUMNS[:-1]
+                f'<td data-label="{label}">{vals.get(k, "")}</td>'
+                for k, label in _COLUMNS[:-1]
             )
-            body.append(f'<tr class="err">{tds}<td class="num">{r["seconds"]}</td></tr>')
+            body.append(
+                f'<tr class="err">{tds}'
+                f'<td data-label="Sec" class="num">{r["seconds"]}</td></tr>'
+            )
             continue
         tds = "".join(
-            f'<td class="num">{r[k]}</td>'
+            f'<td data-label="{label}" class="num">{r[k]}</td>'
             if k not in ("pdf", "title")
-            else f"<td>{html.escape(str(r[k]))}</td>"
-            for k, _l in _COLUMNS
+            else f'<td data-label="{label}" class="wrap">'
+                 f"{html.escape(str(r[k]))}</td>"
+            for k, label in _COLUMNS
         )
         body.append(f"<tr>{tds}</tr>")
     ok = sum(1 for r in rows if r["status"] == "ok")
     version = getattr(exegesis, "__version__", "dev")
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>exegesis — conversion report</title>
 <style>{_CSS}</style></head><body>
 <h1>exegesis conversion report</h1>
 <p class="meta">Generated {generated} · exegesis {version} ·
 {ok}/{len(rows)} converted</p>
-<table><thead><tr>{cells}</tr></thead>
-<tbody>{"".join(body)}</tbody></table>
+<div class="scroll"><table><thead><tr>{cells}</tr></thead>
+<tbody>{"".join(body)}</tbody></table></div>
 <p class="meta">Cols = detected text columns; Grid = upright tables
 emitted as &lt;table&gt;; Raster = rotated tables embedded as images.</p>
 </body></html>
