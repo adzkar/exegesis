@@ -24,6 +24,8 @@ git fetch origin master --quiet
 [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/master)" ] \
     || die "master is not in sync with origin/master — push first"
 
+command -v gh >/dev/null 2>&1 \
+    || die "gh CLI not installed — see https://cli.github.com"
 gh auth status >/dev/null 2>&1 \
     || die "gh not authenticated — run gh auth login"
 
@@ -43,5 +45,6 @@ python3 -m pytest -m "not slow"
 
 git tag -a "v$ver" -m "exegesis v$ver"
 git push origin "v$ver"
-gh release create "v$ver" --title "v$ver" --generate-notes
+gh release create "v$ver" --title "v$ver" --generate-notes \
+    || die "release create failed — tag v$ver is already pushed; finish manually: gh release create v$ver --generate-notes"
 echo "release: v$ver published"
