@@ -44,8 +44,9 @@ def _num_pat(num: str) -> str:
 # Collection uses the same `Table N.` shape the disposition search
 # requires — a bare citation `(see Table 5)` must not produce a
 # 0-coverage "legend+data absent" High and fail the gate — and the same
-# legend position: anchored at an extracted line start so a
-# sentence-ending `…in Table 5.` citation can't collect either.
+# legend position: anchored at an extracted block start (blocks are
+# flattened one-per-line before matching) so a wrapped `…in\nTable 5.
+# The…` sentence or a cite-only `Table S3.` can't collect either.
 # Periodless caption styles (`Table 5 Descriptive`) go unchecked —
 # documented limit.
 TABLE_LEGEND_RE = re.compile(
@@ -342,7 +343,7 @@ def _legend_near(chap: str, num: str, needle: str,
     return needle in chap[max(0, m.start() - radius):m.end() + radius]
 
 
-def table_dispositions(pdf_text: str, chapters: dict[str, str],
+def table_dispositions(blocks_text: str, chapters: dict[str, str],
                        notes: str, furniture: set[str]):
     """For each `Table N` legend in the source, decide where it landed:
     inside <table> markup, beside <table> markup it failed to join
@@ -350,7 +351,9 @@ def table_dispositions(pdf_text: str, chapters: dict[str, str],
     intended rotated-table path — cells live in the image, not text),
     flattened into prose/blockquote, swept into notes.xhtml, or
     missing. Legends require a trailing period
-    (`Table N.`) so in-text citations `(Table N)` don't fake a hit, and
+    (`Table N.`) at a block start (the caller passes block-flattened
+    text — a wrapped sentence breaking at `Table 5.` stays mid-line),
+    so in-text citations `(Table N)` don't fake a hit, and
     the EPUB side must match in legend position so a sentence-ending
     citation can't stand in for the legend. Content survival is scored
     with 4-grams — a lone digit or cell word coincidentally matching
@@ -370,14 +373,14 @@ def table_dispositions(pdf_text: str, chapters: dict[str, str],
     epub_tokens += WORD_RE.findall(xhtml_text(notes).lower())
     grams = {tuple(epub_tokens[i:i + 4]) for i in range(len(epub_tokens) - 3)}
     out = []
-    for num in sorted({n.upper() for n in TABLE_LEGEND_RE.findall(pdf_text)},
+    for num in sorted({n.upper() for n in TABLE_LEGEND_RE.findall(blocks_text)},
                       key=_num_key):
         legend_re = (rf"(?:^|\n)\s*Table\b\s*\.?\s*{_num_pat(num)}"
                      rf"{CAP_RANGE}\.")
         coverages = []
-        for m in re.finditer(legend_re, pdf_text, re.IGNORECASE):
+        for m in re.finditer(legend_re, blocks_text, re.IGNORECASE):
             toks = [t for t in WORD_RE.findall(
-                pdf_text[m.end():m.end() + 700].lower())
+                blocks_text[m.end():m.end() + 700].lower())
                 if t not in furniture][:55]
             if len(toks) < 8:
                 continue
@@ -480,6 +483,14 @@ def main() -> int:
     # at a line boundary — a space join would defeat the line-start
     # anchors used for legend collection below.
     pdf_text = "\n".join(p.get_text("text") for p in pdf)
+    # Table legends collect on block-joined text: each extracted block
+    # flattens to one line, so `\n` anchors mean block starts — a real
+    # caption opens its own block, while a sentence that merely wraps
+    # at `Table 5.` (or a cite-only `Table S3.`) stays mid-line and
+    # can't fake a disposition row.
+    pdf_table_text = "\n".join(
+        " ".join(b[4].split())
+        for p in pdf for b in p.get_text("blocks"))
     epub_text = " ".join(xhtml_text(c) for c in chapters.values()) + " " + xhtml_text(notes)
     pw, ew = Counter(WORD_RE.findall(pdf_text.lower())), Counter(WORD_RE.findall(epub_text.lower()))
     if not pw:
@@ -527,7 +538,7 @@ def main() -> int:
             findings.append(("Med", "E", f"{Path(name).name}: legend spliced mid-sentence: …{frag}"))
 
     # ---- F. tables ----
-    for num, where, cov in table_dispositions(pdf_text, chapters, notes, furn_vocab):
+    for num, where, cov in table_dispositions(pdf_table_text, chapters, notes, furn_vocab):
         if where == "missing":
             # A dropped legend on an intact grid scores high coverage —
             # the data survived, so 'legend+data absent' would misstate

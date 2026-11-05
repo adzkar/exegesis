@@ -76,7 +76,9 @@ operational failures (unreadable inputs).
   2.</b>`); a `,`/`;` right after `</b>` reads as a bolded in-text
   citation, not a splice.
 - **F. Tables** — every `Table N.` legend in the source (trailing period
-  and line-start position required — `Table S1.`/`Table 1A.`/`TABLE 2.`/
+  and *block*-start position required — blocks are flattened one-per-line
+  so a sentence wrapping at `Table 5.` or a cite-only `Table S3.` can't
+  collect — `Table S1.`/`Table 1A.`/`TABLE 2.`/
   `Table 2 (b).`/`Table 3–4.` collect, ranges key on the first number;
   `(Table N)`
   citations and sentence-ending `…in Table 5.` don't) is located in the
