@@ -27,10 +27,11 @@ from xml.etree import ElementTree as ET
 
 WORD_RE = re.compile(r"[A-Za-z0-9]+")
 TAG_RE = re.compile(r"<[^>]+>")
-# Caption numbers mirror the pipeline's `_CAP_NUM` leading unit:
-# `s?` supplementary prefix, letter suffix (`1a`) or parenthesized
-# letter (`2(b)`); dash-joined ranges key on the first number.
+# Caption numbers mirror the pipeline's `_CAP_NUM`: `s?` supplementary
+# prefix, letter suffix (`1a`) or parenthesized letter (`2(b)`); the
+# range tail sits outside the capture so `Table 3–4.` keys on `3`.
 CAP_NUM = r"s?\d+(?:[a-z]|\([a-zA-Z]\))?"
+CAP_RANGE = r"(?:\s*[–-]\s*s?\d+)?"
 # Collection uses the same `Table N.` shape the disposition search
 # requires — a bare citation `(see Table 5)` must not produce a
 # 0-coverage "legend+data absent" High and fail the gate — and the same
@@ -39,7 +40,8 @@ CAP_NUM = r"s?\d+(?:[a-z]|\([a-zA-Z]\))?"
 # Periodless caption styles (`Table 5 Descriptive`) go unchecked —
 # documented limit.
 TABLE_LEGEND_RE = re.compile(
-    rf"(?:^|\n)\s*Table\b\s*\.?\s*({CAP_NUM})\.", re.IGNORECASE)
+    rf"(?:^|\n)\s*Table\b\s*\.?\s*({CAP_NUM}){CAP_RANGE}\.",
+    re.IGNORECASE)
 FIG_LEGEND_RE = re.compile(
     rf"(?:^|\n)\s*(?:Fig(?:ure)?|Plate|Scheme|Chart)\b\s*\.?\s*({CAP_NUM})",
     re.IGNORECASE)
@@ -53,8 +55,8 @@ FIG_LEGEND_RE = re.compile(
 # A `,`/`;` right after `</b>` is sentence grammar — a bolded in-text
 # citation (`…as shown in <b>Table 2.</b>, we…`), not a splice.
 SPLICE_RE = re.compile(
-    r"([^<]{25,}<b>(?:Table|Fig(?:ure)?)\.?\s*" + CAP_NUM + r"\.)"
-    r"</b>(?!\s*[,;])", re.IGNORECASE)
+    r"([^<]{25,}<b>(?:Table|Fig(?:ure)?)\.?\s*" + CAP_NUM + CAP_RANGE +
+    r"\.)</b>(?!\s*[,;])", re.IGNORECASE)
 # Copied from `exegesis.lang.EN.furniture` — the eval grades English
 # conversions until the legend-pattern localization follow-up lands.
 FURNITURE_RE = re.compile(
@@ -139,8 +141,14 @@ def furniture_words(pdf_pages) -> set[str]:
         for b in page.get_text("blocks"):
             x0, y0, x1, y1, text = b[0], b[1], b[2], b[3], b[4]
             joined = " ".join(text.split())
+            # _is_furniture searches dehyphenated `_block_text` — a
+            # `copy-`/`right` running head reads `copyright` to the
+            # converter; the vocab must excuse the same words. Gate on
+            # the dehyphenated form, collect the raw tokens (the actual
+            # missing-side words are the unjoined fragments).
+            dehyph = re.sub(r"([a-z])-\s", r"\1", joined)
             if (y0 > h * 0.93 or y1 < h * 0.07) and (
-                FURNITURE_RE.search(joined) or re.fullmatch(r"\d{1,4}", joined)
+                FURNITURE_RE.search(dehyph) or re.fullmatch(r"\d{1,4}", joined)
             ):
                 edge_words.update(WORD_RE.findall(joined.lower()))
             if (x1 - x0 < 25 and y1 - y0 > 4 * (x1 - x0)
@@ -259,11 +267,15 @@ def nav_entries(nav: str) -> list[str]:
 # Block-level openers a legend can start inside — a `>` emitted by an
 # inline tag (<b>/<i>/<a>/<sup>…) is a mid-sentence position, so
 # `…in <b>Table 3.</b>` citations stay citations while `<p><b>Table
-# 3.</b>` still counts (inline tags *inside* the legend element are
-# allowed by the tag-skipping group).
+# 3.</b>` still counts. The repeated group also skips whitespace,
+# `*†‡§` note markers, empty-position tags, and whole inline elements
+# carrying text (`<sup>3</sup>`) — a numbered note emits
+# `<p class="fn"><sup>3</sup>Table 4.` where the marker element carries
+# real text between the block opener and the legend.
 _BLOCK_OPEN = (r"<(?:p|td|th|caption|h[1-6]|blockquote|dt|dd|li|div|"
                r"section|thead|tbody)\b[^>]*>")
-_LEGEND_AT = rf"(?:^|\n|{_BLOCK_OPEN})\s*(?:<[^>]+>\s*)*"
+_LEGEND_AT = (rf"(?:^|\n|{_BLOCK_OPEN})"
+              rf"(?:[\s*†‡§]|<[^>]+>|<[^>]+>[^<]*</[^>]+>)*")
 
 
 def _num_key(n: str) -> tuple:
@@ -280,8 +292,8 @@ def _legend_present(raw: str, num: str) -> bool:
     lets a citation fake the landing spot — a swept or dropped table
     reporting 'prose' instead of 'notes'/'missing'."""
     return bool(
-        re.search(rf"{_LEGEND_AT}Table\b\s*\.?\s*{re.escape(num)}\.",
-                  raw, re.IGNORECASE)
+        re.search(rf"{_LEGEND_AT}Table\b\s*\.?\s*{re.escape(num)}"
+                  rf"{CAP_RANGE}\.", raw, re.IGNORECASE)
     )
 
 
@@ -312,7 +324,8 @@ def table_dispositions(pdf_text: str, chapters: dict[str, str],
     out = []
     for num in sorted({n.upper() for n in TABLE_LEGEND_RE.findall(pdf_text)},
                       key=_num_key):
-        legend_re = rf"(?:^|\n)\s*Table\b\s*\.?\s*{re.escape(num)}\."
+        legend_re = (rf"(?:^|\n)\s*Table\b\s*\.?\s*{re.escape(num)}"
+                     rf"{CAP_RANGE}\.")
         coverages = []
         for m in re.finditer(legend_re, pdf_text, re.IGNORECASE):
             toks = [t for t in WORD_RE.findall(
@@ -491,7 +504,8 @@ def main() -> int:
                       key=_num_key):
         if not re.search(
                 rf"(?:Fig(?:ure)?|Plate|Scheme|Chart)\b\s*\.?\s*"
-                rf"{re.escape(num)}\b", epub_text, re.IGNORECASE):
+                rf"{re.escape(num)}(?![A-Za-z0-9])",
+                epub_text, re.IGNORECASE):
             findings.append(("Med", "G", f"Fig. {num}: legend absent from EPUB"))
     # >30 vector ops usually means a ruled table grid, not a figure — a
     # `Table N.` legend decides it, and a digit-heavy page is a table
@@ -519,8 +533,9 @@ def main() -> int:
                 findings.append(("Low", "G", f"{Path(name).name}: <img> missing caption alt text"))
 
     # ---- H. notes ----
-    if notes and re.search(rf"{_LEGEND_AT}Table\b\s*\.?\s*{CAP_NUM}\.",
-                           notes, re.IGNORECASE):
+    if notes and re.search(
+            rf"{_LEGEND_AT}Table\b\s*\.?\s*{CAP_NUM}{CAP_RANGE}\.",
+            notes, re.IGNORECASE):
         findings.append(("Med", "H", "notes.xhtml contains table legends — notes zone swallowing grid content"))
     # Unguarded: links pointing at #fnN with no notes.xhtml (or no
     # matching anchor) are dead by construction — that's the defect.

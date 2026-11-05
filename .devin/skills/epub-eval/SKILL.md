@@ -46,8 +46,9 @@ operational failures (unreadable inputs).
     EPUB word (`mind`+`fulness` → `mindfulness`) — a positive, not loss;
   - *stripped furniture* — word appears in running-head signatures
     (block text repeated on ≥40% of pages), the outer 7% edge zones
-    (page numbers / pattern furniture), or margin strips — correct
-    stripping;
+    (page numbers / pattern furniture, gated on dehyphenated block
+    text like `_block_text` so `copy-`/`right` reads `copyright`), or
+    margin strips — correct stripping;
   - *superscript splits* — source token `Kral1` emits as `Kral` +
     superscript `1`; a word splitting at a letter↔digit boundary into
     two parts that both exist in the EPUB lost nothing;
@@ -70,12 +71,15 @@ operational failures (unreadable inputs).
   2.</b>`); a `,`/`;` right after `</b>` reads as a bolded in-text
   citation, not a splice.
 - **F. Tables** — every `Table N.` legend in the source (trailing period
-  and line-start position required — `Table S1.`/`Table 1A.`/`TABLE 2.`
-  collect, `(Table N)` citations and sentence-ending `…in Table 5.`
-  don't) is located in the EPUB: inside `<table>` markup / flattened to
+  and line-start position required — `Table S1.`/`Table 1A.`/`TABLE 2.`/
+  `Table 3–4.` collect, ranges key on the first number; `(Table N)`
+  citations and sentence-ending `…in Table 5.` don't) is located in the
+  EPUB: inside `<table>` markup / flattened to
   prose / swept into notes.xhtml / missing, with the match required in
   legend position (block-element/line start — inline-tag-adjacent
-  citations can't stand in). Content survival is scored
+  citations can't stand in, but `*†‡§` note markers and text-carrying
+  inline elements like a numbered note's `<sup>3</sup>` may sit between
+  the opener and the legend). Content survival is scored
   with 4-grams over a 55-content-token window after each legend —
   order-sensitive, so scattered digits can't fake coverage; furniture
   words are discounted (correctly stripped, not absent), windows left
