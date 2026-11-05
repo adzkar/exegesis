@@ -8,8 +8,8 @@ are visible: container validity, metadata sanity, classified word
 coverage, TOC/headings, reading-order splices, table disposition,
 figure coverage, notes integrity, and whether odd artifacts came from
 the source text layer or the converter. Output is markdown; paste it
-into an issue or read it inline. Exit code is the number of
-High-severity findings (0 = clean), so it can gate CI if wanted.
+into an issue or read it inline. Exit code is `1` when any
+High-severity finding exists (usable as a CI gate), `0` otherwise.
 """
 from __future__ import annotations
 
@@ -24,12 +24,19 @@ from xml.etree import ElementTree as ET
 
 WORD_RE = re.compile(r"[A-Za-z0-9]+")
 TAG_RE = re.compile(r"<[^>]+>")
-TABLE_LEGEND_RE = re.compile(r"\bTable\s+(\d+)\b")
+# Collection uses the same `Table N.` shape the disposition search
+# requires — a bare citation `(see Table 5)` must not produce a
+# 0-coverage "legend+data absent" High and fail the gate. Periodless
+# caption styles (`Table 5 Descriptive`) go unchecked — documented limit.
+TABLE_LEGEND_RE = re.compile(r"\bTable\s+(\d+)\.")
 FIG_LEGEND_RE = re.compile(r"\bFig(?:ure)?\.?\s*(\d+)[a-z]?\b")
-# A caption label glued mid-paragraph: ">20 chars of sentence text, then a
-# bold Table/Fig N. legend inside the same <p>" — a legend that belongs
-# to a floating object was spliced into body flow.
-SPLICE_RE = re.compile(r"(.{25,}<b>(?:Table|Fig)\.?\s*\d+\.)", re.DOTALL)
+# A caption label glued mid-paragraph: "25+ chars of sentence text, then
+# a bold Table/Fig N. legend inside the same <p>" — a legend that belongs
+# to a floating object was spliced into body flow. The run-up excludes
+# `<` so it can never cross a tag boundary — a bold caption opening its
+# own <p> has only `>` + tagname available before it, not 25 chars, while
+# text sharing the paragraph still matches.
+SPLICE_RE = re.compile(r"([^<]{25,}<b>(?:Table|Fig)\.?\s*\d+\.)")
 AFFILIATION_HINTS = (
     "university", "department", "center", "centre", "institute",
     "hospital", "college", "laborator", "school of",
@@ -75,28 +82,37 @@ def looks_like_junk_title(title: str) -> bool:
 
 
 def furniture_words(pdf_pages) -> set[str]:
-    """Words the converter *should* have stripped: block text repeated on
-    >=40% of pages (running-head signatures) plus anything in the outer 8%
-    vertical edge (page numbers, pattern furniture). Mirrors the
-    pipeline's own signals so 'missing' words here count as correct
-    stripping, not loss."""
-    sig_pages: dict[str, set[int]] = {}
+    """Words the converter *should* have stripped, mirroring
+    `exegesis.analyze._boilerplate_signatures`: letters-only signatures of
+    blocks inside the outer 20% edge zones that recur on >=
+    max(2, 40%*pages) pages (running heads) — the zone restriction keeps
+    body text repeated mid-page from being excused, and the 2-page floor
+    stops a 1-page doc from calling every block 'repeated'. Positional
+    page-number/pattern furniture adds words from the outer 8% edge."""
+    sig_re = re.compile(r"[^a-z]+")
+    counts: Counter = Counter()
     edge_words: set[str] = set()
-    for i, page in enumerate(pdf_pages):
+    zone_blocks: list[str] = []
+    for page in pdf_pages:
         h = page.rect.height
+        seen = set()
         for b in page.get_text("blocks"):
             _x0, y0, _x1, y1, text = b[0], b[1], b[2], b[3], b[4]
-            sig = " ".join(WORD_RE.findall(text.lower()))[:80]
-            if sig:
-                sig_pages.setdefault(sig, set()).add(i)
             if y1 < h * 0.08 or y0 > h * 0.92:
                 edge_words.update(WORD_RE.findall(text.lower()))
-    n = max(len(pdf_pages), 1)
-    rep = set()
-    for sig, pages in sig_pages.items():
-        if len(pages) / n >= 0.4:
-            rep.update(sig.split())
-    return rep | edge_words
+            if y1 < h * 0.20 or y0 > h * 0.80:
+                sig = sig_re.sub("", text.lower())
+                if 3 <= len(sig) <= 80:
+                    seen.add(sig)
+                    zone_blocks.append(text.lower())
+        counts.update(seen)
+    boilerplate = {s for s, n in counts.items()
+                   if n >= max(2, int(len(pdf_pages) * 0.4))}
+    furn = set(edge_words)
+    for text in zone_blocks:
+        if sig_re.sub("", text) in boilerplate:
+            furn.update(WORD_RE.findall(text))
+    return furn
 
 
 def classify_missing(missing: Counter, extra: Counter, furniture: set[str],
@@ -311,7 +327,7 @@ def main() -> int:
     epub_imgs = [m for m in members if "/images/" in m]
     vec_pages = [i for i, p in enumerate(pdf) if len(p.get_drawings()) > 30]
     for num in sorted(set(FIG_LEGEND_RE.findall(pdf_text)), key=int):
-        if not re.search(rf"Fig(?:ure)?\.?\s*{num}\b", epub_text):
+        if not re.search(rf"Fig(?:ure)?\.?\s*{num}[a-z]?\b", epub_text):
             findings.append(("Med", "G", f"Fig. {num}: legend absent from EPUB"))
     # >30 vector ops usually means a ruled table grid, not a figure — a
     # `Table N.` legend decides it, and a digit-heavy page is a table
