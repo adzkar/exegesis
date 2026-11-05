@@ -182,8 +182,12 @@ def _dropped(block, rect, boilerplate: set[str]) -> bool:
     joined = " ".join(text.split())
     # _is_furniture searches dehyphenated `_block_text` — a
     # `copy-`/`right` running head reads `copyright` to the converter,
-    # so the gate runs on the dehyphenated form.
-    dehyph = re.sub(r"([a-z])-\s", r"\1", joined)
+    # so the gate runs on the dehyphenated form. The pipeline's
+    # `_join_lines` fuses only a fragment *ending* in `[a-z]-`; fusing
+    # on collapsed whitespace would also join a same-line `Vol- 12`
+    # into `Vol12` — content the pipeline keeps — so the regex runs on
+    # the raw text's line boundary first, collapsing after.
+    dehyph = " ".join(re.sub(r"([a-z])-\n\s*", r"\1", text).split())
     return bool(
         ((y1 < h * 0.20 or y0 > h * 0.80)
          and SIG_RE.sub("", text.lower()) in boilerplate)
@@ -252,12 +256,13 @@ def rasterized_blocks(pdf_pages, boilerplate: set[str]):
 
 
 def classify_missing(missing: Counter, extra: Counter, furniture: Counter,
-                     epub_text: str = ""):
+                     epub_text: str = "", pdf_text: str = ""):
     """Sort missing words into stripped furniture, rejoined-hyphenation
     (a fragment that is a prefix/suffix of an extra EPUB word), superscript
     splits (source token `Kral1` emits as `Kral` + superscript `1` —
-    both halves present AND adjacent in emitted text, so `covid19`
-    can't hide behind free-floating `covid`/`19`), or genuine loss.
+    the halves gain adjacency vs the source, so a `covid19` hiding
+    behind a `covid 19` that already recurs in the PDF stays
+    genuine), or genuine loss.
     Furniture is
     checked first — a running-head word that happens to prefix an extra
     word is still furniture. Dehyphenation only ever concatenates a
@@ -266,7 +271,8 @@ def classify_missing(missing: Counter, extra: Counter, furniture: Counter,
     coincidence, not a join. Every excuse class is count-capped —
     furniture excuses at most its own stripped occurrences, a rejoined
     fragment at most `min(own, complement, merges)` instances, and a
-    superscript split at most the adjacent-pair count — so unpaired
+    superscript split at most the adjacency the EPUB *gained* over the
+    source — so unpaired
     excess stays genuine and feeds the >1% gate."""
     extra_words = list(extra)
     rejoined, furn, supers, genuine = Counter(), Counter(), Counter(), Counter()
@@ -286,11 +292,13 @@ def classify_missing(missing: Counter, extra: Counter, furniture: Counter,
                 cls = rejoined
         if not cap and (m := re.match(r"^([a-z]+)(\d+)$|^(\d+)([a-z]+)$", w)):
             pair = [p for p in m.groups() if p]
-            adj = len(re.findall(
-                rf"(?<![0-9A-Za-z]){re.escape(pair[0])}\s*"
-                rf"{re.escape(pair[1])}(?![0-9A-Za-z])",
-                epub_text, re.IGNORECASE))
-            cap = min(n, adj)
+            pat = re.compile(rf"(?<![0-9A-Za-z]){re.escape(pair[0])}\s*"
+                             rf"{re.escape(pair[1])}(?![0-9A-Za-z])",
+                             re.IGNORECASE)
+            # A `covid 19` that already recurs in the source emits
+            # as-is — only pairs the EPUB *gained* can be splits.
+            adj = len(pat.findall(epub_text)) - len(pat.findall(pdf_text))
+            cap = min(n, max(0, adj))
             if cap:
                 cls = supers
         cls[w] += cap
@@ -671,7 +679,7 @@ def main() -> int:
     expected = pw - raster_vocab
     missing, extra = expected - ew, ew - expected
     rejoined, furn, supers, genuine = classify_missing(
-        missing, extra, furn_vocab, epub_text)
+        missing, extra, furn_vocab, epub_text, pdf_text)
     verbatim = sum((expected - missing).values())
     coverage_pct = 100 * verbatim / max(sum(pw.values()), 1)
     n_genuine = sum(genuine.values())
