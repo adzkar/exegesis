@@ -63,10 +63,13 @@ FIG_LEGEND_RE = re.compile(
 # text sharing the paragraph still matches. `Fig(?:ure)?` keeps parity
 # with FIG_LEGEND_RE — a spelled-out `Figure N.` splice counts too.
 # A `,`/`;` right after `</b>` is sentence grammar — a bolded in-text
-# citation (`…as shown in <b>Table 2.</b>, we…`), not a splice.
+# citation (`…as shown in <b>Table 2.</b>, we…`), not a splice. The
+# label→number junction loop takes one dot, space, or `</b><b>` per
+# step: an empty-able `\.?\s*` inside the repeat backtracks
+# exponentially in the length of a whitespace run.
 SPLICE_RE = re.compile(
     r"([^<]{25,}<b>(?:Table|Fig(?:ure)?|Plate|Scheme|Chart)"
-    r"(?:\.?\s*|</b><b>\s*)*" + CAP_NUM + r"(?:</b><b>\s*)*"
+    r"(?:[.\s]|</b><b>)*" + CAP_NUM + r"(?:</b><b>\s*)*"
     + CAP_RANGE + r"\.)</b>(?!\s*[,;])", re.IGNORECASE)
 # Copied from `exegesis.lang.EN.furniture` — the eval grades English
 # conversions until the legend-pattern localization follow-up lands.
@@ -83,6 +86,13 @@ AFFIL_NAME_RE = re.compile(
 AFFIL_WORD_RE = re.compile(
     r"\b(?:university|department|institute|hospital|school of)\b|"
     r"\blaborator", re.IGNORECASE)
+# The byline merge can absorb a caption block whole — `Table 1.` has
+# reached dc:creator — and it clears every affiliation/title gate.
+# Names never carry a caption label + number, so it matches anywhere:
+# a legend glued after the names is the same contamination.
+CREATOR_CAPTION_RE = re.compile(
+    rf"\b(?:Table|Fig(?:ure)?|Plate|Scheme|Chart)\b\s*\.?\s*{CAP_NUM}",
+    re.IGNORECASE)
 
 
 def epub_members(path: Path) -> list[str]:
@@ -132,65 +142,113 @@ def looks_like_junk_title(title: str) -> bool:
     return digits > letters and digits >= 10
 
 
-def furniture_words(pdf_pages) -> Counter:
-    """Counted vocabulary of words the converter *should* have stripped,
-    mirroring the pipeline's own signals rather than approximating them —
-    `order._ordered_blocks`
-    drops a block when `analyze._is_signature_furniture` or
-    `analyze._is_furniture` holds. Signatures: letters-only sigs of
-    blocks inside the outer 20% edge zones recurring on >=
-    max(2, 40%*pages) pages (running heads) — the zone restriction keeps
-    body text repeated mid-page from being excused, and the 2-page floor
-    stops a 1-page doc from calling every block 'repeated'. Positional
-    furniture mirrors `_is_furniture` exactly: pattern furniture and
-    pure page numbers only inside the outer 7% edge (a wider or
-    unconditional zone would excuse real edge content as stripped), and
-    narrow+tall blocks in the outer 10% horizontal margins (rotated
-    sidebars). Counted, not a set: a running-head word excuses at most
-    its own stripped occurrences, so `of`/`vol`/page digits can't
-    blanket-excuse genuine body loss. A block qualifying under both
-    mirrors (a content-matching head sitting in the signature zone —
-    the norm on journal corpora) counts once: the pipeline drops it
-    once, so its excuse budget is once."""
-    sig_re = re.compile(r"[^a-z]+")
+SIG_RE = re.compile(r"[^a-z]+")
+
+
+def boilerplate_signatures(pdf_pages) -> set[str]:
+    """Running heads by recurrence, mirroring
+    `analyze._boilerplate_signatures`: letters-only sigs of text blocks
+    inside the outer 20% edge zones recurring on >= max(2, 40%*pages)
+    pages — the zone restriction keeps body text repeated mid-page from
+    being excused, and the 2-page floor stops a 1-page doc from calling
+    every block 'repeated'."""
     counts: Counter = Counter()
-    edge_words: Counter = Counter()
-    zone_blocks: list[tuple[str, bool]] = []
     for page in pdf_pages:
-        h, w = page.rect.height, page.rect.width
+        h = page.rect.height
         seen = set()
         for b in page.get_text("blocks"):
-            x0, y0, x1, y1, text = b[0], b[1], b[2], b[3], b[4]
-            joined = " ".join(text.split())
-            # _is_furniture searches dehyphenated `_block_text` — a
-            # `copy-`/`right` running head reads `copyright` to the
-            # converter; the vocab must excuse the same words. Gate on
-            # the dehyphenated form, collect the raw tokens (the actual
-            # missing-side words are the unjoined fragments).
-            dehyph = re.sub(r"([a-z])-\s", r"\1", joined)
-            edge = False
-            if (y0 > h * 0.93 or y1 < h * 0.07) and (
-                FURNITURE_RE.search(dehyph) or re.fullmatch(r"\d{1,4}", joined)
-            ):
-                edge_words.update(WORD_RE.findall(joined.lower()))
-                edge = True
-            if (x1 - x0 < 25 and y1 - y0 > 4 * (x1 - x0)
-                    and (x0 > w * 0.9 or x1 < w * 0.1)):
-                edge_words.update(WORD_RE.findall(joined.lower()))
-                edge = True
-            if y1 < h * 0.20 or y0 > h * 0.80:
-                sig = sig_re.sub("", text.lower())
+            if b[6] == 0 and (b[3] < h * 0.20 or b[1] > h * 0.80):
+                sig = SIG_RE.sub("", b[4].lower())
                 if 3 <= len(sig) <= 80:
                     seen.add(sig)
-                    zone_blocks.append((text.lower(), edge))
         counts.update(seen)
-    boilerplate = {s for s, n in counts.items()
-                   if n >= max(2, int(len(pdf_pages) * 0.4))}
-    furn = Counter(edge_words)
-    for text, counted in zone_blocks:
-        if not counted and sig_re.sub("", text) in boilerplate:
-            furn.update(WORD_RE.findall(text))
+    return {s for s, n in counts.items()
+            if n >= max(2, int(len(pdf_pages) * 0.4))}
+
+
+def _dropped(block, rect, boilerplate: set[str]) -> bool:
+    """Does `order._ordered_blocks` drop this `get_text("blocks")` tuple?
+    Mirrors its rule exactly — `analyze._is_signature_furniture` (an
+    edge-zone sig in the boilerplate set) or `analyze._is_furniture`:
+    pattern furniture and pure page numbers only inside the outer 7%
+    edge (a wider or unconditional zone would excuse real edge content
+    as stripped), and narrow+tall blocks in the outer 10% horizontal
+    margins (rotated sidebars). One predicate per block, so a block
+    qualifying under several arms (a content-matching head that also
+    recurs — the norm on journal corpora) is dropped, and counted,
+    once."""
+    x0, y0, x1, y1, text = block[:5]
+    h, w = rect.height, rect.width
+    joined = " ".join(text.split())
+    # _is_furniture searches dehyphenated `_block_text` — a
+    # `copy-`/`right` running head reads `copyright` to the converter,
+    # so the gate runs on the dehyphenated form.
+    dehyph = re.sub(r"([a-z])-\s", r"\1", joined)
+    return bool(
+        ((y1 < h * 0.20 or y0 > h * 0.80)
+         and SIG_RE.sub("", text.lower()) in boilerplate)
+        or ((y0 > h * 0.93 or y1 < h * 0.07)
+            and (FURNITURE_RE.search(dehyph) or re.fullmatch(r"\d{1,4}", joined)))
+        or (x1 - x0 < 25 and y1 - y0 > 4 * (x1 - x0)
+            and (x0 > w * 0.9 or x1 < w * 0.1)))
+
+
+def furniture_words(pdf_pages, boilerplate: set[str]) -> Counter:
+    """Counted vocabulary of words the converter *should* have stripped
+    — the words of every block `_dropped` holds for, so the excuse
+    mirrors the pipeline's own signals rather than approximating them.
+    Counted, not a set: a running-head word excuses at most its own
+    stripped occurrences, so `of`/`vol`/page digits can't
+    blanket-excuse genuine body loss. Raw tokens are collected, not
+    the dehyphenated gate text — the missing-side words are the
+    unjoined fragments."""
+    furn: Counter = Counter()
+    for page in pdf_pages:
+        for b in page.get_text("blocks"):
+            if b[6] == 0 and _dropped(b, page.rect, boilerplate):
+                furn.update(WORD_RE.findall(b[4].lower()))
     return furn
+
+
+def rasterized_blocks(pdf_pages, boilerplate: set[str]):
+    """Words the rotated-table path carries only as pixels. Mirrors
+    `analyze._rotated_table_region` over the page's body blocks
+    (non-empty text blocks `_dropped` keeps): >=3 tall-narrow blocks
+    (height > 4x width and > 60pt) sharing a y-point, region = the
+    union bbox of every tall block. Then `render._render_page`'s
+    `tbl_ids`: every body block whose bbox intersects the region leaves
+    the text flow and lives only in an `images/table_*.png`. Returns
+    the counted words of those blocks, the `Table N.` legends opening
+    any of them (a legend inside the region is rasterized with its
+    grid), and the region count — at most one per page, as in the
+    pipeline."""
+    import fitz  # lazy like main(): an ImportError must reach the exit-2 net
+    words: Counter = Counter()
+    legends: set[str] = set()
+    regions = 0
+    for page in pdf_pages:
+        body = [b for b in page.get_text("blocks")
+                if b[6] == 0 and b[4].strip()
+                and not _dropped(b, page.rect, boilerplate)]
+        tall = [b for b in body
+                if b[3] - b[1] > 4 * max(1, b[2] - b[0]) and b[3] - b[1] > 60]
+        cov, shared = 0, False
+        for _, d in sorted([(b[1], 1) for b in tall] + [(b[3], -1) for b in tall]):
+            cov += d
+            if cov >= 3:
+                shared = True
+                break
+        if not shared:
+            continue
+        region = fitz.Rect(min(b[0] for b in tall), min(b[1] for b in tall),
+                           max(b[2] for b in tall), max(b[3] for b in tall))
+        regions += 1
+        for b in body:
+            if fitz.Rect(b[:4]).intersects(region):
+                words.update(WORD_RE.findall(b[4].lower()))
+                legends.update(n.upper() for n in TABLE_LEGEND_RE.findall(
+                    " ".join(b[4].split())))
+    return words, frozenset(legends), regions
 
 
 def classify_missing(missing: Counter, extra: Counter, furniture: Counter,
@@ -299,7 +357,16 @@ def missing_sections(pdf_text: str, entries: list[str],
     (`1. Collect`, `2. Wash`) — periodless items share the `N. Title`
     shape but never reach the TOC. A heading can also wrap mid-title
     (`2. Materials and\nMethods`) — it counts as covered when a nav
-    title continues with the next line's first word."""
+    title continues with the next line's first word.
+
+    Documented limit: the next/previous lines are read in extraction
+    order (`get_text("text")`), not reading order. On scrambled-order
+    or column-interleaved sources — the condition `order.py` exists to
+    fix — the 'next line' can be an adjacent column's line or a
+    footer, and its lowercase start (or a coincidental `N±1.` line)
+    silences a genuinely missing heading. False negatives only: the
+    discriminators can suppress a candidate, never invent one. A
+    positional lookup over block bboxes is the upgrade path."""
     nav_titles = {
         re.sub(r"^\s*\d+(?:\.\d+)?\s*[.)]?\s*", "", e.lower()).strip()
         for e in entries}
@@ -360,11 +427,17 @@ def nav_entries(nav: str) -> list[str]:
 # carrying text — restricted to `<sup>` so a styled lead-in
 # (`<p><i>see</i> Table 3.`) stays a citation: a numbered note emits
 # `<p class="fn"><sup>3</sup>Table 4.` where the marker element carries
-# real text between the block opener and the legend.
+# real text between the block opener and the legend. Every step
+# consumes one unambiguous unit — the sup body a char or a tag that
+# isn't `</sup>`, the generic arm any tag but a `<sup` opener (that's
+# the sup arm's alone) — because py39 `re` has no atomic groups:
+# nesting an empty-able `[^<]*` inside the repeat made a failing match
+# retry every split of the sup text (2^n), and a 107-char `<sup>` at a
+# block start hung the eval on a corpus paper.
 _BLOCK_OPEN = (r"<(?:p|td|th|caption|figcaption|h[1-6]|blockquote|"
                r"dt|dd|li|div|section|thead|tbody)\b[^>]*>")
-_LEGEND_AT = (rf"(?:^|\n|{_BLOCK_OPEN})(?:[\s*†‡§]|<[^>]+>|"
-              rf"<sup\b[^>]*>(?:<[^>]+>[^<]*</[^>]+>|[^<]*)*</sup>)*")
+_LEGEND_AT = (rf"(?:^|\n|{_BLOCK_OPEN})(?:[\s*†‡§]|<(?!sup\b)[^>]+>|"
+              rf"<sup\b[^>]*>(?:[^<]|<(?!/sup>)[^>]*>)*</sup>)*")
 
 
 def _num_key(n: str) -> tuple:
@@ -402,13 +475,17 @@ def _legend_near(chap: str, num: str, needle: str,
 
 
 def table_dispositions(blocks_text: str, chapters: dict[str, str],
-                       notes: str, furniture: Counter):
+                       notes: str, furniture: Counter,
+                       raster_legends: frozenset[str] = frozenset()):
     """For each `Table N` legend in the source, decide where it landed:
     inside <table> markup, beside <table> markup it failed to join
     (detached caption), beside a rasterized `images/table_*.png` (the
     intended rotated-table path — cells live in the image, not text),
     flattened into prose/blockquote, swept into notes.xhtml, or
-    missing. Legends require a trailing period
+    missing. A legend absent from the text whose own source block sat
+    inside a rotated-table region (`raster_legends`) was rasterized
+    with its grid by design — 'rasterized', not 'missing'. Legends
+    require a trailing period
     (`Table N.`) at a block start (the caller passes block-flattened
     text — a wrapped sentence breaking at `Table 5.` stays mid-line),
     so in-text citations `(Table N)` don't fake a hit, and
@@ -472,6 +549,11 @@ def table_dispositions(blocks_text: str, chapters: dict[str, str],
             where = "notes"
         elif in_chaps:
             where = "prose"
+        elif num in raster_legends:
+            # the legend block itself sat inside the rotated region —
+            # rasterized along with the cells, only the PNG carries it
+            where = "rasterized"
+            coverage = None
         else:
             where = "missing"
         out.append((num, where, coverage))
@@ -533,7 +615,11 @@ def main() -> int:
     # colliding with one title word can't fake it).
     title_words = {w for w in WORD_RE.findall(meta["title"].lower()) if len(w) > 3}
     absorbed = len(title_words & set(WORD_RE.findall(creator.lower()))) >= 3
-    if AFFIL_NAME_RE.search(creator) or AFFIL_WORD_RE.search(creator) or absorbed:
+    # A caption-shaped creator or one without a single letter (`1, 2`,
+    # `* †`) names nobody at all.
+    nameless = bool(creator) and not re.search(r"[^\W\d_]", creator)
+    if (AFFIL_NAME_RE.search(creator) or AFFIL_WORD_RE.search(creator)
+            or absorbed or nameless or CREATOR_CAPTION_RE.search(creator)):
         findings.append(("High", "B", f"dc:creator contaminated (len={len(creator)}): {creator[:80]!r}…"))
 
     # ---- C. coverage ----
@@ -559,11 +645,31 @@ def main() -> int:
     if not pw:
         findings.append(("High", "C", ("no extractable text in PDF — scanned/"
                                       "image-only input, eval is blind")))
-    missing, extra = pw - ew, ew - pw
-    furn_vocab = furniture_words(pdf)
+    boilerplate = boilerplate_signatures(pdf)
+    furn_vocab = furniture_words(pdf, boilerplate)
+    # The rotated-table path drops its text blocks in every mode and
+    # emits only an `images/table_*.png`, so those words were never
+    # expected in the text. They leave the expected side *before* the
+    # diff: Counter subtraction nets a word's losses against its gains,
+    # so a rasterized `resilience` would cancel a body `resil-ience`
+    # merge and hide the rejoin evidence. Furniture stays a post-diff
+    # excuse — `--keep-headers` emits it, and subtracting kept heads
+    # would invent extras. The excuse needs evidence: one table raster
+    # per mirrored region, else a missing PNG means the table is
+    # genuinely gone and its words (and legends) count as loss.
+    raster_vocab, raster_legends, n_regions = rasterized_blocks(pdf, boilerplate)
+    n_table_imgs = sum(1 for m in members if Path(m).parent.name == "images"
+                       and Path(m).name.startswith("table_"))
+    if n_table_imgs < n_regions:
+        findings.append(("Med", "C", (f"rotated-table regions: {n_regions} in PDF vs "
+                                      f"{n_table_imgs} table rasters in EPUB — "
+                                      "rasterized-cell excuse withheld")))
+        raster_vocab, raster_legends = Counter(), frozenset()
+    expected = pw - raster_vocab
+    missing, extra = expected - ew, ew - expected
     rejoined, furn, supers, genuine = classify_missing(
         missing, extra, furn_vocab, epub_text)
-    verbatim = sum((pw - missing).values())
+    verbatim = sum((expected - missing).values())
     coverage_pct = 100 * verbatim / max(sum(pw.values()), 1)
     n_genuine = sum(genuine.values())
     if n_genuine > sum(pw.values()) * 0.01:
@@ -603,7 +709,8 @@ def main() -> int:
             findings.append(("Med", "E", f"{Path(name).name}: legend spliced mid-sentence: …{frag}"))
 
     # ---- F. tables ----
-    for num, where, cov in table_dispositions(pdf_blocks_text, chapters, notes, furn_vocab):
+    for num, where, cov in table_dispositions(pdf_blocks_text, chapters, notes,
+                                              furn_vocab, raster_legends):
         if where == "missing":
             # A dropped legend on an intact grid scores high coverage —
             # the data survived, so 'legend+data absent' would misstate
@@ -720,6 +827,7 @@ def main() -> int:
           f"{len(members)} members, {len(chapters)} chapters, {len(epub_imgs)} images")
     print(f"- B metadata: title={meta['title'][:60]!r}")
     print(f"- C coverage: rejoined {sum(rejoined.values())}, furniture {sum(furn.values())}, "
+          f"rasterized table cells {sum(raster_vocab.values())}, "
           f"superscript splits {sum(supers.values())}, genuine loss {n_genuine}")
     print(f"- D toc: {len(entries)} entries, h1={n_h1} h2={n_h2}, dupes={dup or 'none'}")
     print(f"- G figures: pdf rasters={pdf_rasters}, embedded={len(epub_imgs)}, "
@@ -735,6 +843,7 @@ def main() -> int:
     print("| class | words | top examples |")
     print("|-------|-------|--------------|")
     for label, c in (("rejoined hyphenation", rejoined), ("stripped furniture", furn),
+                     ("rasterized table cells", raster_vocab),
                      ("superscript splits", supers), ("genuine loss", genuine)):
         ex = ", ".join(w for w, _ in c.most_common(8))
         print(f"| {label} | {sum(c.values())} | {ex} |")

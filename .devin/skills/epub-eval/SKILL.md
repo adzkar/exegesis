@@ -39,9 +39,21 @@ operational failures (unreadable inputs).
   junk (`OP-SCAN150067 1758..1768`: `..`-ranges, ≥5-digit runs, or digit
   dominance over letters) that passes the converter's letter-check;
   `dc:creator` flagged when it absorbs title text or affiliations
-  (University/Department/Center…).
+  (University/Department/Center…), carries a caption label + number
+  anywhere (`Table 1.` swallowed by the byline merge — names never
+  carry numbers), or contains no letters at all (`1, 2`).
 - **C. Coverage** — word-multiset diff of PDF vs EPUB text (`Counter`
   subtraction), then *classified* before being counted as loss:
+  - *rasterized table cells* — words of blocks the rotated-table path
+    drops by design (mirrors `_rotated_table_region`: ≥3 tall-narrow
+    non-furniture blocks sharing a y-point → union region; every body
+    block intersecting it lives only in `images/table_*.png`). They
+    leave the PDF side *before* the diff — the diff nets a word's
+    losses against its gains, so a rasterized `resilience` would
+    cancel a body `resil-ience` merge and hide the rejoin. Needs
+    evidence: when the EPUB carries fewer `table_*` rasters than
+    mirrored regions, the excuse is withheld (Med) and the words count
+    as loss;
   - *rejoined hyphenation* — fragment is a prefix/suffix of an extra
     EPUB word whose complement is also missing (`mind`+`fulness` →
     `mindfulness`, both halves absent) — a positive, not loss;
@@ -73,7 +85,11 @@ operational failures (unreadable inputs).
   TOC (per-entry match on the number-stripped label — a nav entry
   merely containing the title word, `Materials and Methods`, does not
   cover `2. Methods`) → High when ≥2 go missing; zero `<h1>` in a multi-heading doc means
-  the title never promoted and the TOC is flat.
+  the title never promoted and the TOC is flat. Documented limit: the
+  next/previous-line discriminators read extraction order, not reading
+  order — on scrambled-order or column-interleaved sources an adjacent
+  column's lowercase line can silence a genuinely missing heading
+  (false negatives only; a discriminator never invents a finding).
 - **E. Reading-order splices** — a bold `Table|Fig(ure)|Plate|Scheme|
   Chart N.` legend
   appearing after >25 chars of running text inside the same `<p>` is a
@@ -91,7 +107,9 @@ operational failures (unreadable inputs).
   prose / swept into notes.xhtml / missing — plus *detached* (grid
   markup sits beside a legend it failed to absorb as `<caption>`, Low)
   and *rasterized* (legend in flow beside an `images/table_*.png` — the
-  intended rotated-table path, cells not text-checkable, Low) — with
+  intended rotated-table path, cells not text-checkable, Low; also a
+  legend absent from the text whose own source block sat inside a
+  mirrored rotated-table region, i.e. rasterized with its grid) — with
   the match required in
   legend position (block-element/line start — inline-tag-adjacent
   citations can't stand in, but `*†‡§` note markers and text-carrying
@@ -128,9 +146,10 @@ operational failures (unreadable inputs).
 
 ## How the comparison works
 
-1. `fitz` per-page `get_text` → normalized `[A-Za-z0-9]+` word multiset;
-   `Counter` diff both directions — the *extra* side exposes rejoined
-   hyphenations, the *missing* side gets classified.
+1. `fitz` per-page `get_text` → normalized `[A-Za-z0-9]+` word multiset,
+   minus the words of rasterized rotated-table blocks (never expected
+   as text); `Counter` diff both directions — the *extra* side exposes
+   rejoined hyphenations, the *missing* side gets classified.
 2. Artifact attribution — grep the PDF raw text for the same string
    (`Accepted: 2 June 2006`, `\x04` glyph); if it's there, the EPUB is
    faithful, not buggy.
