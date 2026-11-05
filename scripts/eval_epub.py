@@ -299,17 +299,15 @@ def classify_missing(missing: Counter, extra: Counter, furniture: Counter,
                 cls = rejoined
         if not cap and (m := re.match(r"^([a-z]+)(\d+)$|^(\d+)([a-z]+)$", w)):
             pair = [p for p in m.groups() if p]
-            pat = re.compile(rf"(?<![0-9A-Za-z]){re.escape(pair[0])}\s*"
+            pat = re.compile(rf"(?<![0-9A-Za-z]){re.escape(pair[0])}\s+"
                              rf"{re.escape(pair[1])}(?![0-9A-Za-z])",
                              re.IGNORECASE)
-            spaced = re.compile(rf"(?<![0-9A-Za-z]){re.escape(pair[0])}\s+"
-                                rf"{re.escape(pair[1])}(?![0-9A-Za-z])",
-                                re.IGNORECASE)
-            # The EPUB side keeps `\s*`: `<sup>1</sup>` fuses to `Kral1`
-            # in extracted text, which IS a split. The PDF side needs
-            # `\s+` — its own fused `Kral1` matches `\s*` too and would
-            # self-cancel the gain; only spaced pairs pre-exist.
-            adj = len(pat.findall(epub_text)) - len(spaced.findall(pdf_text))
+            # `\s+` both sides: xhtml_text maps every tag (incl. <sup>)
+            # to a space, so a real split always reads 'kral 1' — a
+            # fused 'kral1' survivor is verbatim text, not adjacency —
+            # while a fused 'Kral1' in the PDF is one word and can't
+            # self-cancel the gain.
+            adj = len(pat.findall(epub_text)) - len(pat.findall(pdf_text))
             cap = min(n, max(0, adj))
             if cap:
                 cls = supers
