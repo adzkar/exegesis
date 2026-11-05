@@ -54,27 +54,32 @@ operational failures (unreadable inputs).
   - *genuine loss* — everything else; >1% of source words → High,
     ≥10 words → Med, fewer → Low.
 - **D. TOC/headings** — nav entries counted; duplicate titles flagged;
-  nav titles shaped like table column headers (`df t b p CI`, `M SD
+  nav titles shaped like table column headers (`df SE CI`, `M SD
   Min Max` — ≥3 stat tokens → High, a header row promoted to h2 both
   pollutes the TOC and explodes the table into pseudo-chapters);
   numbered source headings (`2. Methods`, `2.1. Participants` — number
-  and title must share one extracted line, `Surname, I` reference tails
-  excluded) absent from the TOC → High when ≥2 go missing; zero `<h1>`
-  in a multi-heading doc means the title never promoted and the TOC is
-  flat.
-- **E. Reading-order splices** — a bold `Table N.`/`Fig. N.` legend
+  and title must share one extracted line, no trailing period so
+  numbered list items can't match, `Surname, I` reference tails and
+  everything past the References heading excluded) absent from the TOC
+  → High when ≥2 go missing; zero `<h1>` in a multi-heading doc means
+  the title never promoted and the TOC is flat.
+- **E. Reading-order splices** — a bold `Table N.`/`Fig(ure) N.` legend
   appearing after >25 chars of running text inside the same `<p>` is a
   floating-object caption glued into a sentence (e.g. `over 2 <b>Table
   2.</b>`).
 - **F. Tables** — every `Table N.` legend in the source (trailing period
   required, so `(Table N)` citations don't match) is located in the
   EPUB: inside `<table>` markup / flattened to prose / swept into
-  notes.xhtml / missing. Content survival is scored with 4-grams over a
-  55-token window after each legend — order-sensitive, so scattered
-  digits can't fake coverage; the worst window is reported. <60% →
-  content largely absent.
-- **G. Figures** — PDF raster count (`page.get_images`) vs embedded
-  images; `Fig. N` legends must appear somewhere in the EPUB; pages with
+  notes.xhtml / missing, with the match required in legend position so
+  a sentence-ending citation can't stand in. Content survival is scored
+  with 4-grams over a 55-token window after each legend — order-
+  sensitive, so scattered digits can't fake coverage; degenerate
+  (<8-token) and furniture-dominated windows are skipped and the worst
+  remaining window is reported. <60% → content largely absent.
+- **G. Figures** — unique PDF raster count (deduped by content bytes,
+  2048-byte floor — a logo repeated per page counts once) vs embedded
+  `img_*` images (rasterized `table_*` members excluded); `Fig. N`
+  legends must appear somewhere in the EPUB; pages with
   >30 vector drawings are split into *vector-ruled table grids* (a
   `Table N.` legend on the page, or a digit-heavy continuation — cells
   still emit as flat text) vs *vector figures* (nothing capturable —
@@ -83,7 +88,7 @@ operational failures (unreadable inputs).
 - **H. Notes** — `notes.xhtml` shouldn't contain `Table N.` legends
   (notes zone swallowing grids); `href="#fnN"` links must resolve to
   `id="fnN"` anchors.
-- **I. Fidelity** — `U+FFFD`/`¼`-class artifacts are verified against
+- **I. Fidelity** — `U+FFFD` replacement chars are verified against
   the PDF's raw text layer: present in source → source-faithful (OK),
   absent → converter-introduced (Med).
 

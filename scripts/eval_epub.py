@@ -174,7 +174,11 @@ STAT_HDR_RE = re.compile(r"\b(?:(?i:df|CI|SD|SE)|Min|Max|Mean|Median)\b")
 # next line (`6.14\nGender` is not a section). One sublevel max so
 # `6.14` decimals can't pass as `6.1` + stray digit; `Surname, I` tails
 # are excluded so numbered references can't pose as sections either.
-SECTION_RE = re.compile(r"^\s*(\d{1,2}(?:\.\d)?)\.?[ \t]+([A-Z][A-Za-z][A-Za-z &,\-]{2,60})\.?\s*$", re.MULTILINE)
+# No optional trailing period: numbered list items (`1. Collect
+# samples.`, `2. Wash twice with PBS.`) share the `N. Title` shape and
+# never reach the TOC, but real numbered headings almost never end in a
+# sentence period — the line-end anchor discriminates for free.
+SECTION_RE = re.compile(r"^\s*(\d{1,2}(?:\.\d)?)\.?[ \t]+([A-Z][A-Za-z][A-Za-z &,\-]{2,60})\s*$", re.MULTILINE)
 # Vancouver-style numbered references survive the numbered-heading shape
 # (`14. Kessler RC, Berglund P, Demler`, `15. Wang PS,`): reject a title
 # carrying a surname + periodless-initials fragment, any title ending
@@ -190,8 +194,8 @@ REF_ZONE_RE = re.compile(
 
 
 def header_like_titles(entries: list[str]) -> list[str]:
-    """Nav titles built from table column headers (`Right df t b p CI`,
-    `Group M SD Min Max`) — a header row promoted to h2 both pollutes the
+    """Nav titles built from table column headers (`Group M SD Min Max`,
+    `Right df SE CI`) — a header row promoted to h2 both pollutes the
     TOC and explodes the table into pseudo-chapters."""
     return [e for e in entries if len(STAT_HDR_RE.findall(e)) >= 3]
 
@@ -229,7 +233,8 @@ def _legend_present(raw: str, num: str) -> bool:
     )
 
 
-def table_dispositions(pdf_text: str, chapters: dict[str, str], notes: str):
+def table_dispositions(pdf_text: str, chapters: dict[str, str],
+                       notes: str, furniture: set[str]):
     """For each `Table N` legend in the source, decide where it landed:
     inside <table> markup, flattened into prose/blockquote, swept into
     notes.xhtml, or missing. Legends require a trailing period
@@ -238,11 +243,15 @@ def table_dispositions(pdf_text: str, chapters: dict[str, str], notes: str):
     citation can't stand in for the legend. Content survival is scored
     with 4-grams — a lone digit or cell word coincidentally matching
     somewhere proves nothing, but a contiguous cell run can't fake its
-    way in. Every `Table N.` occurrence gets its own 55-token window —
-    iterated by position, not a greedy consume, so a citation <700 chars
-    before the real legend can't swallow the grid's window — and the
-    worst coverage wins: a citation window is ordinary body text
-    (~70-90%), the real grid is the risky one."""
+    way in. Every `Table N.` occurrence gets its own window — iterated
+    by position, not a greedy consume, so a citation <700 chars before
+    the real legend can't swallow the grid's window — built from the
+    first 55 *content* tokens (stripped-furniture words are discounted:
+    they're correctly absent from the EPUB, so counting them would
+    under-report survival); a window left with <8 tokens — an
+    end-of-document citation or an all-furniture tail — carries no
+    coverable content and is skipped. The worst surviving window
+    decides."""
     epub_tokens = []
     for c in chapters.values():
         epub_tokens += WORD_RE.findall(xhtml_text(c).lower())
@@ -253,10 +262,14 @@ def table_dispositions(pdf_text: str, chapters: dict[str, str], notes: str):
         legend_re = rf"Table\s+{num}\."
         coverages = []
         for m in re.finditer(legend_re, pdf_text):
-            toks = WORD_RE.findall(pdf_text[m.end():m.end() + 700].lower())[:55]
+            toks = [t for t in WORD_RE.findall(
+                pdf_text[m.end():m.end() + 700].lower())
+                if t not in furniture][:55]
+            if len(toks) < 8:
+                continue
             win = {tuple(toks[i:i + 4]) for i in range(len(toks) - 3)}
             coverages.append(sum(g in grams for g in win) / max(len(win), 1))
-        coverage = min(coverages, default=0.0)
+        coverage = min(coverages) if coverages else None  # unassessed
         in_markup = any(_legend_present(seg, num)
                         for c in chapters.values()
                         for seg in re.findall(r"<table\b.*?</table>", c, re.DOTALL))
@@ -322,7 +335,14 @@ def main() -> int:
     if looks_like_junk_title(meta["title"]):
         findings.append(("High", "B", f"dc:title looks like junk: {meta['title']!r}"))
     creator = meta["creator"]
-    if len(creator) > 150 or any(h in creator.lower() for h in AFFILIATION_HINTS):
+    # Contamination is about content, not length — a 10-author byline
+    # clears 150 chars legitimately. Flag an affiliation tail
+    # (`Smith J, Department of X`) or the title itself absorbed into the
+    # byline (>=3 of its long words present — needs several so a surname
+    # colliding with one title word can't fake it).
+    title_words = {w for w in WORD_RE.findall(meta["title"].lower()) if len(w) > 3}
+    absorbed = len(title_words & set(WORD_RE.findall(creator.lower()))) >= 3
+    if any(h in creator.lower() for h in AFFILIATION_HINTS) or absorbed:
         findings.append(("High", "B", f"dc:creator contaminated (len={len(creator)}): {creator[:80]!r}…"))
 
     # ---- C. coverage ----
@@ -334,8 +354,12 @@ def main() -> int:
     pdf_text = " ".join(p.get_text("text") for p in pdf)
     epub_text = " ".join(xhtml_text(c) for c in chapters.values()) + " " + xhtml_text(notes)
     pw, ew = Counter(WORD_RE.findall(pdf_text.lower())), Counter(WORD_RE.findall(epub_text.lower()))
+    if not pw:
+        findings.append(("High", "C", ("no extractable text in PDF — scanned/"
+                                      "image-only input, eval is blind")))
     missing, extra = pw - ew, ew - pw
-    rejoined, furn, supers, genuine = classify_missing(missing, extra, furniture_words(pdf), set(ew))
+    furn_vocab = furniture_words(pdf)
+    rejoined, furn, supers, genuine = classify_missing(missing, extra, furn_vocab, set(ew))
     verbatim = sum((pw - missing).values())
     coverage_pct = 100 * verbatim / max(sum(pw.values()), 1)
     n_genuine = sum(genuine.values())
@@ -375,14 +399,15 @@ def main() -> int:
             findings.append(("Med", "E", f"{Path(name).name}: legend spliced mid-sentence: …{frag}"))
 
     # ---- F. tables ----
-    for num, where, cov in table_dispositions(pdf_text, chapters, notes):
+    for num, where, cov in table_dispositions(pdf_text, chapters, notes, furn_vocab):
         if where == "missing":
             findings.append(("High", "F", f"Table {num}: legend+data absent from EPUB"))
         elif where == "notes":
-            findings.append(("High", "F", f"Table {num}: swept into notes.xhtml (coverage {cov:.0%})"))
+            cov_s = "n/a" if cov is None else f"{cov:.0%}"
+            findings.append(("High", "F", f"Table {num}: swept into notes.xhtml (coverage {cov_s})"))
         elif where == "prose":
             findings.append(("Med", "F", f"Table {num}: flattened to prose, no grid markup"))
-        if where != "missing" and cov < 0.6:
+        if where != "missing" and cov is not None and cov < 0.6:
             findings.append(("High", "F", f"Table {num}: content largely absent ({cov:.0%} 4-gram coverage)"))
 
     # ---- G. figures ----
@@ -400,7 +425,11 @@ def main() -> int:
         if len(data) >= 2048:
             raster_digests.add(hashlib.sha1(data).digest())
     pdf_rasters = len(raster_digests)
-    epub_imgs = [m for m in members if "/images/" in m]
+    # Figure embeds only — `images/table_<digest>.png` members are
+    # pipeline-rendered tables, not source rasters; counting them here
+    # would let a dropped figure hide behind a rasterized grid.
+    epub_imgs = [m for m in members
+                 if "/images/" in m and Path(m).name.startswith("img_")]
     vec_pages = [i for i, p in enumerate(pdf) if len(p.get_drawings()) > 30]
     for num in sorted(set(FIG_LEGEND_RE.findall(pdf_text)), key=int):
         if not re.search(rf"Fig(?:ure)?\.?\s*{num}[a-z]?\b", epub_text):
