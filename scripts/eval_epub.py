@@ -99,22 +99,60 @@ def furniture_words(pdf_pages) -> set[str]:
     return rep | edge_words
 
 
-def classify_missing(missing: Counter, extra: Counter, furniture: set[str]):
+def classify_missing(missing: Counter, extra: Counter, furniture: set[str],
+                     epub_words: set[str]):
     """Sort missing words into stripped furniture, rejoined-hyphenation
-    (a fragment that is a prefix/suffix of an extra EPUB word), or genuine
-    loss. Furniture is checked first — a running-head word that happens to
-    prefix an extra word is still furniture. Prefix/suffix matching is
-    enough because dehyphenation only ever concatenates a fragment pair."""
+    (a fragment that is a prefix/suffix of an extra EPUB word), superscript
+    splits (source token `Kral1` emits as `Kral` + superscript `1` — both
+    halves present, so nothing was lost), or genuine loss. Furniture is
+    checked first — a running-head word that happens to prefix an extra
+    word is still furniture. Prefix/suffix matching is enough because
+    dehyphenation only ever concatenates a fragment pair."""
     extra_words = list(extra)
-    rejoined, furn, genuine = Counter(), Counter(), Counter()
+    rejoined, furn, supers, genuine = Counter(), Counter(), Counter(), Counter()
     for w, n in missing.items():
         if w in furniture:
             furn[w] = n
         elif len(w) >= 3 and any(e != w and (e.startswith(w) or e.endswith(w)) for e in extra_words):
             rejoined[w] = n
+        elif (m := re.match(r"^([a-z]+)(\d+)$|^(\d+)([a-z]+)$", w)) and \
+                all(p in epub_words for p in m.groups() if p):
+            supers[w] = n
         else:
             genuine[w] = n
-    return rejoined, furn, genuine
+    return rejoined, furn, supers, genuine
+
+
+STAT_HDR_RE = re.compile(r"\b(?:df|CI|SD|SE|Min|Max|Mean|Median)\b", re.IGNORECASE)
+# A numbered heading keeps number and title on ONE extracted line — a
+# `\s+` separator would let a numeric table cell adopt the label on the
+# next line (`6.14\nGender` is not a section). One sublevel max so
+# `6.14` decimals can't pass as `6.1` + stray digit; `Surname, I` tails
+# are excluded so numbered references can't pose as sections either.
+SECTION_RE = re.compile(r"^\s*(\d{1,2}(?:\.\d)?)\.?[ \t]+([A-Z][A-Za-z][A-Za-z &,\-]{2,60})\.?\s*$", re.MULTILINE)
+REF_TAIL_RE = re.compile(r",\s*[A-Z]{1,3}$")
+
+
+def header_like_titles(entries: list[str]) -> list[str]:
+    """Nav titles built from table column headers (`Right df t b p CI`,
+    `Group M SD Min Max`) — a header row promoted to h2 both pollutes the
+    TOC and explodes the table into pseudo-chapters."""
+    return [e for e in entries if len(STAT_HDR_RE.findall(e)) >= 3]
+
+
+def missing_sections(pdf_text: str, entries: list[str]) -> list[str]:
+    """Numbered headings (`2. Methods`, `3.1. Participants`) present in the
+    source but absent from the TOC — the converter emits them as plain
+    paragraphs, so the reader gets no way into the body. Only the
+    alphabetic core is matched, so `2. Methods` still finds a nav entry
+    titled `Methods`."""
+    nav_blob = " ".join(entries).lower()
+    out = []
+    for m in SECTION_RE.finditer(pdf_text):
+        title = m.group(2).strip()
+        if title.lower() not in nav_blob and title not in out and not REF_TAIL_RE.search(title):
+            out.append(title)
+    return out
 
 
 def nav_entries(nav: str) -> list[str]:
@@ -218,20 +256,33 @@ def main() -> int:
     epub_text = " ".join(xhtml_text(c) for c in chapters.values()) + " " + xhtml_text(notes)
     pw, ew = Counter(WORD_RE.findall(pdf_text.lower())), Counter(WORD_RE.findall(epub_text.lower()))
     missing, extra = pw - ew, ew - pw
-    rejoined, furn, genuine = classify_missing(missing, extra, furniture_words(pdf))
+    rejoined, furn, supers, genuine = classify_missing(missing, extra, furniture_words(pdf), set(ew))
     verbatim = sum((pw - missing).values())
     coverage_pct = 100 * verbatim / max(sum(pw.values()), 1)
-    if sum(genuine.values()) > sum(pw.values()) * 0.01:
-        findings.append(("High", "C", (f"genuine word loss {sum(genuine.values())} "
+    n_genuine = sum(genuine.values())
+    if n_genuine > sum(pw.values()) * 0.01:
+        findings.append(("High", "C", (f"genuine word loss {n_genuine} "
                                     f"(>1%): {genuine.most_common(10)}")))
-    elif genuine:
-        findings.append(("Med", "C", f"genuine word loss {sum(genuine.values())}: {genuine.most_common(10)}"))
+    elif n_genuine >= 10:
+        findings.append(("Med", "C", f"genuine word loss {n_genuine}: {genuine.most_common(10)}"))
+    elif n_genuine:
+        findings.append(("Low", "C", f"genuine word loss {n_genuine}: {genuine.most_common(10)}"))
 
     # ---- D. TOC / headings ----
     entries = nav_entries(nav)
     dup = [t for t, n in Counter(entries).items() if n > 1]
     if dup:
         findings.append(("Low", "D", f"duplicate TOC titles: {dup}"))
+    hdr = header_like_titles(entries)
+    if hdr:
+        findings.append(("High", "D", (f"table header rows promoted to TOC headings: "
+                                      f"{hdr[:3]}{'…' if len(hdr) > 3 else ''}")))
+    missing_secs = missing_sections(pdf_text, entries)
+    if len(missing_secs) >= 2:
+        findings.append(("High", "D", (f"numbered section headings missing from TOC "
+                                      f"({len(missing_secs)}): {missing_secs[:5]}{'…' if len(missing_secs) > 5 else ''}")))
+    elif missing_secs:
+        findings.append(("Low", "D", f"numbered section heading missing from TOC: {missing_secs}"))
     all_chap = "".join(chapters.values())
     n_h1 = len(re.findall(r"<h1[\s>]", all_chap))
     n_h2 = len(re.findall(r"<h2[\s>]", all_chap))
@@ -262,8 +313,24 @@ def main() -> int:
     for num in sorted(set(FIG_LEGEND_RE.findall(pdf_text)), key=int):
         if not re.search(rf"Fig(?:ure)?\.?\s*{num}\b", epub_text):
             findings.append(("Med", "G", f"Fig. {num}: legend absent from EPUB"))
-    if vec_pages:
-        findings.append(("Low", "G", f"vector graphics on pages {vec_pages} not capturable — verify content survived as text"))
+    # >30 vector ops usually means a ruled table grid, not a figure — a
+    # `Table N.` legend decides it, and a digit-heavy page is a table
+    # continuation; the two have different remedies (grid cells still
+    # emit as flat text vs nothing emitted).
+    def _is_grid_page(i: int) -> bool:
+        t = pdf[i].get_text("text")
+        if TABLE_LEGEND_RE.search(t):
+            return True
+        toks = WORD_RE.findall(t)
+        return bool(toks) and sum(x.isdigit() for x in toks) / len(toks) > 0.5
+    grid_pages = [i for i in vec_pages if _is_grid_page(i)]
+    fig_vec = [i for i in vec_pages if i not in grid_pages]
+    if grid_pages:
+        findings.append(("Low", "G", (f"vector-ruled table grids on pages {grid_pages} — "
+                                     "cells emit as flat text, structure lost")))
+    if fig_vec:
+        findings.append(("Low", "G", (f"vector graphics on pages {fig_vec} not capturable — "
+                                     "verify content survived as text")))
     if pdf_rasters > len(epub_imgs):
         findings.append(("Med", "G", f"raster images: {pdf_rasters} in PDF vs {len(epub_imgs)} embedded"))
     for name, raw in chapters.items():
@@ -301,7 +368,7 @@ def main() -> int:
           f"{len(members)} members, {len(chapters)} chapters, {len(epub_imgs)} images")
     print(f"- B metadata: title={meta['title'][:60]!r}")
     print(f"- C coverage: rejoined {sum(rejoined.values())}, furniture {sum(furn.values())}, "
-          f"genuine loss {sum(genuine.values())}")
+          f"superscript splits {sum(supers.values())}, genuine loss {n_genuine}")
     print(f"- D toc: {len(entries)} entries, h1={n_h1} h2={n_h2}, dupes={dup or 'none'}")
     print(f"- G figures: pdf rasters={pdf_rasters}, embedded={len(epub_imgs)}, vector pages={vec_pages}\n")
     print("## Findings (severity-ranked)")
@@ -315,7 +382,7 @@ def main() -> int:
     print("| class | words | top examples |")
     print("|-------|-------|--------------|")
     for label, c in (("rejoined hyphenation", rejoined), ("stripped furniture", furn),
-                     ("genuine loss", genuine)):
+                     ("superscript splits", supers), ("genuine loss", genuine)):
         ex = ", ".join(w for w, _ in c.most_common(8))
         print(f"| {label} | {sum(c.values())} | {ex} |")
     return min(n_high, 1)
