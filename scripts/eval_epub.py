@@ -25,6 +25,10 @@ from collections import Counter
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from exegesis.lang import EN
+from exegesis.text import _join_lines
+
 WORD_RE = re.compile(r"[A-Za-z0-9]+")
 TAG_RE = re.compile(r"<[^>]+>")
 # Caption numbers mirror the pipeline's `_CAP_NUM`: `s?` supplementary
@@ -188,21 +192,13 @@ def _dropped(block, rect, boilerplate: set[str]) -> bool:
     x0, y0, x1, y1, text = block[:5]
     h, w = rect.height, rect.width
     joined = " ".join(text.split())
-    # _is_furniture searches dehyphenated `_block_text` — a
-    # `copy-`/`right` running head reads `copyright` to the converter,
-    # so the gate runs on the dehyphenated form. The pipeline's
-    # `_join_lines` fuses only a fragment *ending* in `[a-z]-`; fusing
-    # on collapsed whitespace would also join a same-line `Vol- 12`
-    # into `Vol12` — content the pipeline keeps — so the regex runs on
-    # the raw text's line boundary first, collapsing after. Its other
-    # arm fuses a lone-uppercase line with a lowercase continuation
-    # (drop caps): `D`\n`oi:10.x` reads `Doi:10.x` to the furniture
-    # gate — except letters that are real words
-    # (`lang.single_letter_words`: I/A for EN), which the pipeline
-    # doesn't fuse — and the pipeline strips each line before the
-    # lone-letter test, so a leading-space ` D` fuses too.
-    fused = re.sub(r"(?m)^ *([B-HJ-Z]) *\n\s*(?=[a-z])", r"\1", text)
-    dehyph = " ".join(re.sub(r"([a-z])- *\n\s*", r"\1", fused).split())
+    # _is_furniture searches `_block_text` — `copy-`/`right` and
+    # `D`/`oi:` heads read `copyright`/`Doi:` to the converter — so
+    # the gate runs the pipeline's own `_join_lines` on the block's
+    # lines rather than re-approximating its sequential per-fragment
+    # arms (hyphen joins before lone-uppercase drop caps, both after
+    # per-line strip, honoring `single_letter_words`).
+    dehyph = _join_lines(text.split("\n"), EN)
     return bool(
         ((y1 < h * 0.20 or y0 > h * 0.80)
          and SIG_RE.sub("", text.lower()) in boilerplate)
@@ -363,8 +359,9 @@ REF_TAIL_RE = re.compile(r"([A-Z][a-z]+\s+[A-Z]{1,3}\s*,|,\s*[A-Z]{1,3}$|,$)")
 # heading in a real paper, so drop every SECTION_RE hit inside the zone.
 REF_ZONE_RE = re.compile(
     r"^\s*(?:\d{1,2}\.?\s+)?"
-    r"(?:References(?: and Notes)?|Notes and References|Bibliography)\s*$",
-    re.MULTILINE,
+    r"(?:References(?: and Notes)?|Notes and References|Bibliography"
+    r"|Literature Cited|Works Cited)\s*$",
+    re.MULTILINE | re.IGNORECASE,
 )
 
 
@@ -402,9 +399,13 @@ def missing_sections(pdf_text: str, entries: list[str],
     or column-interleaved sources — the condition `order.py` exists to
     fix — the 'next line' can be an adjacent column's line or a
     footer, and its lowercase start (or a coincidental `N±1.` line)
-    silences a genuinely missing heading. False negatives only: the
-    discriminators can suppress a candidate, never invent one. A
-    positional lookup over block bboxes is the upgrade path."""
+    silences a genuinely missing heading. Mostly false negatives —
+    though interleaving also breaks the *exclusion* arms: a column-
+    interleaved numbered reference list loses the `N±1` adjacency that
+    marks it as a list run, and surname-free entries
+    (`15. Journal of Testing`) pass `REF_TAIL_RE`, so unanchored
+    numbered references can surface as false findings. A positional
+    lookup over block bboxes is the upgrade path."""
     raw_titles = [re.sub(r"^\s*\d+(?:\.\d+)?\s*[.)]?\s*", "", e.lower()).strip()
                   for e in entries]
     nav_counts = Counter(raw_titles)
@@ -642,9 +643,11 @@ def table_dispositions(blocks_text: str, win_text: str,
 
 def main() -> int:
     """Run checks A–I and emit the severity-ranked report. Returns the
-    CI contract: 0 clean, 1 when High findings exist, and 2 only via
-    the __main__ handler for operational failures (zip/XML/pymupdf) —
-    checks that can't run report High rather than crashing."""
+    CI contract: 0 clean, 1 when High findings exist, 2 for operational
+    failures — this function's early returns (unreadable inputs,
+    non-zip EPUB, unopenable PDF) or the `__main__` catch-all for
+    anything else (zip/XML/pymupdf internals). Checks that can't run
+    report High rather than crashing."""
     ap = argparse.ArgumentParser(description="Evaluate a PDF->EPUB conversion.")
     ap.add_argument("pdf", type=Path)
     ap.add_argument("epub", type=Path)
