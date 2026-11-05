@@ -52,8 +52,13 @@ def _num_pat(num: str) -> str:
 TABLE_LEGEND_RE = re.compile(
     rf"(?:^|\n)\s*Table\b\s*\.?\s*({CAP_NUM}){CAP_RANGE}\.",
     re.IGNORECASE)
+# Caption terminators mirror `lang._CAP_TAIL` — dash/.:/)/2+-space/EOL —
+# so a sentence-initial 'Figure 3 shows…' (the results-section norm)
+# reads as prose, never as a legend, on either side.
+_CAP_TAIL_TXT = r"(?:\s+[—–-]|\s*[.:)]|\s{2,}|\n|$)"
 FIG_LEGEND_RE = re.compile(
-    rf"(?:^|\n)\s*(?:Fig(?:ure)?|Plate|Scheme|Chart)\b\s*\.?\s*({CAP_NUM})",
+    rf"(?:^|\n)\s*(?:Fig(?:ure)?|Plate|Scheme|Chart)\b\s*\.?\s*"
+    rf"({CAP_NUM}){CAP_RANGE}{_CAP_TAIL_TXT}",
     re.IGNORECASE)
 # A caption label glued mid-paragraph: "25+ chars of sentence text, then
 # a bold Table/Fig N. legend inside the same <p>" — a legend that belongs
@@ -191,9 +196,9 @@ def _dropped(block, rect, boilerplate: set[str]) -> bool:
     # (drop caps): `D`\n`oi:10.x` reads `Doi:10.x` to the furniture
     # gate — except letters that are real words
     # (`lang.single_letter_words`: I/A for EN), which the pipeline
-    # doesn't fuse. The hyphen arm allows the trailing space `_block_text`
-    # strips per line.
-    fused = re.sub(r"(?m)^([B-HJ-Z]) *\n\s*(?=[a-z])", r"\1", text)
+    # doesn't fuse — and the pipeline strips each line before the
+    # lone-letter test, so a leading-space ` D` fuses too.
+    fused = re.sub(r"(?m)^ *([B-HJ-Z]) *\n\s*(?=[a-z])", r"\1", text)
     dehyph = " ".join(re.sub(r"([a-z])- *\n\s*", r"\1", fused).split())
     return bool(
         ((y1 < h * 0.20 or y0 > h * 0.80)
@@ -836,7 +841,8 @@ def main() -> int:
                       key=_num_key):
         if not re.search(
                 rf"{_LEGEND_AT}(?:Fig(?:ure)?|Plate|Scheme|Chart)\b"
-                rf"\s*\.?\s*{_num_pat(num)}(?![A-Za-z0-9])",
+                rf"\s*\.?\s*{_num_pat(num)}{CAP_RANGE}"
+                rf"(?:\s+[—–-]|\s*[.:)]|\s{{2,}}|\s*<[^>]+>|$)",
                 all_chap, re.IGNORECASE):
             findings.append(("Med", "G", f"Fig. {num}: legend absent from EPUB"))
     # >30 vector ops usually means a ruled table grid, not a figure — a
