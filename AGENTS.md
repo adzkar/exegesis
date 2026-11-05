@@ -216,9 +216,11 @@ chapters.
   pipeline's constants and floors, not approximate them —
   `scripts/eval_epub.py`'s furniture vocabulary copies
   `analyze._boilerplate_signatures` (edge-zone restriction, letters-only
-  sig, `max(2, int(n * 0.4))` page floor). A looser re-implementation
-  (page-wide signatures, no floor) produces false "clean" verdicts on
-  1-page inputs and repeated body text — the same drift applies to any
+  sig, `max(2, int(n * 0.4))` page floor) and `analyze._is_furniture`
+  (outer-7% content/digit gate, margin-strip shape). A looser
+  re-implementation (page-wide signatures, no floor, unconditional edge
+  zone) produces false "clean" verdicts on 1-page inputs, repeated body
+  text, and real content near the edge — the same drift applies to any
   check that borrows a pipeline heuristic.
 
 ## Git hygiene

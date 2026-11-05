@@ -37,6 +37,13 @@ FIG_LEGEND_RE = re.compile(r"\bFig(?:ure)?\.?\s*(\d+)[a-z]?\b")
 # own <p> has only `>` + tagname available before it, not 25 chars, while
 # text sharing the paragraph still matches.
 SPLICE_RE = re.compile(r"([^<]{25,}<b>(?:Table|Fig)\.?\s*\d+\.)")
+# Copied from `exegesis.lang.EN.furniture` — the eval grades English
+# conversions until the legend-pattern localization follow-up lands.
+FURNITURE_RE = re.compile(
+    r"www\.|downloaded from|vol\.?\s*\d|issn|doi[:\s]|©|copyright|"
+    r"\b\d{2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)",
+    re.IGNORECASE,
+)
 AFFILIATION_HINTS = (
     "university", "department", "center", "centre", "institute",
     "hospital", "college", "laborator", "school of",
@@ -82,24 +89,36 @@ def looks_like_junk_title(title: str) -> bool:
 
 
 def furniture_words(pdf_pages) -> set[str]:
-    """Words the converter *should* have stripped, mirroring
-    `exegesis.analyze._boilerplate_signatures`: letters-only signatures of
-    blocks inside the outer 20% edge zones that recur on >=
+    """Words the converter *should* have stripped, mirroring the pipeline's
+    own signals rather than approximating them — `order._order_page`
+    drops a block when `analyze._is_signature_furniture` or
+    `analyze._is_furniture` holds. Signatures: letters-only sigs of
+    blocks inside the outer 20% edge zones recurring on >=
     max(2, 40%*pages) pages (running heads) — the zone restriction keeps
     body text repeated mid-page from being excused, and the 2-page floor
     stops a 1-page doc from calling every block 'repeated'. Positional
-    page-number/pattern furniture adds words from the outer 8% edge."""
+    furniture mirrors `_is_furniture` exactly: pattern furniture and
+    pure page numbers only inside the outer 7% edge (a wider or
+    unconditional zone would excuse real edge content as stripped), and
+    narrow+tall blocks in the outer 10% horizontal margins (rotated
+    sidebars)."""
     sig_re = re.compile(r"[^a-z]+")
     counts: Counter = Counter()
     edge_words: set[str] = set()
     zone_blocks: list[str] = []
     for page in pdf_pages:
-        h = page.rect.height
+        h, w = page.rect.height, page.rect.width
         seen = set()
         for b in page.get_text("blocks"):
-            _x0, y0, _x1, y1, text = b[0], b[1], b[2], b[3], b[4]
-            if y1 < h * 0.08 or y0 > h * 0.92:
-                edge_words.update(WORD_RE.findall(text.lower()))
+            x0, y0, x1, y1, text = b[0], b[1], b[2], b[3], b[4]
+            joined = " ".join(text.split())
+            if (y0 > h * 0.93 or y1 < h * 0.07) and (
+                FURNITURE_RE.search(joined) or re.fullmatch(r"\d{1,4}", joined)
+            ):
+                edge_words.update(WORD_RE.findall(joined.lower()))
+            if (x1 - x0 < 25 and y1 - y0 > 4 * (x1 - x0)
+                    and (x0 > w * 0.9 or x1 < w * 0.1)):
+                edge_words.update(WORD_RE.findall(joined.lower()))
             if y1 < h * 0.20 or y0 > h * 0.80:
                 sig = sig_re.sub("", text.lower())
                 if 3 <= len(sig) <= 80:
