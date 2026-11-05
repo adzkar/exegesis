@@ -9,11 +9,14 @@ coverage, TOC/headings, reading-order splices, table disposition,
 figure coverage, notes integrity, and whether odd artifacts came from
 the source text layer or the converter. Output is markdown; paste it
 into an issue or read it inline. Exit code is `1` when any
-High-severity finding exists (usable as a CI gate), `0` otherwise.
+High-severity finding exists (usable as a CI gate), `0` otherwise —
+`2` marks operational failures (unreadable inputs), so a broken run
+can't masquerade as a gate failure.
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import html
 import re
 import sys
@@ -35,8 +38,9 @@ FIG_LEGEND_RE = re.compile(r"\bFig(?:ure)?\.?\s*(\d+)[a-z]?\b")
 # to a floating object was spliced into body flow. The run-up excludes
 # `<` so it can never cross a tag boundary — a bold caption opening its
 # own <p> has only `>` + tagname available before it, not 25 chars, while
-# text sharing the paragraph still matches.
-SPLICE_RE = re.compile(r"([^<]{25,}<b>(?:Table|Fig)\.?\s*\d+\.)")
+# text sharing the paragraph still matches. `Fig(?:ure)?` keeps parity
+# with FIG_LEGEND_RE — a spelled-out `Figure N.` splice counts too.
+SPLICE_RE = re.compile(r"([^<]{25,}<b>(?:Table|Fig(?:ure)?)\.?\s*\d+\.)")
 # Copied from `exegesis.lang.EN.furniture` — the eval grades English
 # conversions until the legend-pattern localization follow-up lands.
 FURNITURE_RE = re.compile(
@@ -77,15 +81,17 @@ def opf_metadata(opf: str) -> dict[str, str]:
 
 def looks_like_junk_title(title: str) -> bool:
     """Heuristic: real titles are mostly letters. Pagination/ID junk like
-    'OP-SCAN150067 1758..1768' carries '..'-ranges, long digit runs, or more
-    digits than a title ever needs — the current pipeline only checks for
-    the presence of letters, which these strings still pass."""
+    'OP-SCAN150067 1758..1768' carries '..'-ranges, long digit runs, or
+    outright digit dominance — a real title keeps digits in the minority
+    ('Cancer trends 1990-2019', 'COVID-19 in 2020'), so a bare 0.5 ratio
+    flags honest work. The pipeline only checks for the presence of
+    letters, which these strings still pass."""
     if not title:
         return True
     if re.search(r"\d+\s*\.\.\s*\d+|\d{5,}", title):
         return True
     digits = sum(c.isdigit() for c in title)
-    return digits > 0 and digits >= sum(c.isalpha() for c in title) * 0.5
+    return digits > sum(c.isalpha() for c in title) and digits >= 10
 
 
 def furniture_words(pdf_pages) -> set[str]:
@@ -158,14 +164,29 @@ def classify_missing(missing: Counter, extra: Counter, furniture: set[str],
     return rejoined, furn, supers, genuine
 
 
-STAT_HDR_RE = re.compile(r"\b(?:df|CI|SD|SE|Min|Max|Mean|Median)\b", re.IGNORECASE)
+# Abbreviation arms (df/CI/SD/SE) match case-insensitively — real header
+# rows print them lowercase — but the word forms stay case-sensitive:
+# 'Mean and max heart rate' is a heading, 'Mean SD Min Max' is a header
+# row pretending to be one.
+STAT_HDR_RE = re.compile(r"\b(?:(?i:df|CI|SD|SE)|Min|Max|Mean|Median)\b")
 # A numbered heading keeps number and title on ONE extracted line — a
 # `\s+` separator would let a numeric table cell adopt the label on the
 # next line (`6.14\nGender` is not a section). One sublevel max so
 # `6.14` decimals can't pass as `6.1` + stray digit; `Surname, I` tails
 # are excluded so numbered references can't pose as sections either.
 SECTION_RE = re.compile(r"^\s*(\d{1,2}(?:\.\d)?)\.?[ \t]+([A-Z][A-Za-z][A-Za-z &,\-]{2,60})\.?\s*$", re.MULTILINE)
-REF_TAIL_RE = re.compile(r",\s*[A-Z]{1,3}$")
+# Vancouver-style numbered references survive the numbered-heading shape
+# (`14. Kessler RC, Berglund P, Demler`, `15. Wang PS,`): reject a title
+# carrying a surname + periodless-initials fragment, any title ending
+# mid-list on a comma, or the `Surname, I` tail of an unwrapped entry.
+REF_TAIL_RE = re.compile(r"([A-Z][a-z]+\s+[A-Z]{1,3}\s*,|,\s*[A-Z]{1,3}$|,$)")
+# …and belt-and-suspenders: nothing numbered follows the references
+# heading in a real paper, so drop every SECTION_RE hit inside the zone.
+REF_ZONE_RE = re.compile(
+    r"^\s*(?:\d{1,2}\.?\s+)?"
+    r"(?:References(?: and Notes)?|Notes and References|Bibliography)\s*$",
+    re.MULTILINE,
+)
 
 
 def header_like_titles(entries: list[str]) -> list[str]:
@@ -182,8 +203,11 @@ def missing_sections(pdf_text: str, entries: list[str]) -> list[str]:
     alphabetic core is matched, so `2. Methods` still finds a nav entry
     titled `Methods`."""
     nav_blob = " ".join(entries).lower()
+    zone = REF_ZONE_RE.search(pdf_text)
     out = []
     for m in SECTION_RE.finditer(pdf_text):
+        if zone and m.start() > zone.end():
+            continue
         title = m.group(2).strip()
         if title.lower() not in nav_blob and title not in out and not REF_TAIL_RE.search(title):
             out.append(title)
@@ -194,36 +218,50 @@ def nav_entries(nav: str) -> list[str]:
     return [html.unescape(t).strip() for t in re.findall(r'<a href="[^"]*">(.*?)</a>', nav, re.DOTALL)]
 
 
+def _legend_present(raw: str, num: str) -> bool:
+    """A `Table N.` only counts as *the legend* in legend position — the
+    start of an element or extracted line. `results appear in Table 3.`
+    ends a sentence with the same shape, so an unanchored search lets a
+    citation fake the landing spot (a swept or dropped table reporting
+    'prose' instead of 'notes'/'missing')."""
+    return bool(
+        re.search(rf"(?:^|>|\n)\s*(?:<[^>]+>\s*)*Table\s+{num}\.", raw)
+    )
+
+
 def table_dispositions(pdf_text: str, chapters: dict[str, str], notes: str):
     """For each `Table N` legend in the source, decide where it landed:
     inside <table> markup, flattened into prose/blockquote, swept into
     notes.xhtml, or missing. Legends require a trailing period
-    (`Table N.`) so in-text citations `(Table N)` don't fake a hit.
-    Content survival is scored with 4-grams — a lone digit or cell word
-    coincidentally matching somewhere proves nothing, but a contiguous
-    cell run can't fake its way in. Every `Table N.` occurrence gets a
-    55-token window and the worst coverage wins: a citation window is
-    ordinary body text (~70-90%), the real grid is the risky one."""
+    (`Table N.`) so in-text citations `(Table N)` don't fake a hit, and
+    the EPUB side must match in legend position so a sentence-ending
+    citation can't stand in for the legend. Content survival is scored
+    with 4-grams — a lone digit or cell word coincidentally matching
+    somewhere proves nothing, but a contiguous cell run can't fake its
+    way in. Every `Table N.` occurrence gets its own 55-token window —
+    iterated by position, not a greedy consume, so a citation <700 chars
+    before the real legend can't swallow the grid's window — and the
+    worst coverage wins: a citation window is ordinary body text
+    (~70-90%), the real grid is the risky one."""
     epub_tokens = []
     for c in chapters.values():
         epub_tokens += WORD_RE.findall(xhtml_text(c).lower())
     epub_tokens += WORD_RE.findall(xhtml_text(notes).lower())
     grams = {tuple(epub_tokens[i:i + 4]) for i in range(len(epub_tokens) - 3)}
-    notes_txt = xhtml_text(notes)
     out = []
     for num in sorted(set(TABLE_LEGEND_RE.findall(pdf_text)), key=int):
         legend_re = rf"Table\s+{num}\."
         coverages = []
-        for m in re.finditer(legend_re + r"\s*(.{0,700})", pdf_text, re.DOTALL):
-            toks = WORD_RE.findall(m.group(1).lower())[:55]
+        for m in re.finditer(legend_re, pdf_text):
+            toks = WORD_RE.findall(pdf_text[m.end():m.end() + 700].lower())[:55]
             win = {tuple(toks[i:i + 4]) for i in range(len(toks) - 3)}
             coverages.append(sum(g in grams for g in win) / max(len(win), 1))
         coverage = min(coverages, default=0.0)
-        in_markup = any(re.search(legend_re, seg)
+        in_markup = any(_legend_present(seg, num)
                         for c in chapters.values()
                         for seg in re.findall(r"<table\b.*?</table>", c, re.DOTALL))
-        in_notes = re.search(legend_re, notes_txt)
-        in_chaps = any(re.search(legend_re, xhtml_text(c)) for c in chapters.values())
+        in_notes = _legend_present(notes, num)
+        in_chaps = any(_legend_present(c, num) for c in chapters.values())
         if in_markup:
             where = "table"
         elif in_notes and not in_chaps:
@@ -242,7 +280,8 @@ def main() -> int:
     ap.add_argument("epub", type=Path)
     args = ap.parse_args()
     if not args.pdf.exists() or not args.epub.exists():
-        sys.exit("error: input file not found")
+        print("error: input file not found", file=sys.stderr)
+        return 2
 
     import fitz  # pymupdf — same dependency as the pipeline
 
@@ -252,7 +291,8 @@ def main() -> int:
     try:
         members = epub_members(args.epub)
     except zipfile.BadZipFile:
-        sys.exit("FATAL: epub is not a zip archive")
+        print("FATAL: epub is not a zip archive", file=sys.stderr)
+        return 2
     names = {Path(m).name for m in members}
     required = {"mimetype", "container.xml", "content.opf", "nav.xhtml", "toc.ncx"}
     absent = required - names
@@ -286,7 +326,11 @@ def main() -> int:
         findings.append(("High", "B", f"dc:creator contaminated (len={len(creator)}): {creator[:80]!r}…"))
 
     # ---- C. coverage ----
-    pdf = fitz.open(str(args.pdf))
+    try:
+        pdf = fitz.open(str(args.pdf))
+    except (RuntimeError, ValueError) as e:  # fitz.FileDataError et al.
+        print(f"FATAL: cannot open pdf: {e}", file=sys.stderr)
+        return 2
     pdf_text = " ".join(p.get_text("text") for p in pdf)
     epub_text = " ".join(xhtml_text(c) for c in chapters.values()) + " " + xhtml_text(notes)
     pw, ew = Counter(WORD_RE.findall(pdf_text.lower())), Counter(WORD_RE.findall(epub_text.lower()))
@@ -342,7 +386,20 @@ def main() -> int:
             findings.append(("High", "F", f"Table {num}: content largely absent ({cov:.0%} 4-gram coverage)"))
 
     # ---- G. figures ----
-    pdf_rasters = sum(len(p.get_images()) for p in pdf)
+    # The pipeline embeds one `images/img_N.ext` per unique image
+    # (render.py dedupes by sha1 of the bytes and skips <2048-byte
+    # blocks) — so the PDF side counts unique extracted rasters the same
+    # way, not per-page references: a running-head logo repeated on 10
+    # pages is still one image.
+    raster_digests = set()
+    for x in {img[0] for p in pdf for img in p.get_images()}:
+        try:
+            data = pdf.extract_image(x)["image"]
+        except (RuntimeError, ValueError):
+            data = b""
+        if len(data) >= 2048:
+            raster_digests.add(hashlib.sha1(data).digest())
+    pdf_rasters = len(raster_digests)
     epub_imgs = [m for m in members if "/images/" in m]
     vec_pages = [i for i, p in enumerate(pdf) if len(p.get_drawings()) > 30]
     for num in sorted(set(FIG_LEGEND_RE.findall(pdf_text)), key=int):
@@ -375,7 +432,7 @@ def main() -> int:
 
     # ---- H. notes ----
     if notes:
-        if re.search(r"Table\s+\d+\.", xhtml_text(notes)):
+        if re.search(r"(?:^|>|\n)\s*(?:<[^>]+>\s*)*Table\s+\d+\.", notes):
             findings.append(("Med", "H", "notes.xhtml contains table legends — notes zone swallowing grid content"))
         fn_ids = set(re.findall(r'id="fn(\d+)"', notes))
         fn_links = set(re.findall(r'href="[^"]*#fn(\d+)"', all_chap))

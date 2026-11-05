@@ -27,7 +27,8 @@ python3 scripts/eval_epub.py <input.pdf> <output.epub>
 ```
 
 Prints a markdown report. Exit code is `1` when any High-severity
-finding exists (usable as a CI gate), `0` otherwise.
+finding exists (usable as a CI gate), `0` otherwise; `2` marks
+operational failures (unreadable inputs).
 
 ## What the script checks
 
@@ -36,7 +37,7 @@ finding exists (usable as a CI gate), `0` otherwise.
   parses as XML; every spine `itemref` resolves to a manifest item.
 - **B. Metadata** — `dc:title` flagged when it looks like pagination/ID
   junk (`OP-SCAN150067 1758..1768`: `..`-ranges, ≥5-digit runs, or digit
-  density rivaling letters) that passes the converter's letter-check;
+  dominance over letters) that passes the converter's letter-check;
   `dc:creator` flagged when it absorbs title text or affiliations
   (University/Department/Center…).
 - **C. Coverage** — word-multiset diff of PDF vs EPUB text (`Counter`
@@ -44,8 +45,9 @@ finding exists (usable as a CI gate), `0` otherwise.
   - *rejoined hyphenation* — fragment is a prefix/suffix of an extra
     EPUB word (`mind`+`fulness` → `mindfulness`) — a positive, not loss;
   - *stripped furniture* — word appears in running-head signatures
-    (block text repeated on ≥40% of pages) or the outer 8% edge zones
-    (page numbers) — correct stripping;
+    (block text repeated on ≥40% of pages), the outer 7% edge zones
+    (page numbers / pattern furniture), or margin strips — correct
+    stripping;
   - *superscript splits* — source token `Kral1` emits as `Kral` +
     superscript `1`; a word splitting at a letter↔digit boundary into
     two parts that both exist in the EPUB lost nothing;
