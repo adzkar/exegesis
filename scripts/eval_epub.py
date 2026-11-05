@@ -176,14 +176,22 @@ def classify_missing(missing: Counter, extra: Counter, furniture: set[str],
     splits (source token `Kral1` emits as `Kral` + superscript `1` — both
     halves present, so nothing was lost), or genuine loss. Furniture is
     checked first — a running-head word that happens to prefix an extra
-    word is still furniture. Prefix/suffix matching is enough because
-    dehyphenation only ever concatenates a fragment pair."""
+    word is still furniture. Dehyphenation only ever concatenates a
+    fragment *pair*, so the rejoined claim requires the complement to
+    be missing too — a lone `the` prefixing an unrelated `them` is
+    coincidence, not a join."""
     extra_words = list(extra)
     rejoined, furn, supers, genuine = Counter(), Counter(), Counter(), Counter()
     for w, n in missing.items():
         if w in furniture:
             furn[w] = n
-        elif len(w) >= 3 and any(e != w and (e.startswith(w) or e.endswith(w)) for e in extra_words):
+        elif len(w) >= 3 and any(
+                e != w and (
+                    (e.startswith(w) and len(e) - len(w) >= 2
+                     and e[len(w):] in missing)
+                    or (e.endswith(w) and len(e) - len(w) >= 2
+                        and e[:-len(w)] in missing))
+                for e in extra_words):
             rejoined[w] = n
         elif (m := re.match(r"^([a-z]+)(\d+)$|^(\d+)([a-z]+)$", w)) and \
                 all(p in epub_words for p in m.groups() if p):
@@ -239,12 +247,16 @@ def missing_sections(pdf_text: str, entries: list[str],
     paragraphs, so the reader gets no way into the body. Only the
     alphabetic core is matched, so `2. Methods` still finds a nav entry
     titled `Methods`. Two more discriminators keep numbered non-headings
-    out: a candidate whose text survives in notes.xhtml was a numbered
-    note, and a candidate followed by a lowercase-starting line is a
-    wrapped list item/sentence — real headings are followed by a new
-    sentence."""
+    out: a candidate whose own numbered line survives in notes.xhtml
+    (marker then title at a note-paragraph start) was a numbered note —
+    a note merely containing the word 'results' must not silence a
+    missing `2. Results` — and a candidate followed by a
+    lowercase-starting line is a wrapped list item/sentence — real
+    headings are followed by a new sentence."""
     nav_blob = " ".join(entries).lower()
-    notes_txt = " ".join(xhtml_text(notes).split()).lower()
+    notes_paras = [" ".join(xhtml_text(p).split()).lower()
+                   for p in re.findall(r"<p\b[^>]*>(.*?)</p>", notes,
+                                       re.DOTALL)]
     zone = REF_ZONE_RE.search(pdf_text)
     out = []
     for m in SECTION_RE.finditer(pdf_text):
@@ -253,7 +265,12 @@ def missing_sections(pdf_text: str, entries: list[str],
         title = m.group(2).strip()
         nxt = next((ln.strip() for ln in pdf_text[m.end():].split("\n")
                     if ln.strip()), "")
-        if title.lower() in notes_txt or (nxt and nxt[0].islower()):
+        # The note marker precedes its text — `<sup>2</sup>Results`
+        # emits fused after tag-stripping, so separators are optional.
+        note_re = (rf"[*†‡§\s]*{re.escape(m.group(1))}[.\s)]*"
+                   rf"{re.escape(title.lower())}")
+        if (any(re.match(note_re, p) for p in notes_paras)
+                or (nxt and nxt[0].islower())):
             continue
         if title.lower() not in nav_blob and title not in out and not REF_TAIL_RE.search(title):
             out.append(title)
@@ -297,11 +314,29 @@ def _legend_present(raw: str, num: str) -> bool:
     )
 
 
+def _legend_near(chap: str, num: str, needle: str,
+                 radius: int = 1500) -> bool:
+    """Does `needle` occur within `radius` chars of this table's legend
+    inside one chapter? A detached caption (`<p>Table 3.</p>` beside its
+    `<table>`) and a rasterized grid (`images/table_x.png` beside the
+    in-flow legend) both keep the grid near its legend — proximity
+    attributes the markup/image to *this* table when several share a
+    chapter."""
+    m = re.search(rf"{_LEGEND_AT}Table\b\s*\.?\s*{re.escape(num)}"
+                  rf"{CAP_RANGE}\.", chap, re.IGNORECASE)
+    if not m:
+        return False
+    return needle in chap[max(0, m.start() - radius):m.end() + radius]
+
+
 def table_dispositions(pdf_text: str, chapters: dict[str, str],
                        notes: str, furniture: set[str]):
     """For each `Table N` legend in the source, decide where it landed:
-    inside <table> markup, flattened into prose/blockquote, swept into
-    notes.xhtml, or missing. Legends require a trailing period
+    inside <table> markup, beside <table> markup it failed to join
+    (detached caption), beside a rasterized `images/table_*.png` (the
+    intended rotated-table path — cells live in the image, not text),
+    flattened into prose/blockquote, swept into notes.xhtml, or
+    missing. Legends require a trailing period
     (`Table N.`) so in-text citations `(Table N)` don't fake a hit, and
     the EPUB side must match in legend position so a sentence-ending
     citation can't stand in for the legend. Content survival is scored
@@ -343,6 +378,17 @@ def table_dispositions(pdf_text: str, chapters: dict[str, str],
         in_chaps = any(_legend_present(c, num) for c in chapters.values())
         if in_markup:
             where = "table"
+        elif any(_legend_near(c, num, "<table")
+                 for c in chapters.values()):
+            # grid markup sits beside the legend but didn't absorb it
+            # as a caption — linkage failed, not flattening
+            where = "detached"
+        elif any(_legend_near(c, num, "images/table_")
+                 for c in chapters.values()):
+            # the intended rotated-table path: legend stays in flow,
+            # cells live inside a rendered PNG — coverage can't assess
+            where = "rasterized"
+            coverage = None
         elif in_notes and not in_chaps:
             where = "notes"
         elif in_chaps:
@@ -470,7 +516,17 @@ def main() -> int:
     # ---- F. tables ----
     for num, where, cov in table_dispositions(pdf_text, chapters, notes, furn_vocab):
         if where == "missing":
-            findings.append(("High", "F", f"Table {num}: legend+data absent from EPUB"))
+            # A dropped legend on an intact grid scores high coverage —
+            # the data survived, so 'legend+data absent' would misstate
+            # the defect.
+            if cov is not None and cov >= 0.6:
+                findings.append(("Med", "F", f"Table {num}: legend absent; grid data survives ({cov:.0%} coverage)"))
+            else:
+                findings.append(("High", "F", f"Table {num}: legend+data absent from EPUB"))
+        elif where == "detached":
+            findings.append(("Low", "F", f"Table {num}: legend detached from grid markup (caption linkage failed)"))
+        elif where == "rasterized":
+            findings.append(("Low", "F", f"Table {num}: rasterized to image (cells not text-checkable)"))
         elif where == "notes":
             cov_s = "n/a" if cov is None else f"{cov:.0%}"
             findings.append(("High", "F", f"Table {num}: swept into notes.xhtml (coverage {cov_s})"))

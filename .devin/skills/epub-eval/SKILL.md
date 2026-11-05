@@ -43,7 +43,8 @@ operational failures (unreadable inputs).
 - **C. Coverage** — word-multiset diff of PDF vs EPUB text (`Counter`
   subtraction), then *classified* before being counted as loss:
   - *rejoined hyphenation* — fragment is a prefix/suffix of an extra
-    EPUB word (`mind`+`fulness` → `mindfulness`) — a positive, not loss;
+    EPUB word whose complement is also missing (`mind`+`fulness` →
+    `mindfulness`, both halves absent) — a positive, not loss;
   - *stripped furniture* — word appears in running-head signatures
     (block text repeated on ≥40% of pages), the outer 7% edge zones
     (page numbers / pattern furniture, gated on dehyphenated block
@@ -60,8 +61,10 @@ operational failures (unreadable inputs).
   pollutes the TOC and explodes the table into pseudo-chapters);
   numbered source headings (`2. Methods`, `2.1. Participants` — number
   and title must share one extracted line with no trailing period;
-  wrapped items ending in lowercase continuations, numbered notes
-  surviving in notes.xhtml, `Surname, I` reference tails, and
+  wrapped items ending in lowercase continuations, numbered notes whose
+  own number+title line starts a notes.xhtml paragraph (a note merely
+  mentioning 'results' doesn't silence `2. Results`), `Surname, I`
+  reference tails, and
   everything past the References heading are excluded) absent from the
   TOC → High when ≥2 go missing; zero `<h1>` in a multi-heading doc means
   the title never promoted and the TOC is flat.
@@ -75,7 +78,11 @@ operational failures (unreadable inputs).
   `Table 3–4.` collect, ranges key on the first number; `(Table N)`
   citations and sentence-ending `…in Table 5.` don't) is located in the
   EPUB: inside `<table>` markup / flattened to
-  prose / swept into notes.xhtml / missing, with the match required in
+  prose / swept into notes.xhtml / missing — plus *detached* (grid
+  markup sits beside a legend it failed to absorb as `<caption>`, Low)
+  and *rasterized* (legend in flow beside an `images/table_*.png` — the
+  intended rotated-table path, cells not text-checkable, Low) — with
+  the match required in
   legend position (block-element/line start — inline-tag-adjacent
   citations can't stand in, but `*†‡§` note markers and text-carrying
   inline elements like a numbered note's `<sup>3</sup>` may sit between
