@@ -52,7 +52,8 @@ operational failures (unreadable inputs).
     margin strips — correct stripping;
   - *superscript splits* — source token `Kral1` emits as `Kral` +
     superscript `1`; a word splitting at a letter↔digit boundary into
-    two parts that both exist in the EPUB lost nothing;
+    two parts that exist *adjacent* in the EPUB lost nothing (a
+    `covid19` hiding behind free-floating halves stays genuine);
   - *genuine loss* — everything else; >1% of source words → High,
     ≥10 words → Med, fewer → Low.
 - **D. TOC/headings** — nav entries counted; duplicate titles flagged;
@@ -63,14 +64,16 @@ operational failures (unreadable inputs).
   and title must share one extracted line with no trailing period;
   wrapped items ending in lowercase continuations, numbered notes whose
   own number+title line starts a notes.xhtml paragraph (a note merely
-  mentioning 'results' doesn't silence `2. Results`), `Surname, I`
+  mentioning 'results' doesn't silence `2. Results`), `N±1.`-flanked
+  lines (a numbered-list run like `1. Collect`/`2. Wash`), `Surname, I`
   reference tails, and
   everything past the References heading are excluded) absent from the
   TOC (per-entry match on the number-stripped label — a nav entry
   merely containing the title word, `Materials and Methods`, does not
   cover `2. Methods`) → High when ≥2 go missing; zero `<h1>` in a multi-heading doc means
   the title never promoted and the TOC is flat.
-- **E. Reading-order splices** — a bold `Table N.`/`Fig(ure) N.` legend
+- **E. Reading-order splices** — a bold `Table|Fig(ure)|Plate|Scheme|
+  Chart N.` legend
   appearing after >25 chars of running text inside the same `<p>` is a
   floating-object caption glued into a sentence (e.g. `over 2 <b>Table
   2.</b>`); a `,`/`;` right after `</b>` reads as a bolded in-text
@@ -100,7 +103,9 @@ operational failures (unreadable inputs).
 - **G. Figures** — unique PDF raster count (deduped by content bytes,
   2048-byte floor — a logo repeated per page counts once) vs embedded
   `img_*` images (rasterized `table_*` members excluded); `Fig. N`/
-  `Plate`/`Scheme`/`Chart` legends must appear somewhere in the EPUB;
+  `Plate`/`Scheme`/`Chart` legends (block-start collected like tables)
+  must appear in legend position in the raw xhtml — an in-text
+  `as shown in Figure 3` can't satisfy a dropped caption;
   pages with
   >30 vector drawings are split into *vector-ruled table grids* (a
   `Table N.` legend on the page, or a digit-heavy continuation — cells
@@ -109,8 +114,9 @@ operational failures (unreadable inputs).
   caption-derived `alt`.
 - **H. Notes** — `notes.xhtml` shouldn't contain `Table N.` legends
   (notes zone swallowing grids); `href="#fnN"` links must resolve to
-  `id="fnN"` anchors — checked even when notes.xhtml is absent, since
-  links without a notes member are dead by construction.
+  `id="fnN"` anchors — checked even when notes.xhtml is absent (links
+  without a notes member are dead by construction) and including links
+  inside notes.xhtml itself.
 - **I. Fidelity** — `U+FFFD` replacement chars are verified against
   the PDF's raw text layer: present in source → source-faithful (OK),
   absent → converter-introduced (Med).

@@ -65,7 +65,8 @@ FIG_LEGEND_RE = re.compile(
 # A `,`/`;` right after `</b>` is sentence grammar — a bolded in-text
 # citation (`…as shown in <b>Table 2.</b>, we…`), not a splice.
 SPLICE_RE = re.compile(
-    r"([^<]{25,}<b>(?:Table|Fig(?:ure)?)\.?\s*" + CAP_NUM + CAP_RANGE +
+    r"([^<]{25,}<b>(?:Table|Fig(?:ure)?|Plate|Scheme|Chart)\.?\s*"
+    + CAP_NUM + CAP_RANGE +
     r"\.)</b>(?!\s*[,;])", re.IGNORECASE)
 # Copied from `exegesis.lang.EN.furniture` — the eval grades English
 # conversions until the legend-pattern localization follow-up lands.
@@ -180,11 +181,13 @@ def furniture_words(pdf_pages) -> set[str]:
 
 
 def classify_missing(missing: Counter, extra: Counter, furniture: set[str],
-                     epub_words: set[str]):
+                     epub_words: set[str], epub_text: str = ""):
     """Sort missing words into stripped furniture, rejoined-hyphenation
     (a fragment that is a prefix/suffix of an extra EPUB word), superscript
-    splits (source token `Kral1` emits as `Kral` + superscript `1` — both
-    halves present, so nothing was lost), or genuine loss. Furniture is
+    splits (source token `Kral1` emits as `Kral` + superscript `1` —
+    both halves present AND adjacent in emitted text, so `covid19`
+    can't hide behind free-floating `covid`/`19`), or genuine loss.
+    Furniture is
     checked first — a running-head word that happens to prefix an extra
     word is still furniture. Dehyphenation only ever concatenates a
     fragment *pair*, so the rejoined claim requires the complement to
@@ -204,7 +207,10 @@ def classify_missing(missing: Counter, extra: Counter, furniture: set[str],
                 for e in extra_words):
             rejoined[w] = n
         elif (m := re.match(r"^([a-z]+)(\d+)$|^(\d+)([a-z]+)$", w)) and \
-                all(p in epub_words for p in m.groups() if p):
+                (pair := [p for p in m.groups() if p]) and \
+                all(p in epub_words for p in pair) and \
+                re.search(rf"{re.escape(pair[0])}\s*{re.escape(pair[1])}",
+                          epub_text, re.IGNORECASE):
             supers[w] = n
         else:
             genuine[w] = n
@@ -264,7 +270,10 @@ def missing_sections(pdf_text: str, entries: list[str],
     a note merely containing the word 'results' must not silence a
     missing `2. Results` — and a candidate followed by a
     lowercase-starting line is a wrapped list item/sentence — real
-    headings are followed by a new sentence."""
+    headings are followed by a new sentence. A candidate flanked by
+    `N±1.`/`N±1)` lines with no body between is a numbered-list run
+    (`1. Collect`, `2. Wash`) — periodless items share the `N. Title`
+    shape but never reach the TOC."""
     nav_titles = {
         re.sub(r"^\s*\d+(?:\.\d+)?\s*[.)]?\s*", "", e.lower()).strip()
         for e in entries}
@@ -286,6 +295,18 @@ def missing_sections(pdf_text: str, entries: list[str],
         if (any(re.match(note_re, p) for p in notes_paras)
                 or (nxt and nxt[0].islower())):
             continue
+        # Adjacent `N±1.`/`N±1)` lines with no body between are a
+        # numbered-list run (`1. Collect`, `2. Wash`) — list items
+        # never reach the TOC, so only an isolated numbered line can
+        # be a demoted heading.
+        seq = m.group(1).split(".")
+        nxt_n = ".".join(seq[:-1] + [str(int(seq[-1]) + 1)])
+        prv_n = ".".join(seq[:-1] + [str(int(seq[-1]) - 1)])
+        prv = next((ln.strip() for ln in reversed(
+                    pdf_text[:m.start()].split("\n")) if ln.strip()), "")
+        if (re.match(rf"{re.escape(nxt_n)}[.)]\s", nxt)
+                or re.match(rf"{re.escape(prv_n)}[.)]\s", prv)):
+            continue
         if title.lower() not in nav_titles and title not in out and not REF_TAIL_RE.search(title):
             out.append(title)
     return out
@@ -303,8 +324,8 @@ def nav_entries(nav: str) -> list[str]:
 # carrying text (`<sup>3</sup>`) — a numbered note emits
 # `<p class="fn"><sup>3</sup>Table 4.` where the marker element carries
 # real text between the block opener and the legend.
-_BLOCK_OPEN = (r"<(?:p|td|th|caption|h[1-6]|blockquote|dt|dd|li|div|"
-               r"section|thead|tbody)\b[^>]*>")
+_BLOCK_OPEN = (r"<(?:p|td|th|caption|figcaption|h[1-6]|blockquote|"
+               r"dt|dd|li|div|section|thead|tbody)\b[^>]*>")
 _LEGEND_AT = (rf"(?:^|\n|{_BLOCK_OPEN})"
               rf"(?:[\s*†‡§]|<[^>]+>|<[^>]+>[^<]*</[^>]+>)*")
 
@@ -483,12 +504,12 @@ def main() -> int:
     # at a line boundary — a space join would defeat the line-start
     # anchors used for legend collection below.
     pdf_text = "\n".join(p.get_text("text") for p in pdf)
-    # Table legends collect on block-joined text: each extracted block
-    # flattens to one line, so `\n` anchors mean block starts — a real
-    # caption opens its own block, while a sentence that merely wraps
-    # at `Table 5.` (or a cite-only `Table S3.`) stays mid-line and
-    # can't fake a disposition row.
-    pdf_table_text = "\n".join(
+    # Table and figure legends collect on block-joined text: each
+    # extracted block flattens to one line, so `\n` anchors mean block
+    # starts — a real caption opens its own block, while a sentence
+    # that merely wraps at `Table 5.`/`Figure 3` (or a cite-only
+    # `Table S3.`) stays mid-line and can't fake a disposition row.
+    pdf_blocks_text = "\n".join(
         " ".join(b[4].split())
         for p in pdf for b in p.get_text("blocks"))
     epub_text = " ".join(xhtml_text(c) for c in chapters.values()) + " " + xhtml_text(notes)
@@ -498,7 +519,8 @@ def main() -> int:
                                       "image-only input, eval is blind")))
     missing, extra = pw - ew, ew - pw
     furn_vocab = furniture_words(pdf)
-    rejoined, furn, supers, genuine = classify_missing(missing, extra, furn_vocab, set(ew))
+    rejoined, furn, supers, genuine = classify_missing(
+        missing, extra, furn_vocab, set(ew), epub_text)
     verbatim = sum((pw - missing).values())
     coverage_pct = 100 * verbatim / max(sum(pw.values()), 1)
     n_genuine = sum(genuine.values())
@@ -538,7 +560,7 @@ def main() -> int:
             findings.append(("Med", "E", f"{Path(name).name}: legend spliced mid-sentence: …{frag}"))
 
     # ---- F. tables ----
-    for num, where, cov in table_dispositions(pdf_table_text, chapters, notes, furn_vocab):
+    for num, where, cov in table_dispositions(pdf_blocks_text, chapters, notes, furn_vocab):
         if where == "missing":
             # A dropped legend on an intact grid scores high coverage —
             # the data survived, so 'legend+data absent' would misstate
@@ -581,12 +603,16 @@ def main() -> int:
                  if Path(m).parent.name == "images"
                  and Path(m).name.startswith("img_")]
     vec_pages = [i for i, p in enumerate(pdf) if len(p.get_drawings()) > 30]
-    for num in sorted({n.upper() for n in FIG_LEGEND_RE.findall(pdf_text)},
+    # Same citation-vs-legend split as the table side: collect on the
+    # block-flattened text and require legend position in the raw xhtml
+    # — an in-text 'as shown in Figure 3' can't satisfy a dropped
+    # caption.
+    for num in sorted({n.upper() for n in FIG_LEGEND_RE.findall(pdf_blocks_text)},
                       key=_num_key):
         if not re.search(
-                rf"(?:Fig(?:ure)?|Plate|Scheme|Chart)\b\s*\.?\s*"
-                rf"{_num_pat(num)}(?![A-Za-z0-9])",
-                epub_text, re.IGNORECASE):
+                rf"{_LEGEND_AT}(?:Fig(?:ure)?|Plate|Scheme|Chart)\b"
+                rf"\s*\.?\s*{_num_pat(num)}(?![A-Za-z0-9])",
+                all_chap, re.IGNORECASE):
             findings.append(("Med", "G", f"Fig. {num}: legend absent from EPUB"))
     # >30 vector ops usually means a ruled table grid, not a figure — a
     # `Table N.` legend decides it, and a digit-heavy page is a table
@@ -623,7 +649,7 @@ def main() -> int:
     # Unguarded: links pointing at #fnN with no notes.xhtml (or no
     # matching anchor) are dead by construction — that's the defect.
     fn_ids = set(re.findall(r'id="fn(\d+)"', notes))
-    fn_links = set(re.findall(r'href="[^"]*#fn(\d+)"', all_chap))
+    fn_links = set(re.findall(r'href="[^"]*#fn(\d+)"', all_chap + notes))
     if fn_links - fn_ids:
         findings.append(("Med", "H", f"dead footnote links: {sorted(fn_links - fn_ids)}"))
 
