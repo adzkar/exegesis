@@ -65,9 +65,9 @@ FIG_LEGEND_RE = re.compile(
 # A `,`/`;` right after `</b>` is sentence grammar — a bolded in-text
 # citation (`…as shown in <b>Table 2.</b>, we…`), not a splice.
 SPLICE_RE = re.compile(
-    r"([^<]{25,}<b>(?:Table|Fig(?:ure)?|Plate|Scheme|Chart)\.?\s*"
-    + CAP_NUM + CAP_RANGE +
-    r"\.)</b>(?!\s*[,;])", re.IGNORECASE)
+    r"([^<]{25,}<b>(?:Table|Fig(?:ure)?|Plate|Scheme|Chart)"
+    r"(?:\.?\s*|</b><b>\s*)*" + CAP_NUM + r"(?:</b><b>\s*)*"
+    + CAP_RANGE + r"\.)</b>(?!\s*[,;])", re.IGNORECASE)
 # Copied from `exegesis.lang.EN.furniture` — the eval grades English
 # conversions until the legend-pattern localization follow-up lands.
 FURNITURE_RE = re.compile(
@@ -185,7 +185,7 @@ def furniture_words(pdf_pages) -> set[str]:
 
 
 def classify_missing(missing: Counter, extra: Counter, furniture: set[str],
-                     epub_words: set[str], epub_text: str = ""):
+                     epub_counts: Counter, epub_text: str = ""):
     """Sort missing words into stripped furniture, rejoined-hyphenation
     (a fragment that is a prefix/suffix of an extra EPUB word), superscript
     splits (source token `Kral1` emits as `Kral` + superscript `1` —
@@ -196,29 +196,39 @@ def classify_missing(missing: Counter, extra: Counter, furniture: set[str],
     word is still furniture. Dehyphenation only ever concatenates a
     fragment *pair*, so the rejoined claim requires the complement to
     be missing too — a lone `the` prefixing an unrelated `them` is
-    coincidence, not a join."""
+    coincidence, not a join. Both excuse classes are count-capped: one
+    qualifying instance can't carry the whole missing count — a
+    rejoined fragment excuses at most `min(own, complement)` instances
+    and a superscript split at most the scarcer half's emitted count —
+    unpaired excess stays genuine and feeds the >1% gate."""
     extra_words = list(extra)
     rejoined, furn, supers, genuine = Counter(), Counter(), Counter(), Counter()
     for w, n in missing.items():
         if w in furniture:
             furn[w] = n
-        elif len(w) >= 3 and any(
-                e != w and (
-                    (e.startswith(w) and len(e) - len(w) >= 2
-                     and e[len(w):] in missing)
-                    or (e.endswith(w) and len(e) - len(w) >= 2
-                        and e[:-len(w)] in missing))
-                for e in extra_words):
-            rejoined[w] = n
-        elif (m := re.match(r"^([a-z]+)(\d+)$|^(\d+)([a-z]+)$", w)) and \
-                (pair := [p for p in m.groups() if p]) and \
-                all(p in epub_words for p in pair) and \
-                re.search(rf"(?<![0-9A-Za-z]){re.escape(pair[0])}\s*"
-                          rf"{re.escape(pair[1])}(?![0-9A-Za-z])",
-                          epub_text, re.IGNORECASE):
-            supers[w] = n
-        else:
-            genuine[w] = n
+            continue
+        cap, cls = 0, genuine
+        if len(w) >= 3:
+            for e in extra_words:
+                if e == w:
+                    continue
+                if e.startswith(w) and len(e) - len(w) >= 2:
+                    cap = max(cap, min(n, missing.get(e[len(w):], 0)))
+                if e.endswith(w) and len(e) - len(w) >= 2:
+                    cap = max(cap, min(n, missing.get(e[:-len(w)], 0)))
+            if cap:
+                cls = rejoined
+        if not cap and (m := re.match(r"^([a-z]+)(\d+)$|^(\d+)([a-z]+)$", w)):
+            pair = [p for p in m.groups() if p]
+            if re.search(rf"(?<![0-9A-Za-z]){re.escape(pair[0])}\s*"
+                         rf"{re.escape(pair[1])}(?![0-9A-Za-z])",
+                         epub_text, re.IGNORECASE):
+                cap = min(n, epub_counts[pair[0]], epub_counts[pair[1]])
+                if cap:
+                    cls = supers
+        cls[w] += cap
+        if n - cap:
+            genuine[w] = n - cap
     return rejoined, furn, supers, genuine
 
 
@@ -314,14 +324,18 @@ def missing_sections(pdf_text: str, entries: list[str],
         if (re.match(rf"{re.escape(nxt_n)}[.)]\s", nxt)
                 or re.match(rf"{re.escape(prv_n)}[.)]\s", prv)):
             continue
-        if title.lower() not in nav_titles and title not in out and not REF_TAIL_RE.search(title):
+        # Two distinct sections can share a title (`3. Methods` and
+        # `7. Methods`) — dedupe on (number, title), not title alone.
+        if (title.lower() not in nav_titles
+                and (m.group(1), title) not in out
+                and not REF_TAIL_RE.search(title)):
             # A numbered heading can wrap mid-title (`2. Materials
             # and\nMethods`) — covered when a nav title continues the
             # first word of the next line.
             joined = f"{title} {nxt.split()[0]}".lower() if nxt else ""
             if joined and any(t.startswith(joined) for t in nav_titles):
                 continue
-            out.append(title)
+            out.append((m.group(1), title))
     return out
 
 
@@ -534,7 +548,7 @@ def main() -> int:
     missing, extra = pw - ew, ew - pw
     furn_vocab = furniture_words(pdf)
     rejoined, furn, supers, genuine = classify_missing(
-        missing, extra, furn_vocab, set(ew), epub_text)
+        missing, extra, furn_vocab, ew, epub_text)
     verbatim = sum((pw - missing).values())
     coverage_pct = 100 * verbatim / max(sum(pw.values()), 1)
     n_genuine = sum(genuine.values())
@@ -556,11 +570,12 @@ def main() -> int:
         findings.append(("High", "D", (f"table header rows promoted to TOC headings: "
                                       f"{hdr[:3]}{'…' if len(hdr) > 3 else ''}")))
     missing_secs = missing_sections(pdf_text, entries, notes)
+    shown_secs = [f"{n}. {t}" for n, t in missing_secs]
     if len(missing_secs) >= 2:
         findings.append(("High", "D", (f"numbered section headings missing from TOC "
-                                      f"({len(missing_secs)}): {missing_secs[:5]}{'…' if len(missing_secs) > 5 else ''}")))
+                                      f"({len(missing_secs)}): {shown_secs[:5]}{'…' if len(shown_secs) > 5 else ''}")))
     elif missing_secs:
-        findings.append(("Low", "D", f"numbered section heading missing from TOC: {missing_secs}"))
+        findings.append(("Low", "D", f"numbered section heading missing from TOC: {shown_secs}"))
     all_chap = "".join(chapters.values())
     n_h1 = len(re.findall(r"<h1[\s>]", all_chap))
     n_h2 = len(re.findall(r"<h2[\s>]", all_chap))
@@ -596,19 +611,17 @@ def main() -> int:
             findings.append(("High", "F", f"Table {num}: content largely absent ({cov:.0%} 4-gram coverage)"))
 
     # ---- G. figures ----
-    # The pipeline embeds one `images/img_N.ext` per unique image
-    # (render.py dedupes by sha1 of the bytes and skips <2048-byte
-    # blocks) — so the PDF side counts unique extracted rasters the same
-    # way, not per-page references: a running-head logo repeated on 10
-    # pages is still one image.
+    # The pipeline embeds one `images/img_N.ext` per unique *rendered*
+    # image — dict type-1 blocks ≥2048B, sha1-deduped — so count the
+    # same population: get_images() lists /Resources instead, missing
+    # XObject-nested draws and counting never-rendered entries.
     raster_digests = set()
-    for x in {img[0] for p in pdf for img in p.get_images()}:
-        try:
-            data = pdf.extract_image(x)["image"]
-        except (RuntimeError, ValueError):
-            data = b""
-        if len(data) >= 2048:
-            raster_digests.add(hashlib.sha1(data).digest())
+    for p in pdf:
+        for b in p.get_text("dict")["blocks"]:
+            if b["type"] == 1:
+                data = b.get("image") or b""
+                if len(data) >= 2048:
+                    raster_digests.add(hashlib.sha1(data).digest())
     pdf_rasters = len(raster_digests)
     # Figure embeds only — `images/table_<digest>.png` members are
     # pipeline-rendered tables, not source rasters; counting them here
@@ -652,7 +665,12 @@ def main() -> int:
         findings.append(("Med", "G", f"raster images: {pdf_rasters} in PDF vs {len(epub_imgs)} embedded"))
     for name, raw in chapters.items():
         for img in re.findall(r"<img[^>]*>", raw):
-            if 'alt="' not in img or len(img.split('alt="')[1]) < 15:
+            # The pipeline emits alt="" for uncaptioned figures and the
+            # `table_alt` fallback ("table") for uncaptioned grids —
+            # those are the meaningful misses; a short real caption
+            # (alt="Fig. 1") is fine.
+            alt = re.search(r'alt="([^"]*)"', img)
+            if not alt or alt.group(1) in ("", "table"):
                 findings.append(("Low", "G", f"{Path(name).name}: <img> missing caption alt text"))
 
     # ---- H. notes ----
@@ -712,8 +730,7 @@ def main() -> int:
 if __name__ == "__main__":
     try:
         sys.exit(main())
-    except (ImportError, RuntimeError, ValueError, KeyError, OSError,
-            zipfile.BadZipFile, ET.ParseError) as e:
+    except Exception as e:  # noqa: BLE001 — any operational failure is exit 2
         # Mid-run operational failures (missing fitz, corrupt PDF/zip
         # members) must not exit 1 — that code means "High findings",
         # not "the eval itself broke".
