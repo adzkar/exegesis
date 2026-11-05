@@ -221,7 +221,21 @@ chapters.
   re-implementation (page-wide signatures, no floor, unconditional edge
   zone) produces false "clean" verdicts on 1-page inputs, repeated body
   text, and real content near the edge — the same drift applies to any
-  check that borrows a pipeline heuristic.
+  check that borrows a pipeline heuristic. Mirror every path that drops
+  text *by design*, not just furniture: rotated tables leave the flow as
+  `images/table_*.png`, so `rasterized_blocks` copies
+  `analyze._rotated_table_region` plus `render`'s `tbl_ids` intersect —
+  an unmodeled path grades intended behavior as loss, the report
+  contradicts itself, and the High gate fails a correct conversion.
+- A repeated regex group must match its text exactly one way — no
+  empty-able repeat nested inside it (`(?:<t>x</t>|[^<]*)*`,
+  `(?:\.?\s*)*`) and no two alternatives that can consume the same
+  text (a generic `<[^>]+>` beside a `<sup>…</sup>` arm): py39 `re` has
+  no atomic groups or possessive quantifiers, so a failing match
+  backtracks exponentially — a 107-char `<sup>` hung `eval_epub.py`.
+  Make each loop step consume one unambiguous unit
+  (`(?:[^<]|<(?!/sup>)[^>]*>)*`, `<(?!sup\b)[^>]+>`,
+  `(?:[.\s]|</b><b>)*`).
 
 ## Git hygiene
 
