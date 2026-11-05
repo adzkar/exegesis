@@ -58,8 +58,9 @@ operational failures (unreadable inputs).
     EPUB word whose complement is also missing (`mind`+`fulness` →
     `mindfulness`, both halves absent) — a positive, not loss;
   - *stripped furniture* — word appears in the counted running-head
-    vocabulary (signatures repeated on ≥40% of pages, the outer 7%
-    edge zones — gated on dehyphenated block text — or margin strips),
+    vocabulary (signatures repeated on ≥40% of pages in the outer 20%
+    zones, pattern furniture in the outer 7% edge — gated on
+    dehyphenated block text — or margin strips),
     and at most its own stripped occurrences excuse (a common word
     like `of` can't blanket-excuse body loss);
   - *superscript splits* — source token `Kral1` emits as `Kral` +

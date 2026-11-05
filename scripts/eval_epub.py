@@ -186,8 +186,12 @@ def _dropped(block, rect, boilerplate: set[str]) -> bool:
     # `_join_lines` fuses only a fragment *ending* in `[a-z]-`; fusing
     # on collapsed whitespace would also join a same-line `Vol- 12`
     # into `Vol12` — content the pipeline keeps — so the regex runs on
-    # the raw text's line boundary first, collapsing after.
-    dehyph = " ".join(re.sub(r"([a-z])-\n\s*", r"\1", text).split())
+    # the raw text's line boundary first, collapsing after. Its other
+    # arm fuses a lone-uppercase line with a lowercase continuation
+    # (drop caps): `D`\n`oi:10.x` reads `Doi:10.x` to the furniture
+    # gate, not `D oi:10.x`.
+    fused = re.sub(r"(?m)^([A-Z]) *\n\s*(?=[a-z])", r"\1", text)
+    dehyph = " ".join(re.sub(r"([a-z])-\n\s*", r"\1", fused).split())
     return bool(
         ((y1 < h * 0.20 or y0 > h * 0.80)
          and SIG_RE.sub("", text.lower()) in boilerplate)
@@ -380,13 +384,29 @@ def missing_sections(pdf_text: str, entries: list[str],
     silences a genuinely missing heading. False negatives only: the
     discriminators can suppress a candidate, never invent one. A
     positional lookup over block bboxes is the upgrade path."""
-    nav_titles = {
-        re.sub(r"^\s*\d+(?:\.\d+)?\s*[.)]?\s*", "", e.lower()).strip()
-        for e in entries}
+    raw_titles = [re.sub(r"^\s*\d+(?:\.\d+)?\s*[.)]?\s*", "", e.lower()).strip()
+                  for e in entries]
+    nav_counts = Counter(raw_titles)
+    # Subtract the synthesized entries: the notes-chapter link (one
+    # exists iff notes content did), a lone headingless-doc "Start"
+    # seed, and untitled-chapter "Section N" fallbacks. Each subtracts
+    # one occurrence, so a real covered heading titled `Notes` — a
+    # second identical entry — still masks; an *uncovered* one doesn't.
+    if notes.strip():
+        nav_counts.subtract({"notes": 1})
+    if len(entries) == 1:
+        nav_counts.subtract({"start": 1})
+    nav_counts.subtract({t: 1 for t in raw_titles
+                         if re.fullmatch(r"section\s+\d+", t)})
+    nav_titles = {t for t, n in nav_counts.items() if n > 0}
     notes_paras = [" ".join(xhtml_text(p).split()).lower()
                    for p in re.findall(r"<p\b[^>]*>(.*?)</p>", notes,
                                        re.DOTALL)]
-    zone = REF_ZONE_RE.search(pdf_text)
+    # Anchor at the LAST line-shaped references heading — an early
+    # stray (a verso running head) mustn't silence the whole check;
+    # headings before the real bibliography still get examined.
+    zones = list(REF_ZONE_RE.finditer(pdf_text))
+    zone = zones[-1] if zones else None
     out = []
     for m in SECTION_RE.finditer(pdf_text):
         if zone and m.start() > zone.end():
@@ -645,20 +665,24 @@ def main() -> int:
     # at a line boundary — a space join would defeat the line-start
     # anchors used for legend collection below.
     pdf_text = "\n".join(p.get_text("text") for p in pdf)
+    boilerplate = boilerplate_signatures(pdf)
     # Table and figure legends collect on block-joined text: each
     # extracted block flattens to one line, so `\n` anchors mean block
     # starts — a real caption opens its own block, while a sentence
     # that merely wraps at `Table 5.`/`Figure 3` (or a cite-only
     # `Table S3.`) stays mid-line and can't fake a disposition row.
+    # `_dropped` blocks are excluded: furniture and margin-strip text
+    # was never expected in the EPUB — a rotated caption beside a
+    # landscape table mustn't open a disposition row.
     pdf_blocks_text = "\n".join(
         " ".join(b[4].split())
-        for p in pdf for b in p.get_text("blocks") if b[6] == 0)
+        for p in pdf for b in p.get_text("blocks")
+        if b[6] == 0 and not _dropped(b, p.rect, boilerplate))
     epub_text = " ".join(xhtml_text(c) for c in chapters.values()) + " " + xhtml_text(notes)
     pw, ew = Counter(WORD_RE.findall(pdf_text.lower())), Counter(WORD_RE.findall(epub_text.lower()))
     if not pw:
         findings.append(("High", "C", ("no extractable text in PDF — scanned/"
                                       "image-only input, eval is blind")))
-    boilerplate = boilerplate_signatures(pdf)
     furn_vocab = furniture_words(pdf, boilerplate)
     # The rotated-table path drops its text blocks in every mode and
     # emits only an `images/table_*.png`, so those words were never
@@ -686,7 +710,11 @@ def main() -> int:
     rejoined, furn, supers, genuine = classify_missing(
         missing, extra, furn_vocab, epub_text, pdf_text)
     verbatim = sum((expected - missing).values())
-    coverage_pct = 100 * verbatim / max(sum(pw.values()), 1)
+    # The denominator is words that *could* survive — rasterized cells
+    # and stripped furniture never can, so counting them would
+    # under-report coverage on exactly the intended-drop paths.
+    survivable = expected - furn_vocab
+    coverage_pct = 100 * verbatim / max(sum(survivable.values()), 1)
     n_genuine = sum(genuine.values())
     if n_genuine > sum(pw.values()) * 0.01:
         findings.append(("High", "C", (f"genuine word loss {n_genuine} "
@@ -730,9 +758,12 @@ def main() -> int:
         if where == "missing":
             # A dropped legend on an intact grid scores high coverage —
             # the data survived, so 'legend+data absent' would misstate
-            # the defect.
+            # the defect; an unassessed window (cov None) proves
+            # nothing either way and can't carry a High.
             if cov is not None and cov >= 0.6:
                 findings.append(("Med", "F", f"Table {num}: legend absent; grid data survives ({cov:.0%} coverage)"))
+            elif cov is None:
+                findings.append(("Med", "F", f"Table {num}: legend absent; content window unassessable — data presence unknown"))
             else:
                 findings.append(("High", "F", f"Table {num}: legend+data absent from EPUB"))
         elif where == "detached":
@@ -836,7 +867,7 @@ def main() -> int:
     print(f"# epub-eval: {args.pdf.name}\n")
     print(f"**Verdict:** {n_high} high-severity findings — "
           f"{'needs attention' if n_high else 'clean'}; "
-          f"verbatim word coverage {coverage_pct:.1f}% ({verbatim}/{sum(pw.values())}, "
+          f"verbatim word coverage {coverage_pct:.1f}% ({verbatim}/{sum(survivable.values())}, "
           f"epub emitted {sum(ew.values())} words after rejoins)\n")
     print("## Checks")
     print(f"- A container: {'PASS' if not absent and not xml_bad and spine_refs <= manifest_ids else 'FAIL'} — "
