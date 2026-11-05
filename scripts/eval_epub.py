@@ -189,9 +189,12 @@ def _dropped(block, rect, boilerplate: set[str]) -> bool:
     # the raw text's line boundary first, collapsing after. Its other
     # arm fuses a lone-uppercase line with a lowercase continuation
     # (drop caps): `D`\n`oi:10.x` reads `Doi:10.x` to the furniture
-    # gate, not `D oi:10.x`.
-    fused = re.sub(r"(?m)^([A-Z]) *\n\s*(?=[a-z])", r"\1", text)
-    dehyph = " ".join(re.sub(r"([a-z])-\n\s*", r"\1", fused).split())
+    # gate — except letters that are real words
+    # (`lang.single_letter_words`: I/A for EN), which the pipeline
+    # doesn't fuse. The hyphen arm allows the trailing space `_block_text`
+    # strips per line.
+    fused = re.sub(r"(?m)^([B-HJ-Z]) *\n\s*(?=[a-z])", r"\1", text)
+    dehyph = " ".join(re.sub(r"([a-z])- *\n\s*", r"\1", fused).split())
     return bool(
         ((y1 < h * 0.20 or y0 > h * 0.80)
          and SIG_RE.sub("", text.lower()) in boilerplate)
@@ -377,7 +380,8 @@ def missing_sections(pdf_text: str, entries: list[str],
     title continues with the next line's first word.
 
     Documented limit: the next/previous lines are read in extraction
-    order (`get_text("text")`), not reading order. On scrambled-order
+    order (block-flattened text with `_dropped` blocks already out),
+    not reading order. On scrambled-order
     or column-interleaved sources — the condition `order.py` exists to
     fix — the 'next line' can be an adjacent column's line or a
     footer, and its lowercase start (or a coincidental `N±1.` line)
@@ -395,7 +399,9 @@ def missing_sections(pdf_text: str, entries: list[str],
     if notes.strip():
         nav_counts.subtract({"notes": 1})
     if len(entries) == 1:
-        nav_counts.subtract({"start": 1})
+        # The headingless-doc seed links the doc title (title is
+        # always non-empty at that point), never the literal 'Start'.
+        nav_counts.subtract({raw_titles[0]: 1})
     nav_counts.subtract({t: 1 for t in raw_titles
                          if re.fullmatch(r"section\s+\d+", t)})
     nav_titles = {t for t, n in nav_counts.items() if n > 0}
@@ -493,18 +499,25 @@ def _legend_present(raw: str, num: str) -> bool:
 
 
 def _legend_near(chap: str, num: str, needle: str,
-                 radius: int = 1500) -> bool:
-    """Does `needle` occur within `radius` chars of this table's legend
-    inside one chapter? A detached caption (`<p>Table 3.</p>` beside its
-    `<table>`) and a rasterized grid (`images/table_x.png` beside the
-    in-flow legend) both keep the grid near its legend — proximity
-    attributes the markup/image to *this* table when several share a
-    chapter."""
+                 radius: int = 1500) -> float:
+    """Distance to the nearest `needle` occurrence within `radius` chars
+    of this table's legend inside one chapter — `inf` when none. A
+    detached caption (`<p>Table 3.</p>` beside its `<table>`) and a
+    rasterized grid (`images/table_x.png` beside the in-flow legend)
+    both keep the grid near its legend. Distances, not booleans: when
+    a chapter mixes markup and raster tables, the *nearest* floating
+    object owns the legend — a foreign `<table>` 1400 chars away
+    can't shadow the `table_*.png` the legend belongs to."""
     m = re.search(rf"{_LEGEND_AT}Table\b\s*\.?\s*{_num_pat(num)}"
                   rf"{CAP_RANGE}\.", chap, re.IGNORECASE)
     if not m:
-        return False
-    return needle in chap[max(0, m.start() - radius):m.end() + radius]
+        return float("inf")
+    lo, hi = max(0, m.start() - radius), m.end() + radius
+    return min((abs(p - m.start())
+                for p in (mm.start() for mm in
+                          re.finditer(re.escape(needle), chap))
+                if lo <= p <= hi),
+               default=float("inf"))
 
 
 def table_dispositions(blocks_text: str, chapters: dict[str, str],
@@ -567,28 +580,36 @@ def table_dispositions(blocks_text: str, chapters: dict[str, str],
         in_chaps = any(_legend_present(c, num) for c in chapters.values())
         if in_markup:
             where = "table"
-        elif any(_legend_near(c, num, "<table")
-                 for c in chapters.values()):
-            # grid markup sits beside the legend but didn't absorb it
-            # as a caption — linkage failed, not flattening
-            where = "detached"
-        elif any(_legend_near(c, num, "images/table_")
-                 for c in chapters.values()):
-            # the intended rotated-table path: legend stays in flow,
-            # cells live inside a rendered PNG — coverage can't assess
-            where = "rasterized"
-            coverage = None
-        elif in_notes and not in_chaps:
-            where = "notes"
-        elif in_chaps:
-            where = "prose"
-        elif num in raster_legends:
-            # the legend block itself sat inside the rotated region —
-            # rasterized along with the cells, only the PNG carries it
-            where = "rasterized"
-            coverage = None
         else:
-            where = "missing"
+            # Attribute the *nearest* floating object — a foreign
+            # `<table>` can't label a legend `detached` when the
+            # legend's own `table_*.png` sits closer.
+            tbl_d = min((_legend_near(c, num, "<table")
+                         for c in chapters.values()), default=float("inf"))
+            img_d = min((_legend_near(c, num, "images/table_")
+                         for c in chapters.values()), default=float("inf"))
+            if img_d != float("inf") and img_d <= tbl_d:
+                # the intended rotated-table path: legend stays in
+                # flow, cells live inside a rendered PNG — coverage
+                # can't assess
+                where = "rasterized"
+                coverage = None
+            elif tbl_d != float("inf"):
+                # grid markup sits beside the legend but didn't absorb
+                # it as a caption — linkage failed, not flattening
+                where = "detached"
+            elif in_notes and not in_chaps:
+                where = "notes"
+            elif in_chaps:
+                where = "prose"
+            elif num in raster_legends:
+                # the legend block itself sat inside the rotated
+                # region — rasterized along with the cells, only the
+                # PNG carries it
+                where = "rasterized"
+                coverage = None
+            else:
+                where = "missing"
         out.append((num, where, coverage))
     return out
 
@@ -709,11 +730,14 @@ def main() -> int:
     missing, extra = expected - ew, ew - expected
     rejoined, furn, supers, genuine = classify_missing(
         missing, extra, furn_vocab, epub_text, pdf_text)
-    verbatim = sum((expected - missing).values())
     # The denominator is words that *could* survive — rasterized cells
-    # and stripped furniture never can, so counting them would
-    # under-report coverage on exactly the intended-drop paths.
+    # and stripped furniture never can — and the numerator counts
+    # surviving occurrences of that same population (per-word
+    # min(survivable, emitted)); measuring verbatim on `expected`
+    # would let a furniture-word's body occurrences push coverage
+    # past 100%.
     survivable = expected - furn_vocab
+    verbatim = sum((survivable - (survivable - ew)).values())
     coverage_pct = 100 * verbatim / max(sum(survivable.values()), 1)
     n_genuine = sum(genuine.values())
     if n_genuine > sum(pw.values()) * 0.01:
@@ -733,7 +757,11 @@ def main() -> int:
     if hdr:
         findings.append(("High", "D", (f"table header rows promoted to TOC headings: "
                                       f"{hdr[:3]}{'…' if len(hdr) > 3 else ''}")))
-    missing_secs = missing_sections(pdf_text, entries, notes)
+    # Candidates scan the same `_dropped`-filtered block text as the
+    # legend checks — a numbered running head or rotated-sidebar line
+    # was never expected in the EPUB and can't be "missing" from its
+    # TOC.
+    missing_secs = missing_sections(pdf_blocks_text, entries, notes)
     shown_secs = [f"{n}. {t}" for n, t in missing_secs]
     if len(missing_secs) >= 2:
         findings.append(("High", "D", (f"numbered section headings missing from TOC "

@@ -36,8 +36,10 @@ operational failures (unreadable inputs).
   `content.opf`, `nav.xhtml`, `toc.ncx`); every `.xhtml`/`.opf`/`.ncx`
   parses as XML; every spine `itemref` resolves to a manifest item.
 - **B. Metadata** — `dc:title` flagged when it looks like pagination/ID
-  junk (`OP-SCAN150067 1758..1768`: `..`-ranges, ≥5-digit runs, or digit
-  dominance over letters) that passes the converter's letter-check;
+  junk (`OP-SCAN150067 1758..1768`: `..`-ranges, digit-dominant runs,
+  or outright digit dominance — a ≥5-digit run alone doesn't flag,
+  'The 100000 Genomes Project' is spared) that passes the
+  converter's letter-check;
   `dc:creator` flagged when it absorbs title text or affiliations
   (University/Department/Center…), carries a caption label + number
   anywhere (`Table 1.` swallowed by the byline merge — names never
