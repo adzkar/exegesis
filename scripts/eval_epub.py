@@ -295,9 +295,14 @@ def classify_missing(missing: Counter, extra: Counter, furniture: Counter,
             pat = re.compile(rf"(?<![0-9A-Za-z]){re.escape(pair[0])}\s*"
                              rf"{re.escape(pair[1])}(?![0-9A-Za-z])",
                              re.IGNORECASE)
-            # A `covid 19` that already recurs in the source emits
-            # as-is — only pairs the EPUB *gained* can be splits.
-            adj = len(pat.findall(epub_text)) - len(pat.findall(pdf_text))
+            spaced = re.compile(rf"(?<![0-9A-Za-z]){re.escape(pair[0])}\s+"
+                                rf"{re.escape(pair[1])}(?![0-9A-Za-z])",
+                                re.IGNORECASE)
+            # The EPUB side keeps `\s*`: `<sup>1</sup>` fuses to `Kral1`
+            # in extracted text, which IS a split. The PDF side needs
+            # `\s+` — its own fused `Kral1` matches `\s*` too and would
+            # self-cancel the gain; only spaced pairs pre-exist.
+            adj = len(pat.findall(epub_text)) - len(spaced.findall(pdf_text))
             cap = min(n, max(0, adj))
             if cap:
                 cls = supers
@@ -647,7 +652,7 @@ def main() -> int:
     # `Table S3.`) stays mid-line and can't fake a disposition row.
     pdf_blocks_text = "\n".join(
         " ".join(b[4].split())
-        for p in pdf for b in p.get_text("blocks"))
+        for p in pdf for b in p.get_text("blocks") if b[6] == 0)
     epub_text = " ".join(xhtml_text(c) for c in chapters.values()) + " " + xhtml_text(notes)
     pw, ew = Counter(WORD_RE.findall(pdf_text.lower())), Counter(WORD_RE.findall(epub_text.lower()))
     if not pw:
