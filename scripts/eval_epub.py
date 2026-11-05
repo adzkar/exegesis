@@ -148,11 +148,14 @@ def furniture_words(pdf_pages) -> Counter:
     narrow+tall blocks in the outer 10% horizontal margins (rotated
     sidebars). Counted, not a set: a running-head word excuses at most
     its own stripped occurrences, so `of`/`vol`/page digits can't
-    blanket-excuse genuine body loss."""
+    blanket-excuse genuine body loss. A block qualifying under both
+    mirrors (a content-matching head sitting in the signature zone —
+    the norm on journal corpora) counts once: the pipeline drops it
+    once, so its excuse budget is once."""
     sig_re = re.compile(r"[^a-z]+")
     counts: Counter = Counter()
     edge_words: Counter = Counter()
-    zone_blocks: list[str] = []
+    zone_blocks: list[tuple[str, bool]] = []
     for page in pdf_pages:
         h, w = page.rect.height, page.rect.width
         seen = set()
@@ -165,30 +168,33 @@ def furniture_words(pdf_pages) -> Counter:
             # the dehyphenated form, collect the raw tokens (the actual
             # missing-side words are the unjoined fragments).
             dehyph = re.sub(r"([a-z])-\s", r"\1", joined)
+            edge = False
             if (y0 > h * 0.93 or y1 < h * 0.07) and (
                 FURNITURE_RE.search(dehyph) or re.fullmatch(r"\d{1,4}", joined)
             ):
                 edge_words.update(WORD_RE.findall(joined.lower()))
+                edge = True
             if (x1 - x0 < 25 and y1 - y0 > 4 * (x1 - x0)
                     and (x0 > w * 0.9 or x1 < w * 0.1)):
                 edge_words.update(WORD_RE.findall(joined.lower()))
+                edge = True
             if y1 < h * 0.20 or y0 > h * 0.80:
                 sig = sig_re.sub("", text.lower())
                 if 3 <= len(sig) <= 80:
                     seen.add(sig)
-                    zone_blocks.append(text.lower())
+                    zone_blocks.append((text.lower(), edge))
         counts.update(seen)
     boilerplate = {s for s, n in counts.items()
                    if n >= max(2, int(len(pdf_pages) * 0.4))}
     furn = Counter(edge_words)
-    for text in zone_blocks:
-        if sig_re.sub("", text) in boilerplate:
+    for text, counted in zone_blocks:
+        if not counted and sig_re.sub("", text) in boilerplate:
             furn.update(WORD_RE.findall(text))
     return furn
 
 
 def classify_missing(missing: Counter, extra: Counter, furniture: Counter,
-                     epub_counts: Counter, epub_text: str = ""):
+                     epub_text: str = ""):
     """Sort missing words into stripped furniture, rejoined-hyphenation
     (a fragment that is a prefix/suffix of an extra EPUB word), superscript
     splits (source token `Kral1` emits as `Kral` + superscript `1` —
@@ -556,7 +562,7 @@ def main() -> int:
     missing, extra = pw - ew, ew - pw
     furn_vocab = furniture_words(pdf)
     rejoined, furn, supers, genuine = classify_missing(
-        missing, extra, furn_vocab, ew, epub_text)
+        missing, extra, furn_vocab, epub_text)
     verbatim = sum((pw - missing).values())
     coverage_pct = 100 * verbatim / max(sum(pw.values()), 1)
     n_genuine = sum(genuine.values())
