@@ -75,10 +75,14 @@ FURNITURE_RE = re.compile(
     r"\b\d{2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)",
     re.IGNORECASE,
 )
-AFFILIATION_HINTS = (
-    "university", "department", "center", "centre", "institute",
-    "hospital", "college", "laborator", "school of",
-)
+# 'center'/'centre'/'college' are plausible surnames — flag them only in
+# affiliation context (after a comma or `of`); the rest are never names,
+# so a bare word match suffices (`laborator` is a stem, left unbound).
+AFFIL_NAME_RE = re.compile(
+    r"(?:,|\bof)\s+\b(?:center|centre|college)\b", re.IGNORECASE)
+AFFIL_WORD_RE = re.compile(
+    r"\b(?:university|department|institute|hospital|school of)\b|"
+    r"\blaborator", re.IGNORECASE)
 
 
 def epub_members(path: Path) -> list[str]:
@@ -209,7 +213,8 @@ def classify_missing(missing: Counter, extra: Counter, furniture: set[str],
         elif (m := re.match(r"^([a-z]+)(\d+)$|^(\d+)([a-z]+)$", w)) and \
                 (pair := [p for p in m.groups() if p]) and \
                 all(p in epub_words for p in pair) and \
-                re.search(rf"{re.escape(pair[0])}\s*{re.escape(pair[1])}",
+                re.search(rf"(?<![0-9A-Za-z]){re.escape(pair[0])}\s*"
+                          rf"{re.escape(pair[1])}(?![0-9A-Za-z])",
                           epub_text, re.IGNORECASE):
             supers[w] = n
         else:
@@ -273,7 +278,9 @@ def missing_sections(pdf_text: str, entries: list[str],
     headings are followed by a new sentence. A candidate flanked by
     `N±1.`/`N±1)` lines with no body between is a numbered-list run
     (`1. Collect`, `2. Wash`) — periodless items share the `N. Title`
-    shape but never reach the TOC."""
+    shape but never reach the TOC. A heading can also wrap mid-title
+    (`2. Materials and\nMethods`) — it counts as covered when a nav
+    title continues with the next line's first word."""
     nav_titles = {
         re.sub(r"^\s*\d+(?:\.\d+)?\s*[.)]?\s*", "", e.lower()).strip()
         for e in entries}
@@ -308,6 +315,12 @@ def missing_sections(pdf_text: str, entries: list[str],
                 or re.match(rf"{re.escape(prv_n)}[.)]\s", prv)):
             continue
         if title.lower() not in nav_titles and title not in out and not REF_TAIL_RE.search(title):
+            # A numbered heading can wrap mid-title (`2. Materials
+            # and\nMethods`) — covered when a nav title continues the
+            # first word of the next line.
+            joined = f"{title} {nxt.split()[0]}".lower() if nxt else ""
+            if joined and any(t.startswith(joined) for t in nav_titles):
+                continue
             out.append(title)
     return out
 
@@ -321,13 +334,14 @@ def nav_entries(nav: str) -> list[str]:
 # `…in <b>Table 3.</b>` citations stay citations while `<p><b>Table
 # 3.</b>` still counts. The repeated group also skips whitespace,
 # `*†‡§` note markers, empty-position tags, and whole inline elements
-# carrying text (`<sup>3</sup>`) — a numbered note emits
+# carrying text — restricted to `<sup>` so a styled lead-in
+# (`<p><i>see</i> Table 3.`) stays a citation: a numbered note emits
 # `<p class="fn"><sup>3</sup>Table 4.` where the marker element carries
 # real text between the block opener and the legend.
 _BLOCK_OPEN = (r"<(?:p|td|th|caption|figcaption|h[1-6]|blockquote|"
                r"dt|dd|li|div|section|thead|tbody)\b[^>]*>")
-_LEGEND_AT = (rf"(?:^|\n|{_BLOCK_OPEN})"
-              rf"(?:[\s*†‡§]|<[^>]+>|<[^>]+>[^<]*</[^>]+>)*")
+_LEGEND_AT = (rf"(?:^|\n|{_BLOCK_OPEN})(?:[\s*†‡§]|<[^>]+>|"
+              rf"<sup\b[^>]*>(?:<[^>]+>[^<]*</[^>]+>|[^<]*)*</sup>)*")
 
 
 def _num_key(n: str) -> tuple:
@@ -491,7 +505,7 @@ def main() -> int:
     # colliding with one title word can't fake it).
     title_words = {w for w in WORD_RE.findall(meta["title"].lower()) if len(w) > 3}
     absorbed = len(title_words & set(WORD_RE.findall(creator.lower()))) >= 3
-    if any(h in creator.lower() for h in AFFILIATION_HINTS) or absorbed:
+    if AFFIL_NAME_RE.search(creator) or AFFIL_WORD_RE.search(creator) or absorbed:
         findings.append(("High", "B", f"dc:creator contaminated (len={len(creator)}): {creator[:80]!r}…"))
 
     # ---- C. coverage ----
@@ -676,7 +690,8 @@ def main() -> int:
     print(f"- C coverage: rejoined {sum(rejoined.values())}, furniture {sum(furn.values())}, "
           f"superscript splits {sum(supers.values())}, genuine loss {n_genuine}")
     print(f"- D toc: {len(entries)} entries, h1={n_h1} h2={n_h2}, dupes={dup or 'none'}")
-    print(f"- G figures: pdf rasters={pdf_rasters}, embedded={len(epub_imgs)}, vector pages={vec_pages}\n")
+    print(f"- G figures: pdf rasters={pdf_rasters}, embedded={len(epub_imgs)}, "
+          f"vector pages={[i + 1 for i in vec_pages]}\n")
     print("## Findings (severity-ranked)")
     print("| Sev | Check | Finding |")
     print("|-----|-------|---------|")

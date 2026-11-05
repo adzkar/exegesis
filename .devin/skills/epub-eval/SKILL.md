@@ -67,7 +67,9 @@ operational failures (unreadable inputs).
   mentioning 'results' doesn't silence `2. Results`), `N±1.`-flanked
   lines (a numbered-list run like `1. Collect`/`2. Wash`), `Surname, I`
   reference tails, and
-  everything past the References heading are excluded) absent from the
+  everything past the References heading are excluded; a title wrapping
+  across two source lines counts as covered when a nav entry continues
+  it) absent from the
   TOC (per-entry match on the number-stripped label — a nav entry
   merely containing the title word, `Materials and Methods`, does not
   cover `2. Methods`) → High when ≥2 go missing; zero `<h1>` in a multi-heading doc means
