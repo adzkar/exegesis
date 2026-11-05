@@ -212,6 +212,14 @@ chapters.
   `*.pdf` corpus and the python env (either can be absent in a
   worktree/fresh clone) so a missing dependency can't strand a dirty
   tree mid-prep.
+- Eval/tooling that reimplements a pipeline signal must mirror the
+  pipeline's constants and floors, not approximate them —
+  `scripts/eval_epub.py`'s furniture vocabulary copies
+  `analyze._boilerplate_signatures` (edge-zone restriction, letters-only
+  sig, `max(2, int(n * 0.4))` page floor). A looser re-implementation
+  (page-wide signatures, no floor) produces false "clean" verdicts on
+  1-page inputs and repeated body text — the same drift applies to any
+  check that borrows a pipeline heuristic.
 
 ## Git hygiene
 
