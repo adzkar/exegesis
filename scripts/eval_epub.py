@@ -655,15 +655,18 @@ def main() -> int:
     # merge and hide the rejoin evidence. Furniture stays a post-diff
     # excuse — `--keep-headers` emits it, and subtracting kept heads
     # would invent extras. The excuse needs evidence: one table raster
-    # per mirrored region, else a missing PNG means the table is
-    # genuinely gone and its words (and legends) count as loss.
+    # *reference* per mirrored region — `state.images` dedupes PNGs by
+    # pixmap sha1, so two identical regions share one member and a
+    # member count would withhold the excuse on a correct conversion —
+    # else a missing raster means the table is genuinely gone and its
+    # words (and legends) count as loss.
     raster_vocab, raster_legends, n_regions = rasterized_blocks(pdf, boilerplate)
-    n_table_imgs = sum(1 for m in members if Path(m).parent.name == "images"
-                       and Path(m).name.startswith("table_"))
-    if n_table_imgs < n_regions:
+    n_table_refs = sum(len(re.findall(r'<img\b[^>]*src="[^"]*images/table_', c))
+                       for c in chapters.values())
+    if n_table_refs < n_regions:
         findings.append(("Med", "C", (f"rotated-table regions: {n_regions} in PDF vs "
-                                      f"{n_table_imgs} table rasters in EPUB — "
-                                      "rasterized-cell excuse withheld")))
+                                      f"{n_table_refs} table rasters referenced in "
+                                      "EPUB — rasterized-cell excuse withheld")))
         raster_vocab, raster_legends = Counter(), frozenset()
     expected = pw - raster_vocab
     missing, extra = expected - ew, ew - expected
