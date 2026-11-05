@@ -132,9 +132,10 @@ def looks_like_junk_title(title: str) -> bool:
     return digits > letters and digits >= 10
 
 
-def furniture_words(pdf_pages) -> set[str]:
-    """Words the converter *should* have stripped, mirroring the pipeline's
-    own signals rather than approximating them — `order._ordered_blocks`
+def furniture_words(pdf_pages) -> Counter:
+    """Counted vocabulary of words the converter *should* have stripped,
+    mirroring the pipeline's own signals rather than approximating them —
+    `order._ordered_blocks`
     drops a block when `analyze._is_signature_furniture` or
     `analyze._is_furniture` holds. Signatures: letters-only sigs of
     blocks inside the outer 20% edge zones recurring on >=
@@ -145,10 +146,12 @@ def furniture_words(pdf_pages) -> set[str]:
     pure page numbers only inside the outer 7% edge (a wider or
     unconditional zone would excuse real edge content as stripped), and
     narrow+tall blocks in the outer 10% horizontal margins (rotated
-    sidebars)."""
+    sidebars). Counted, not a set: a running-head word excuses at most
+    its own stripped occurrences, so `of`/`vol`/page digits can't
+    blanket-excuse genuine body loss."""
     sig_re = re.compile(r"[^a-z]+")
     counts: Counter = Counter()
-    edge_words: set[str] = set()
+    edge_words: Counter = Counter()
     zone_blocks: list[str] = []
     for page in pdf_pages:
         h, w = page.rect.height, page.rect.width
@@ -177,14 +180,14 @@ def furniture_words(pdf_pages) -> set[str]:
         counts.update(seen)
     boilerplate = {s for s, n in counts.items()
                    if n >= max(2, int(len(pdf_pages) * 0.4))}
-    furn = set(edge_words)
+    furn = Counter(edge_words)
     for text in zone_blocks:
         if sig_re.sub("", text) in boilerplate:
             furn.update(WORD_RE.findall(text))
     return furn
 
 
-def classify_missing(missing: Counter, extra: Counter, furniture: set[str],
+def classify_missing(missing: Counter, extra: Counter, furniture: Counter,
                      epub_counts: Counter, epub_text: str = ""):
     """Sort missing words into stripped furniture, rejoined-hyphenation
     (a fragment that is a prefix/suffix of an extra EPUB word), superscript
@@ -196,36 +199,36 @@ def classify_missing(missing: Counter, extra: Counter, furniture: set[str],
     word is still furniture. Dehyphenation only ever concatenates a
     fragment *pair*, so the rejoined claim requires the complement to
     be missing too — a lone `the` prefixing an unrelated `them` is
-    coincidence, not a join. Both excuse classes are count-capped: one
-    qualifying instance can't carry the whole missing count — a
-    rejoined fragment excuses at most `min(own, complement)` instances
-    and a superscript split at most the scarcer half's emitted count —
-    unpaired excess stays genuine and feeds the >1% gate."""
+    coincidence, not a join. Every excuse class is count-capped —
+    furniture excuses at most its own stripped occurrences, a rejoined
+    fragment at most `min(own, complement, merges)` instances, and a
+    superscript split at most the adjacent-pair count — so unpaired
+    excess stays genuine and feeds the >1% gate."""
     extra_words = list(extra)
     rejoined, furn, supers, genuine = Counter(), Counter(), Counter(), Counter()
     for w, n in missing.items():
-        if w in furniture:
-            furn[w] = n
-            continue
         cap, cls = 0, genuine
-        if len(w) >= 3:
+        if furniture.get(w):
+            cap, cls = min(n, furniture[w]), furn
+        elif len(w) >= 3:
             for e in extra_words:
                 if e == w:
                     continue
                 if e.startswith(w) and len(e) - len(w) >= 2:
-                    cap = max(cap, min(n, missing.get(e[len(w):], 0)))
+                    cap = max(cap, min(n, missing.get(e[len(w):], 0), extra[e]))
                 if e.endswith(w) and len(e) - len(w) >= 2:
-                    cap = max(cap, min(n, missing.get(e[:-len(w)], 0)))
+                    cap = max(cap, min(n, missing.get(e[:-len(w)], 0), extra[e]))
             if cap:
                 cls = rejoined
         if not cap and (m := re.match(r"^([a-z]+)(\d+)$|^(\d+)([a-z]+)$", w)):
             pair = [p for p in m.groups() if p]
-            if re.search(rf"(?<![0-9A-Za-z]){re.escape(pair[0])}\s*"
-                         rf"{re.escape(pair[1])}(?![0-9A-Za-z])",
-                         epub_text, re.IGNORECASE):
-                cap = min(n, epub_counts[pair[0]], epub_counts[pair[1]])
-                if cap:
-                    cls = supers
+            adj = len(re.findall(
+                rf"(?<![0-9A-Za-z]){re.escape(pair[0])}\s*"
+                rf"{re.escape(pair[1])}(?![0-9A-Za-z])",
+                epub_text, re.IGNORECASE))
+            cap = min(n, adj)
+            if cap:
+                cls = supers
         cls[w] += cap
         if n - cap:
             genuine[w] = n - cap
@@ -393,7 +396,7 @@ def _legend_near(chap: str, num: str, needle: str,
 
 
 def table_dispositions(blocks_text: str, chapters: dict[str, str],
-                       notes: str, furniture: set[str]):
+                       notes: str, furniture: Counter):
     """For each `Table N` legend in the source, decide where it landed:
     inside <table> markup, beside <table> markup it failed to join
     (detached caption), beside a rasterized `images/table_*.png` (the
@@ -409,18 +412,22 @@ def table_dispositions(blocks_text: str, chapters: dict[str, str],
     somewhere proves nothing, but a contiguous cell run can't fake its
     way in. Every `Table N.` occurrence gets its own window — iterated
     by position, not a greedy consume, so a citation <700 chars before
-    the real legend can't swallow the grid's window — built from the
-    first 55 *content* tokens (stripped-furniture words are discounted:
-    they're correctly absent from the EPUB, so counting them would
-    under-report survival); a window left with <8 tokens — an
-    end-of-document citation or an all-furniture tail — carries no
-    coverable content and is skipped. The worst surviving window
-    decides."""
+    the real legend can't swallow the grid's window, and the window is
+    truncated at the *next* table legend so a surviving sibling can't
+    lend its content — built from the first 55 tokens. Furniture words
+    keep their stream positions: deleting them would fabricate
+    n-gram adjacency that exists in neither text (`group0 12 0 3 0`
+    reads `group0 0 0` once digits drop). Instead, grams containing a
+    furniture word leave the denominator — stripped heads are
+    correctly absent, so their grams are unassessable, not missing —
+    and a window left with <5 furniture-free grams is skipped. The
+    worst surviving window decides."""
     epub_tokens = []
     for c in chapters.values():
         epub_tokens += WORD_RE.findall(xhtml_text(c).lower())
     epub_tokens += WORD_RE.findall(xhtml_text(notes).lower())
     grams = {tuple(epub_tokens[i:i + 4]) for i in range(len(epub_tokens) - 3)}
+    bounds = sorted(m.start() for m in TABLE_LEGEND_RE.finditer(blocks_text))
     out = []
     for num in sorted({n.upper() for n in TABLE_LEGEND_RE.findall(blocks_text)},
                       key=_num_key):
@@ -428,13 +435,14 @@ def table_dispositions(blocks_text: str, chapters: dict[str, str],
                      rf"{CAP_RANGE}\.")
         coverages = []
         for m in re.finditer(legend_re, blocks_text, re.IGNORECASE):
-            toks = [t for t in WORD_RE.findall(
-                blocks_text[m.end():m.end() + 700].lower())
-                if t not in furniture][:55]
-            if len(toks) < 8:
+            nxt = next((b for b in bounds if b > m.start()), m.end() + 700)
+            toks = WORD_RE.findall(
+                blocks_text[m.end():min(m.end() + 700, nxt)].lower())[:55]
+            win = {tuple(toks[i:i + 4]) for i in range(len(toks) - 3)
+                   if all(t not in furniture for t in toks[i:i + 4])}
+            if len(win) < 5:
                 continue
-            win = {tuple(toks[i:i + 4]) for i in range(len(toks) - 3)}
-            coverages.append(sum(g in grams for g in win) / max(len(win), 1))
+            coverages.append(sum(g in grams for g in win) / len(win))
         coverage = min(coverages) if coverages else None  # unassessed
         in_markup = any(_legend_present(seg, num)
                         for c in chapters.values()

@@ -45,11 +45,11 @@ operational failures (unreadable inputs).
   - *rejoined hyphenation* — fragment is a prefix/suffix of an extra
     EPUB word whose complement is also missing (`mind`+`fulness` →
     `mindfulness`, both halves absent) — a positive, not loss;
-  - *stripped furniture* — word appears in running-head signatures
-    (block text repeated on ≥40% of pages), the outer 7% edge zones
-    (page numbers / pattern furniture, gated on dehyphenated block
-    text like `_block_text` so `copy-`/`right` reads `copyright`), or
-    margin strips — correct stripping;
+  - *stripped furniture* — word appears in the counted running-head
+    vocabulary (signatures repeated on ≥40% of pages, the outer 7%
+    edge zones — gated on dehyphenated block text — or margin strips),
+    and at most its own stripped occurrences excuse (a common word
+    like `of` can't blanket-excuse body loss);
   - *superscript splits* — source token `Kral1` emits as `Kral` +
     superscript `1`; a word splitting at a letter↔digit boundary into
     two parts that exist *adjacent* in the EPUB lost nothing (a
@@ -97,10 +97,13 @@ operational failures (unreadable inputs).
   citations can't stand in, but `*†‡§` note markers and text-carrying
   inline elements like a numbered note's `<sup>3</sup>` may sit between
   the opener and the legend). Content survival is scored
-  with 4-grams over a 55-content-token window after each legend —
-  order-sensitive, so scattered digits can't fake coverage; furniture
-  words are discounted (correctly stripped, not absent), windows left
-  with <8 tokens are skipped, and the worst remaining window is
+  with 4-grams over a 55-token window after each legend, truncated at
+  the *next* collected legend so a surviving sibling can't lend its
+  content — order-sensitive, so scattered digits can't fake coverage;
+  grams containing a furniture word leave the denominator (deleting
+  the tokens would fabricate adjacency; stripped heads are
+  unassessable, not absent), windows left with <5 furniture-free
+  grams are skipped, and the worst remaining window is
   reported. <60% → content largely absent.
 - **G. Figures** — unique PDF raster count (deduped by content bytes,
   2048-byte floor — a logo repeated per page counts once) vs embedded
