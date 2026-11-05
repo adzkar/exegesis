@@ -287,7 +287,7 @@ def classify_missing(missing: Counter, extra: Counter, furniture: Counter,
         cap, cls = 0, genuine
         if furniture.get(w):
             cap, cls = min(n, furniture[w]), furn
-        elif len(w) >= 3:
+        elif len(w) >= 2:  # `co-`/`re-`/`de-` halves are real joins
             for e in extra_words:
                 if e == w:
                     continue
@@ -359,7 +359,7 @@ def header_like_titles(entries: list[str]) -> list[str]:
 
 
 def missing_sections(pdf_text: str, entries: list[str],
-                     notes: str) -> list[str]:
+                     notes: str, has_headings: bool = True) -> list[str]:
     """Numbered headings (`2. Methods`, `3.1. Participants`) present in the
     source but absent from the TOC — the converter emits them as plain
     paragraphs, so the reader gets no way into the body. The alphabetic
@@ -398,9 +398,10 @@ def missing_sections(pdf_text: str, entries: list[str],
     # second identical entry — still masks; an *uncovered* one doesn't.
     if notes.strip():
         nav_counts.subtract({"notes": 1})
-    if len(entries) == 1:
-        # The headingless-doc seed links the doc title (title is
-        # always non-empty at that point), never the literal 'Start'.
+    if len(entries) == 1 and not has_headings:
+        # The seed only fires on an EMPTY toc — a lone entry beside
+        # real <h1>/<h2> markup is a legitimate single-heading TOC and
+        # must keep masking. (It links the doc title, not 'Start'.)
         nav_counts.subtract({raw_titles[0]: 1})
     nav_counts.subtract({t: 1 for t in raw_titles
                          if re.fullmatch(r"section\s+\d+", t)})
@@ -761,7 +762,10 @@ def main() -> int:
     # legend checks — a numbered running head or rotated-sidebar line
     # was never expected in the EPUB and can't be "missing" from its
     # TOC.
-    missing_secs = missing_sections(pdf_blocks_text, entries, notes)
+    missing_secs = missing_sections(
+        pdf_blocks_text, entries, notes,
+        has_headings=any(re.search(r"<h[12]\b", c)
+                         for c in chapters.values()))
     shown_secs = [f"{n}. {t}" for n, t in missing_secs]
     if len(missing_secs) >= 2:
         findings.append(("High", "D", (f"numbered section headings missing from TOC "
