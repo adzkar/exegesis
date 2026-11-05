@@ -27,12 +27,22 @@ from xml.etree import ElementTree as ET
 
 WORD_RE = re.compile(r"[A-Za-z0-9]+")
 TAG_RE = re.compile(r"<[^>]+>")
+# Caption numbers mirror the pipeline's `_CAP_NUM` leading unit:
+# `s?` supplementary prefix, letter suffix (`1a`) or parenthesized
+# letter (`2(b)`); dash-joined ranges key on the first number.
+CAP_NUM = r"s?\d+(?:[a-z]|\([a-zA-Z]\))?"
 # Collection uses the same `Table N.` shape the disposition search
 # requires — a bare citation `(see Table 5)` must not produce a
-# 0-coverage "legend+data absent" High and fail the gate. Periodless
-# caption styles (`Table 5 Descriptive`) go unchecked — documented limit.
-TABLE_LEGEND_RE = re.compile(r"\bTable\s+(\d+)\.")
-FIG_LEGEND_RE = re.compile(r"\bFig(?:ure)?\.?\s*(\d+)[a-z]?\b")
+# 0-coverage "legend+data absent" High and fail the gate — and the same
+# legend position: anchored at an extracted line start so a
+# sentence-ending `…in Table 5.` citation can't collect either.
+# Periodless caption styles (`Table 5 Descriptive`) go unchecked —
+# documented limit.
+TABLE_LEGEND_RE = re.compile(
+    rf"(?:^|\n)\s*Table\b\s*\.?\s*({CAP_NUM})\.", re.IGNORECASE)
+FIG_LEGEND_RE = re.compile(
+    rf"(?:^|\n)\s*(?:Fig(?:ure)?|Plate|Scheme|Chart)\b\s*\.?\s*({CAP_NUM})",
+    re.IGNORECASE)
 # A caption label glued mid-paragraph: "25+ chars of sentence text, then
 # a bold Table/Fig N. legend inside the same <p>" — a legend that belongs
 # to a floating object was spliced into body flow. The run-up excludes
@@ -40,7 +50,11 @@ FIG_LEGEND_RE = re.compile(r"\bFig(?:ure)?\.?\s*(\d+)[a-z]?\b")
 # own <p> has only `>` + tagname available before it, not 25 chars, while
 # text sharing the paragraph still matches. `Fig(?:ure)?` keeps parity
 # with FIG_LEGEND_RE — a spelled-out `Figure N.` splice counts too.
-SPLICE_RE = re.compile(r"([^<]{25,}<b>(?:Table|Fig(?:ure)?)\.?\s*\d+\.)")
+# A `,`/`;` right after `</b>` is sentence grammar — a bolded in-text
+# citation (`…as shown in <b>Table 2.</b>, we…`), not a splice.
+SPLICE_RE = re.compile(
+    r"([^<]{25,}<b>(?:Table|Fig(?:ure)?)\.?\s*" + CAP_NUM + r"\.)"
+    r"</b>(?!\s*[,;])", re.IGNORECASE)
 # Copied from `exegesis.lang.EN.furniture` — the eval grades English
 # conversions until the legend-pattern localization follow-up lands.
 FURNITURE_RE = re.compile(
@@ -81,17 +95,24 @@ def opf_metadata(opf: str) -> dict[str, str]:
 
 def looks_like_junk_title(title: str) -> bool:
     """Heuristic: real titles are mostly letters. Pagination/ID junk like
-    'OP-SCAN150067 1758..1768' carries '..'-ranges, long digit runs, or
-    outright digit dominance — a real title keeps digits in the minority
-    ('Cancer trends 1990-2019', 'COVID-19 in 2020'), so a bare 0.5 ratio
-    flags honest work. The pipeline only checks for the presence of
-    letters, which these strings still pass."""
+    'OP-SCAN150067 1758..1768' carries '..'-ranges, dominant digit runs,
+    or outright digit dominance — a real title keeps digits in the
+    minority ('Cancer trends 1990-2019', 'COVID-19 in 2020'), so a bare
+    ratio flags honest work, and real titles carry accession IDs
+    ('Association of rs1137101 with obesity', 'The 100000 Genomes
+    Project') so a 5+-digit run only counts when digits dominate the
+    whole title ('OP-SCAN150067': 6 digits vs 6 letters). The pipeline
+    only checks for the presence of letters, which these strings still
+    pass."""
     if not title:
         return True
-    if re.search(r"\d+\s*\.\.\s*\d+|\d{5,}", title):
+    if re.search(r"\d+\s*\.\.\s*\d+", title):
         return True
     digits = sum(c.isdigit() for c in title)
-    return digits > sum(c.isalpha() for c in title) and digits >= 10
+    letters = sum(c.isalpha() for c in title)
+    if re.search(r"\d{5,}", title) and digits >= letters:
+        return True
+    return digits > letters and digits >= 10
 
 
 def furniture_words(pdf_pages) -> set[str]:
@@ -177,8 +198,11 @@ STAT_HDR_RE = re.compile(r"\b(?:(?i:df|CI|SD|SE)|Min|Max|Mean|Median)\b")
 # No optional trailing period: numbered list items (`1. Collect
 # samples.`, `2. Wash twice with PBS.`) share the `N. Title` shape and
 # never reach the TOC, but real numbered headings almost never end in a
-# sentence period — the line-end anchor discriminates for free.
-SECTION_RE = re.compile(r"^\s*(\d{1,2}(?:\.\d)?)\.?[ \t]+([A-Z][A-Za-z][A-Za-z &,\-]{2,60})\s*$", re.MULTILINE)
+# sentence period — the line-end anchor discriminates for free. The
+# leading dot is mandatory: footnote-style numbering (`1 The authors
+# thank`, `2 Corresponding author`) carries none — a periodless `2
+# Methods` heading style goes unchecked (precision-first).
+SECTION_RE = re.compile(r"^\s*(\d{1,2}(?:\.\d)?)\.[ \t]+([A-Z][A-Za-z][A-Za-z &,\-]{2,60})\s*$", re.MULTILINE)
 # Vancouver-style numbered references survive the numbered-heading shape
 # (`14. Kessler RC, Berglund P, Demler`, `15. Wang PS,`): reject a title
 # carrying a surname + periodless-initials fragment, any title ending
@@ -200,19 +224,29 @@ def header_like_titles(entries: list[str]) -> list[str]:
     return [e for e in entries if len(STAT_HDR_RE.findall(e)) >= 3]
 
 
-def missing_sections(pdf_text: str, entries: list[str]) -> list[str]:
+def missing_sections(pdf_text: str, entries: list[str],
+                     notes: str) -> list[str]:
     """Numbered headings (`2. Methods`, `3.1. Participants`) present in the
     source but absent from the TOC — the converter emits them as plain
     paragraphs, so the reader gets no way into the body. Only the
     alphabetic core is matched, so `2. Methods` still finds a nav entry
-    titled `Methods`."""
+    titled `Methods`. Two more discriminators keep numbered non-headings
+    out: a candidate whose text survives in notes.xhtml was a numbered
+    note, and a candidate followed by a lowercase-starting line is a
+    wrapped list item/sentence — real headings are followed by a new
+    sentence."""
     nav_blob = " ".join(entries).lower()
+    notes_txt = " ".join(xhtml_text(notes).split()).lower()
     zone = REF_ZONE_RE.search(pdf_text)
     out = []
     for m in SECTION_RE.finditer(pdf_text):
         if zone and m.start() > zone.end():
             continue
         title = m.group(2).strip()
+        nxt = next((ln.strip() for ln in pdf_text[m.end():].split("\n")
+                    if ln.strip()), "")
+        if title.lower() in notes_txt or (nxt and nxt[0].islower()):
+            continue
         if title.lower() not in nav_blob and title not in out and not REF_TAIL_RE.search(title):
             out.append(title)
     return out
@@ -222,14 +256,32 @@ def nav_entries(nav: str) -> list[str]:
     return [html.unescape(t).strip() for t in re.findall(r'<a href="[^"]*">(.*?)</a>', nav, re.DOTALL)]
 
 
+# Block-level openers a legend can start inside — a `>` emitted by an
+# inline tag (<b>/<i>/<a>/<sup>…) is a mid-sentence position, so
+# `…in <b>Table 3.</b>` citations stay citations while `<p><b>Table
+# 3.</b>` still counts (inline tags *inside* the legend element are
+# allowed by the tag-skipping group).
+_BLOCK_OPEN = (r"<(?:p|td|th|caption|h[1-6]|blockquote|dt|dd|li|div|"
+               r"section|thead|tbody)\b[^>]*>")
+_LEGEND_AT = rf"(?:^|\n|{_BLOCK_OPEN})\s*(?:<[^>]+>\s*)*"
+
+
+def _num_key(n: str) -> tuple:
+    """Sort key for caption numbers: supplementary `S`-prefixed labels
+    after regular ones, then numeric core, then suffix."""
+    return (n.startswith("S"), int(re.sub(r"\D", "", n) or 0), n)
+
+
 def _legend_present(raw: str, num: str) -> bool:
     """A `Table N.` only counts as *the legend* in legend position — the
-    start of an element or extracted line. `results appear in Table 3.`
-    ends a sentence with the same shape, so an unanchored search lets a
-    citation fake the landing spot (a swept or dropped table reporting
-    'prose' instead of 'notes'/'missing')."""
+    start of a block element or extracted line. `results appear in
+    <b>Table 3.</b>` ends a sentence with the same shape and the same
+    tags, so an unanchored search (or one that accepts any tag end)
+    lets a citation fake the landing spot — a swept or dropped table
+    reporting 'prose' instead of 'notes'/'missing'."""
     return bool(
-        re.search(rf"(?:^|>|\n)\s*(?:<[^>]+>\s*)*Table\s+{num}\.", raw)
+        re.search(rf"{_LEGEND_AT}Table\b\s*\.?\s*{re.escape(num)}\.",
+                  raw, re.IGNORECASE)
     )
 
 
@@ -258,10 +310,11 @@ def table_dispositions(pdf_text: str, chapters: dict[str, str],
     epub_tokens += WORD_RE.findall(xhtml_text(notes).lower())
     grams = {tuple(epub_tokens[i:i + 4]) for i in range(len(epub_tokens) - 3)}
     out = []
-    for num in sorted(set(TABLE_LEGEND_RE.findall(pdf_text)), key=int):
-        legend_re = rf"Table\s+{num}\."
+    for num in sorted({n.upper() for n in TABLE_LEGEND_RE.findall(pdf_text)},
+                      key=_num_key):
+        legend_re = rf"(?:^|\n)\s*Table\b\s*\.?\s*{re.escape(num)}\."
         coverages = []
-        for m in re.finditer(legend_re, pdf_text):
+        for m in re.finditer(legend_re, pdf_text, re.IGNORECASE):
             toks = [t for t in WORD_RE.findall(
                 pdf_text[m.end():m.end() + 700].lower())
                 if t not in furniture][:55]
@@ -351,7 +404,10 @@ def main() -> int:
     except (RuntimeError, ValueError) as e:  # fitz.FileDataError et al.
         print(f"FATAL: cannot open pdf: {e}", file=sys.stderr)
         return 2
-    pdf_text = " ".join(p.get_text("text") for p in pdf)
+    # Pages join with \n so a legend/heading opening a page's text sits
+    # at a line boundary — a space join would defeat the line-start
+    # anchors used for legend collection below.
+    pdf_text = "\n".join(p.get_text("text") for p in pdf)
     epub_text = " ".join(xhtml_text(c) for c in chapters.values()) + " " + xhtml_text(notes)
     pw, ew = Counter(WORD_RE.findall(pdf_text.lower())), Counter(WORD_RE.findall(epub_text.lower()))
     if not pw:
@@ -380,7 +436,7 @@ def main() -> int:
     if hdr:
         findings.append(("High", "D", (f"table header rows promoted to TOC headings: "
                                       f"{hdr[:3]}{'…' if len(hdr) > 3 else ''}")))
-    missing_secs = missing_sections(pdf_text, entries)
+    missing_secs = missing_sections(pdf_text, entries, notes)
     if len(missing_secs) >= 2:
         findings.append(("High", "D", (f"numbered section headings missing from TOC "
                                       f"({len(missing_secs)}): {missing_secs[:5]}{'…' if len(missing_secs) > 5 else ''}")))
@@ -431,8 +487,11 @@ def main() -> int:
     epub_imgs = [m for m in members
                  if "/images/" in m and Path(m).name.startswith("img_")]
     vec_pages = [i for i, p in enumerate(pdf) if len(p.get_drawings()) > 30]
-    for num in sorted(set(FIG_LEGEND_RE.findall(pdf_text)), key=int):
-        if not re.search(rf"Fig(?:ure)?\.?\s*{num}[a-z]?\b", epub_text):
+    for num in sorted({n.upper() for n in FIG_LEGEND_RE.findall(pdf_text)},
+                      key=_num_key):
+        if not re.search(
+                rf"(?:Fig(?:ure)?|Plate|Scheme|Chart)\b\s*\.?\s*"
+                rf"{re.escape(num)}\b", epub_text, re.IGNORECASE):
             findings.append(("Med", "G", f"Fig. {num}: legend absent from EPUB"))
     # >30 vector ops usually means a ruled table grid, not a figure — a
     # `Table N.` legend decides it, and a digit-heavy page is a table
@@ -460,13 +519,15 @@ def main() -> int:
                 findings.append(("Low", "G", f"{Path(name).name}: <img> missing caption alt text"))
 
     # ---- H. notes ----
-    if notes:
-        if re.search(r"(?:^|>|\n)\s*(?:<[^>]+>\s*)*Table\s+\d+\.", notes):
-            findings.append(("Med", "H", "notes.xhtml contains table legends — notes zone swallowing grid content"))
-        fn_ids = set(re.findall(r'id="fn(\d+)"', notes))
-        fn_links = set(re.findall(r'href="[^"]*#fn(\d+)"', all_chap))
-        if fn_links - fn_ids:
-            findings.append(("Med", "H", f"dead footnote links: {sorted(fn_links - fn_ids)}"))
+    if notes and re.search(rf"{_LEGEND_AT}Table\b\s*\.?\s*{CAP_NUM}\.",
+                           notes, re.IGNORECASE):
+        findings.append(("Med", "H", "notes.xhtml contains table legends — notes zone swallowing grid content"))
+    # Unguarded: links pointing at #fnN with no notes.xhtml (or no
+    # matching anchor) are dead by construction — that's the defect.
+    fn_ids = set(re.findall(r'id="fn(\d+)"', notes))
+    fn_links = set(re.findall(r'href="[^"]*#fn(\d+)"', all_chap))
+    if fn_links - fn_ids:
+        findings.append(("Med", "H", f"dead footnote links: {sorted(fn_links - fn_ids)}"))
 
     # ---- I. artifacts ----
     fffd = epub_text.count("\ufffd")
@@ -510,4 +571,12 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except (ImportError, RuntimeError, ValueError, KeyError, OSError,
+            zipfile.BadZipFile, ET.ParseError) as e:
+        # Mid-run operational failures (missing fitz, corrupt PDF/zip
+        # members) must not exit 1 — that code means "High findings",
+        # not "the eval itself broke".
+        print(f"FATAL: {type(e).__name__}: {e}", file=sys.stderr)
+        sys.exit(2)
