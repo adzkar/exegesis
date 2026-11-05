@@ -66,7 +66,9 @@ operational failures (unreadable inputs).
   mentioning 'results' doesn't silence `2. Results`), `Surname, I`
   reference tails, and
   everything past the References heading are excluded) absent from the
-  TOC → High when ≥2 go missing; zero `<h1>` in a multi-heading doc means
+  TOC (per-entry match on the number-stripped label — a nav entry
+  merely containing the title word, `Materials and Methods`, does not
+  cover `2. Methods`) → High when ≥2 go missing; zero `<h1>` in a multi-heading doc means
   the title never promoted and the TOC is flat.
 - **E. Reading-order splices** — a bold `Table N.`/`Fig(ure) N.` legend
   appearing after >25 chars of running text inside the same `<p>` is a
@@ -75,7 +77,8 @@ operational failures (unreadable inputs).
   citation, not a splice.
 - **F. Tables** — every `Table N.` legend in the source (trailing period
   and line-start position required — `Table S1.`/`Table 1A.`/`TABLE 2.`/
-  `Table 3–4.` collect, ranges key on the first number; `(Table N)`
+  `Table 2 (b).`/`Table 3–4.` collect, ranges key on the first number;
+  `(Table N)`
   citations and sentence-ending `…in Table 5.` don't) is located in the
   EPUB: inside `<table>` markup / flattened to
   prose / swept into notes.xhtml / missing — plus *detached* (grid

@@ -30,8 +30,17 @@ TAG_RE = re.compile(r"<[^>]+>")
 # Caption numbers mirror the pipeline's `_CAP_NUM`: `s?` supplementary
 # prefix, letter suffix (`1a`) or parenthesized letter (`2(b)`); the
 # range tail sits outside the capture so `Table 3–4.` keys on `3`.
-CAP_NUM = r"s?\d+(?:[a-z]|\([a-zA-Z]\))?"
+CAP_NUM = r"s?\d+(?:[a-z]|\s*\([a-zA-Z]\))?"
 CAP_RANGE = r"(?:\s*[–-]\s*s?\d+)?"
+
+
+def _num_pat(num: str) -> str:
+    """Escape a collected caption number for re-search: the pipeline's
+    `\\s*\\(` means `Table 2 (b).` in the source may emit fused as
+    `Table 2(b).` — spaces inside the number become `\\s*`."""
+    return re.escape(num).replace("\\ ", r"\s*").replace(" ", r"\s*")
+
+
 # Collection uses the same `Table N.` shape the disposition search
 # requires — a bare citation `(see Table 5)` must not produce a
 # 0-coverage "legend+data absent" High and fail the gate — and the same
@@ -119,7 +128,7 @@ def looks_like_junk_title(title: str) -> bool:
 
 def furniture_words(pdf_pages) -> set[str]:
     """Words the converter *should* have stripped, mirroring the pipeline's
-    own signals rather than approximating them — `order._order_page`
+    own signals rather than approximating them — `order._ordered_blocks`
     drops a block when `analyze._is_signature_furniture` or
     `analyze._is_furniture` holds. Signatures: letters-only sigs of
     blocks inside the outer 20% edge zones recurring on >=
@@ -244,16 +253,20 @@ def missing_sections(pdf_text: str, entries: list[str],
                      notes: str) -> list[str]:
     """Numbered headings (`2. Methods`, `3.1. Participants`) present in the
     source but absent from the TOC — the converter emits them as plain
-    paragraphs, so the reader gets no way into the body. Only the
-    alphabetic core is matched, so `2. Methods` still finds a nav entry
-    titled `Methods`. Two more discriminators keep numbered non-headings
+    paragraphs, so the reader gets no way into the body. The alphabetic
+    core is matched against each nav entry with its own leading number
+    stripped — `2. Methods` finds a nav entry titled `Methods`, while an
+    entry merely containing the word (`Materials and Methods`) does NOT
+    count as coverage. Two more discriminators keep numbered non-headings
     out: a candidate whose own numbered line survives in notes.xhtml
     (marker then title at a note-paragraph start) was a numbered note —
     a note merely containing the word 'results' must not silence a
     missing `2. Results` — and a candidate followed by a
     lowercase-starting line is a wrapped list item/sentence — real
     headings are followed by a new sentence."""
-    nav_blob = " ".join(entries).lower()
+    nav_titles = {
+        re.sub(r"^\s*\d+(?:\.\d+)?\s*[.)]?\s*", "", e.lower()).strip()
+        for e in entries}
     notes_paras = [" ".join(xhtml_text(p).split()).lower()
                    for p in re.findall(r"<p\b[^>]*>(.*?)</p>", notes,
                                        re.DOTALL)]
@@ -272,7 +285,7 @@ def missing_sections(pdf_text: str, entries: list[str],
         if (any(re.match(note_re, p) for p in notes_paras)
                 or (nxt and nxt[0].islower())):
             continue
-        if title.lower() not in nav_blob and title not in out and not REF_TAIL_RE.search(title):
+        if title.lower() not in nav_titles and title not in out and not REF_TAIL_RE.search(title):
             out.append(title)
     return out
 
@@ -309,7 +322,7 @@ def _legend_present(raw: str, num: str) -> bool:
     lets a citation fake the landing spot — a swept or dropped table
     reporting 'prose' instead of 'notes'/'missing'."""
     return bool(
-        re.search(rf"{_LEGEND_AT}Table\b\s*\.?\s*{re.escape(num)}"
+        re.search(rf"{_LEGEND_AT}Table\b\s*\.?\s*{_num_pat(num)}"
                   rf"{CAP_RANGE}\.", raw, re.IGNORECASE)
     )
 
@@ -322,7 +335,7 @@ def _legend_near(chap: str, num: str, needle: str,
     in-flow legend) both keep the grid near its legend — proximity
     attributes the markup/image to *this* table when several share a
     chapter."""
-    m = re.search(rf"{_LEGEND_AT}Table\b\s*\.?\s*{re.escape(num)}"
+    m = re.search(rf"{_LEGEND_AT}Table\b\s*\.?\s*{_num_pat(num)}"
                   rf"{CAP_RANGE}\.", chap, re.IGNORECASE)
     if not m:
         return False
@@ -359,7 +372,7 @@ def table_dispositions(pdf_text: str, chapters: dict[str, str],
     out = []
     for num in sorted({n.upper() for n in TABLE_LEGEND_RE.findall(pdf_text)},
                       key=_num_key):
-        legend_re = (rf"(?:^|\n)\s*Table\b\s*\.?\s*{re.escape(num)}"
+        legend_re = (rf"(?:^|\n)\s*Table\b\s*\.?\s*{_num_pat(num)}"
                      rf"{CAP_RANGE}\.")
         coverages = []
         for m in re.finditer(legend_re, pdf_text, re.IGNORECASE):
@@ -554,13 +567,14 @@ def main() -> int:
     # pipeline-rendered tables, not source rasters; counting them here
     # would let a dropped figure hide behind a rasterized grid.
     epub_imgs = [m for m in members
-                 if "/images/" in m and Path(m).name.startswith("img_")]
+                 if Path(m).parent.name == "images"
+                 and Path(m).name.startswith("img_")]
     vec_pages = [i for i, p in enumerate(pdf) if len(p.get_drawings()) > 30]
     for num in sorted({n.upper() for n in FIG_LEGEND_RE.findall(pdf_text)},
                       key=_num_key):
         if not re.search(
                 rf"(?:Fig(?:ure)?|Plate|Scheme|Chart)\b\s*\.?\s*"
-                rf"{re.escape(num)}(?![A-Za-z0-9])",
+                rf"{_num_pat(num)}(?![A-Za-z0-9])",
                 epub_text, re.IGNORECASE):
             findings.append(("Med", "G", f"Fig. {num}: legend absent from EPUB"))
     # >30 vector ops usually means a ruled table grid, not a figure — a
@@ -576,11 +590,13 @@ def main() -> int:
     grid_pages = [i for i in vec_pages if _is_grid_page(i)]
     fig_vec = [i for i in vec_pages if i not in grid_pages]
     if grid_pages:
-        findings.append(("Low", "G", (f"vector-ruled table grids on pages {grid_pages} — "
-                                     "cells emit as flat text, structure lost")))
+        findings.append(("Low", "G", (f"vector-ruled table grids on pages "
+                                      f"{[i + 1 for i in grid_pages]} — "
+                                      "cells emit as flat text, structure lost")))
     if fig_vec:
-        findings.append(("Low", "G", (f"vector graphics on pages {fig_vec} not capturable — "
-                                     "verify content survived as text")))
+        findings.append(("Low", "G", (f"vector graphics on pages "
+                                      f"{[i + 1 for i in fig_vec]} not capturable — "
+                                      "verify content survived as text")))
     if pdf_rasters > len(epub_imgs):
         findings.append(("Med", "G", f"raster images: {pdf_rasters} in PDF vs {len(epub_imgs)} embedded"))
     for name, raw in chapters.items():
@@ -617,7 +633,7 @@ def main() -> int:
           f"verbatim word coverage {coverage_pct:.1f}% ({verbatim}/{sum(pw.values())}, "
           f"epub emitted {sum(ew.values())} words after rejoins)\n")
     print("## Checks")
-    print(f"- A container: {'PASS' if not absent and not xml_bad else 'FAIL'} — "
+    print(f"- A container: {'PASS' if not absent and not xml_bad and spine_refs <= manifest_ids else 'FAIL'} — "
           f"{len(members)} members, {len(chapters)} chapters, {len(epub_imgs)} images")
     print(f"- B metadata: title={meta['title'][:60]!r}")
     print(f"- C coverage: rejoined {sum(rejoined.values())}, furniture {sum(furn.values())}, "
