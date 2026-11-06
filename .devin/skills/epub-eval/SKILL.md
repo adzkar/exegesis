@@ -28,7 +28,9 @@ python3 scripts/eval_epub.py <input.pdf> <output.epub>
 
 Prints a markdown report. Exit code is `1` when any High-severity
 finding exists (usable as a CI gate), `0` otherwise; `2` marks
-operational failures (unreadable inputs).
+operational failures (unreadable inputs, or a non-English
+`dc:language` — the patterns are English-scoped, so other languages
+bail rather than report a wrong verdict).
 
 ## What the script checks
 

@@ -10,8 +10,10 @@ figure coverage, notes integrity, and whether odd artifacts came from
 the source text layer or the converter. Output is markdown; paste it
 into an issue or read it inline. Exit code is `1` when any
 High-severity finding exists (usable as a CI gate), `0` otherwise —
-`2` marks operational failures (unreadable inputs), so a broken run
-can't masquerade as a gate failure.
+`2` marks operational failures (unreadable inputs, or a non-English
+`dc:language` — every pattern is English-scoped today, so grading
+another language would assert a confident wrong verdict) — a broken
+or ungradeable run can't masquerade as a gate failure.
 """
 from __future__ import annotations
 
@@ -398,7 +400,11 @@ def missing_sections(pdf_text: str, entries: list[str],
     core is matched against each nav entry with its own leading number
     stripped — `2. Methods` finds a nav entry titled `Methods`, while an
     entry merely containing the word (`Materials and Methods`) does NOT
-    count as coverage. Two more discriminators keep numbered non-headings
+    count as coverage. Coverage is consumptive: a numbered `7. Methods`
+    nav entry satisfies only a `7.` candidate and each entry covers one
+    section, so `2. Methods` can't hide behind a same-titled sibling —
+    multi-study papers reuse `Method`/`Results` per study. Two more
+    discriminators keep numbered non-headings
     out: a candidate whose own numbered line survives in notes.xhtml
     (marker then title at a note-paragraph start) was a numbered note —
     a note merely containing the word 'results' must not silence a
@@ -436,24 +442,40 @@ def missing_sections(pdf_text: str, entries: list[str],
     alone can't separate it from a demoted one, and two such lines
     trip the High gate on a correct conversion. A positional
     lookup over block bboxes is the upgrade path."""
-    raw_titles = [re.sub(r"^\s*\d+(?:\.\d+)?\s*[.)]?\s*", "", e.lower()).strip()
-                  for e in entries]
-    nav_counts = Counter(raw_titles)
+    raw_pairs = []
+    for e in entries:
+        mm = re.match(r"^\s*(\d+(?:\.\d+)?)\s*[.)]?\s*", e)
+        raw_pairs.append((mm.group(1) if mm else None,
+                          re.sub(r"^\s*\d+(?:\.\d+)?\s*[.)]?\s*", "",
+                                 e.lower()).strip()))
+    # Nav entries split by whether they carry a leading number: a
+    # numbered `7. Methods` covers ONLY a `7.` candidate — a `2.
+    # Methods` candidate can't hide behind its sibling's entry — while
+    # unnumbered entries are consumed first-come. Each entry covers
+    # exactly one section (Counter decrements on coverage), so a
+    # single surviving `methods` can't mask a demoted same-title
+    # sibling the way set-membership did.
+    nav_numbered = Counter((n, t) for n, t in raw_pairs if n)
+    nav_generic = Counter(t for n, t in raw_pairs if not n)
     # Subtract the synthesized entries: the notes-chapter link (one
     # exists iff notes content did), a lone headingless-doc "Start"
-    # seed, and untitled-chapter "Section N" fallbacks. Each subtracts
-    # one occurrence, so a real covered heading titled `Notes` — a
-    # second identical entry — still masks; an *uncovered* one doesn't.
+    # seed, and untitled-chapter "Section N" fallbacks — all unnumbered.
+    # Each subtracts one occurrence, so a real covered heading titled
+    # `Notes` — a second identical entry — still masks; an *uncovered*
+    # one doesn't.
     if notes.strip():
-        nav_counts.subtract({"notes": 1})
+        nav_generic.subtract({"notes": 1})
     if len(entries) == 1 and not has_headings:
         # The seed only fires on an EMPTY toc — a lone entry beside
         # real <h1>/<h2> markup is a legitimate single-heading TOC and
         # must keep masking. (It links the doc title, not 'Start'.)
-        nav_counts.subtract({raw_titles[0]: 1})
-    nav_counts.subtract({t: 1 for t in raw_titles
-                         if re.fullmatch(r"section\s+\d+", t)})
-    nav_titles = {t for t, n in nav_counts.items() if n > 0}
+        n0, t0 = raw_pairs[0]
+        if n0:
+            nav_numbered[(n0, t0)] -= 1
+        else:
+            nav_generic[t0] -= 1
+    nav_generic.subtract({t: 1 for n, t in raw_pairs
+                          if not n and re.fullmatch(r"section\s+\d+", t)})
     notes_paras = [" ".join(xhtml_text(p).split()).lower()
                    for p in re.findall(r"<p\b[^>]*>(.*?)</p>", notes,
                                        re.DOTALL)]
@@ -497,17 +519,34 @@ def missing_sections(pdf_text: str, entries: list[str],
                 or re.match(rf"{re.escape(prv_n)}[.)]\s", prv)):
             continue
         # Two distinct sections can share a title (`3. Methods` and
-        # `7. Methods`) — dedupe on (number, title), not title alone.
-        if (title.lower() not in nav_titles
-                and (num, title) not in out
-                and not REF_TAIL_RE.search(title)):
-            # A numbered heading can wrap mid-title (`2. Materials
-            # and\nMethods`) — covered when a nav title continues the
-            # first word of the next line.
-            joined = f"{title} {nxt.split()[0]}".lower() if nxt else ""
-            if joined and any(t.startswith(joined) for t in nav_titles):
+        # `7. Methods`) — dedupe on (number, title), not title alone,
+        # and each nav entry satisfies exactly one candidate.
+        if (num, title) in out or REF_TAIL_RE.search(title):
+            continue
+        key = title.lower()
+        if nav_numbered[(num, key)] > 0:
+            nav_numbered[(num, key)] -= 1
+            continue
+        if nav_generic[key] > 0:
+            nav_generic[key] -= 1
+            continue
+        # A numbered heading can wrap mid-title (`2. Materials
+        # and\nMethods`) — covered when a nav title continues the
+        # first word of the next line; a numbered entry only covers
+        # its own number here too.
+        if nxt:
+            joined = f"{title} {nxt.split()[0]}".lower()
+            hit = next((t for t, n in nav_generic.items()
+                        if n > 0 and t.startswith(joined)), None)
+            if hit is None:
+                hit = next((k for k, n in nav_numbered.items()
+                            if n > 0 and k[0] == num
+                            and k[1].startswith(joined)), None)
+            if hit is not None:
+                (nav_generic if isinstance(hit, str)
+                 else nav_numbered)[hit] -= 1
                 continue
-            out.append((num, title))
+        out.append((num, title))
     return out
 
 
@@ -757,6 +796,22 @@ def main() -> int:
 
     # ---- B. metadata ----
     meta = opf_metadata(opf)
+    # Language-bound grading is English-only today: furniture vocab,
+    # legend labels, section/ref-zone patterns, nav-title subtractions,
+    # and ASCII `WORD_RE` coverage (umlauts/ß fragment into fake loss).
+    # A de/fr/es EPUB graded against English reports confident wrong
+    # verdicts both ways (correct conversion → High; dropped localized
+    # legends → false clean), so bail as operational rather than assert
+    # a verdict. Findings collected so far still print — container
+    # checks are language-agnostic. Missing `dc:language` assumes en,
+    # same as before.
+    lang_code = (meta.get("language") or "en").split("-")[0].strip().lower()
+    if lang_code != "en":
+        for sev, chk, detail in findings:
+            print(f"| {sev} | {chk} | {detail.replace('|', '/')} |")
+        print(f"NOTE: dc:language {meta['language']!r} — eval patterns are "
+              "English-only; grading deferred to the localization follow-up")
+        return 2
     if looks_like_junk_title(meta["title"]):
         findings.append(("High", "B", f"dc:title looks like junk: {meta['title']!r}"))
     creator = meta["creator"]
