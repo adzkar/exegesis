@@ -106,6 +106,15 @@ CREATOR_CAPTION_RE = re.compile(
     re.IGNORECASE)
 
 
+def _flatten(block_text: str) -> str:
+    """One extracted block → one line: newline runs collapse to a single
+    space so `\\n` anchors mean block starts, but intra-line spacing is
+    kept verbatim — the 2+-space caption tail (`Fig. 1  Title`, the
+    Springer style `lang._CAP_TAIL` exists to catch) must survive for
+    the `\\s{2,}` terminator arm to see it."""
+    return re.sub(r"\s*\n\s*", " ", block_text)
+
+
 def epub_members(path: Path) -> list[str]:
     """List archive members; a BadZipFile means the EPUB isn't a zip at all."""
     with zipfile.ZipFile(path) as z:
@@ -270,7 +279,7 @@ def rasterized_blocks(pdf_pages, boilerplate: set[str]):
                 claimed.add((pi, bi))
                 words.update(WORD_RE.findall(b[4].lower()))
                 legends.update(n.upper() for n in TABLE_LEGEND_RE.findall(
-                    " ".join(b[4].split())))
+                    _flatten(b[4])))
     return words, frozenset(legends), regions, claimed
 
 
@@ -406,7 +415,12 @@ def missing_sections(pdf_text: str, entries: list[str],
     interleaved numbered reference list loses the `N±1` adjacency that
     marks it as a list run, and surname-free entries
     (`15. Journal of Testing`) pass `REF_TAIL_RE`, so unanchored
-    numbered references can surface as false findings. A positional
+    numbered references can surface as false findings. The lone-`N.`
+    line is the same hole at size one: a single-item list
+    (`1. Collect samples`) or a run whose neighbors interleaved away
+    passes every discriminator and reports as a missing heading — text
+    alone can't separate it from a demoted one, and two such lines
+    trip the High gate on a correct conversion. A positional
     lookup over block bboxes is the upgrade path."""
     raw_titles = [re.sub(r"^\s*\d+(?:\.\d+)?\s*[.)]?\s*", "", e.lower()).strip()
                   for e in entries]
@@ -531,17 +545,39 @@ def _legend_near(chap: str, num: str, needle: str,
     both keep the grid near its legend. Distances, not booleans: when
     a chapter mixes markup and raster tables, the *nearest* floating
     object owns the legend — a foreign `<table>` 1400 chars away
-    can't shadow the `table_*.png` the legend belongs to."""
+    can't shadow the `table_*.png` the legend belongs to. Ownership is
+    checked, not just distance: a `<table>` already carrying a
+    `Table M.` caption belongs to M — it can't also be this legend's
+    stray grid — and a `table_*.png` sitting nearer to a different
+    collected legend is that table's raster. Without the ownership
+    pass a prose-flattened legend beside a foreign table misdiagnoses
+    as 'detached'/'rasterized' (a Low) when the truth is 'prose'
+    (a Med)."""
     m = re.search(rf"{_LEGEND_AT}Table\b\s*\.?\s*{_num_pat(num)}"
                   rf"{CAP_RANGE}\.", chap, re.IGNORECASE)
     if not m:
         return float("inf")
     lo, hi = max(0, m.start() - radius), m.end() + radius
-    return min((abs(p - m.start())
-                for p in (mm.start() for mm in
-                          re.finditer(re.escape(needle), chap))
-                if lo <= p <= hi),
-               default=float("inf"))
+    best = float("inf")
+    for mm in re.finditer(re.escape(needle), chap):
+        p = mm.start()
+        if not (lo <= p <= hi):
+            continue
+        if needle == "<table":
+            end = chap.find("</table>", p)
+            seg = xhtml_text(chap[p:end if end != -1 else len(chap)])
+            if re.search(rf"Table\b\s*\.?\s*{CAP_NUM}{CAP_RANGE}\.",
+                         seg, re.IGNORECASE):
+                continue
+        elif needle == "images/table_" and any(
+                lm.group(1).upper() != num.upper()
+                and abs(lm.start() - p) < abs(p - m.start())
+                for lm in re.finditer(
+                    rf"{_LEGEND_AT}Table\b\s*\.?\s*({CAP_NUM})"
+                    rf"{CAP_RANGE}\.", chap, re.IGNORECASE)):
+            continue
+        best = min(best, abs(p - m.start()))
+    return best
 
 
 def table_dispositions(blocks_text: str, win_text: str,
@@ -738,7 +774,7 @@ def main() -> int:
     # was never expected in the EPUB — a rotated caption beside a
     # landscape table mustn't open a disposition row.
     pdf_blocks_text = "\n".join(
-        " ".join(b[4].split())
+        _flatten(b[4])
         for p in pdf for b in p.get_text("blocks")
         if b[6] == 0 and not _dropped(b, p.rect, boilerplate))
     # Coverage windows additionally mask region-claimed cell blocks:
@@ -746,7 +782,7 @@ def main() -> int:
     # never match and would drag a neighboring upright table's window
     # under the 0.6 flag on a correct conversion.
     win_text = "\n".join(
-        " ".join(b[4].split())
+        _flatten(b[4])
         for pi, p in enumerate(pdf) for bi, b in enumerate(p.get_text("blocks"))
         if b[6] == 0 and not _dropped(b, p.rect, boilerplate)
         and (pi, bi) not in raster_claimed)
