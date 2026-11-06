@@ -82,18 +82,19 @@ SPLICE_RE = re.compile(
     r"([^<>]{25,}<b>(?:Table|Fig(?:ure)?|Plate|Scheme|Chart)"
     r"(?:[.\s]|</b><b>)*" + CAP_NUM + r"(?:</b><b>\s*)*"
     + CAP_RANGE + r"\.)</b>(?!\s*[,;])", re.IGNORECASE)
-# Copied from `exegesis.lang.EN.furniture` — the eval grades English
-# conversions until the legend-pattern localization follow-up lands.
-FURNITURE_RE = re.compile(
-    r"www\.|downloaded from|vol\.?\s*\d|issn|doi[:\s]|©|copyright|"
-    r"\b\d{2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)",
-    re.IGNORECASE,
-)
+# `EN.furniture` aliased, not copied — the eval grades English
+# conversions until the legend-pattern localization follow-up lands,
+# and a verbatim re-compile is exactly the drift surface AGENTS.md
+# warns about when the profile's vocabulary next changes.
+FURNITURE_RE = EN.furniture
 # 'center'/'centre'/'college' are plausible surnames — flag them only in
 # affiliation context (after a comma or `of`); the rest are never names,
 # so a bare word match suffices (`laborator` is a stem, left unbound).
+# One token may intervene — `Smith J, Boston College` and `Roe, Mayo
+# Center` are the natural `Name, Place Institution` tail.
 AFFIL_NAME_RE = re.compile(
-    r"(?:,|\bof)\s+\b(?:center|centre|college)\b", re.IGNORECASE)
+    r"(?:,|\bof)\s+(?:\w+\s+)?(?:center|centre|college)\b",
+    re.IGNORECASE)
 AFFIL_WORD_RE = re.compile(
     r"\b(?:university|department|institute|hospital|school of)\b|"
     r"\blaborator", re.IGNORECASE)
@@ -403,7 +404,12 @@ def missing_sections(pdf_text: str, entries: list[str],
     a note merely containing the word 'results' must not silence a
     missing `2. Results` — and a candidate followed by a
     lowercase-starting line is a wrapped list item/sentence — real
-    headings are followed by a new sentence. A candidate flanked by
+    headings are followed by a new sentence. Scanning is per text line,
+    matching the pipeline's per-line heading classification — an OCR
+    block that merged `2. Methods\nWe recruited…` yields title
+    `Methods`, not the sentence — and a candidate whose title carries a
+    2+ lowercase-word run (heading fused to body with no line break at
+    all) is rejected as sentence contamination. A candidate flanked by
     `N±1.`/`N±1)` lines with no body between is a numbered-list run
     (`1. Collect`, `2. Wash`) — periodless items share the `N. Title`
     shape but never reach the TOC. A heading can also wrap mid-title
@@ -411,8 +417,10 @@ def missing_sections(pdf_text: str, entries: list[str],
     title continues with the next line's first word.
 
     Documented limit: the next/previous lines are read in extraction
-    order (block-flattened text with `_dropped` blocks already out),
-    not reading order. On scrambled-order
+    order (per-line text with `_dropped` blocks already out), not
+    reading order, and the lowercase-run guard sacrifices recall on
+    sentence-case heading styles (`4. Strengths and limitations of
+    this study`) — a missing one is never reported. On scrambled-order
     or column-interleaved sources — the condition `order.py` exists to
     fix — the 'next line' can be an adjacent column's line or a
     footer, and its lowercase start (or a coincidental `N±1.` line)
@@ -460,6 +468,13 @@ def missing_sections(pdf_text: str, entries: list[str],
             continue
         title = m.group(2).strip()
         num = m.group(1).rstrip(".")
+        # A 2+ lowercase-word run is sentence grammar fused to the
+        # heading — an OCR layer that merged heading and body on one
+        # physical line (`2. Methods We recruited participants…`).
+        # Lone connectors (`and`/`of`) never form a run; the cost is
+        # recall on sentence-case heading styles, documented below.
+        if re.search(r"\b[a-z]+\s+[a-z]", title):
+            continue
         nxt = next((ln.strip() for ln in pdf_text[m.end():].split("\n")
                     if ln.strip()), "")
         # The note marker precedes its text — `<sup>2</sup>Results`
@@ -780,10 +795,18 @@ def main() -> int:
     # `_dropped` blocks are excluded: furniture and margin-strip text
     # was never expected in the EPUB — a rotated caption beside a
     # landscape table mustn't open a disposition row.
+    kept_text = [b[4]
+                 for p in pdf for b in p.get_text("blocks")
+                 if b[6] == 0 and not _dropped(b, p.rect, boilerplate)]
     pdf_blocks_text = "\n".join(
-        _flatten(b[4])
-        for p in pdf for b in p.get_text("blocks")
-        if b[6] == 0 and not _dropped(b, p.rect, boilerplate))
+        _flatten(t)
+        for t in kept_text)
+    # `missing_sections` scans real text lines, not flattened blocks:
+    # the pipeline classifies headings per *line*, so an OCR-merged
+    # block's heading line must keep its boundary — flattening would
+    # glue the following sentence into the 'title' (`2. Methods We
+    # recruited participants…`) and every discriminator would miss it.
+    pdf_lines_text = "\n".join(kept_text)
     # Coverage windows additionally mask region-claimed cell blocks:
     # rasterized text can only survive as pixels, so its grams could
     # never match and would drag a neighboring upright table's window
@@ -850,12 +873,13 @@ def main() -> int:
     if hdr:
         findings.append(("High", "D", (f"table header rows promoted to TOC headings: "
                                       f"{hdr[:3]}{'…' if len(hdr) > 3 else ''}")))
-    # Candidates scan the same `_dropped`-filtered block text as the
-    # legend checks — a numbered running head or rotated-sidebar line
-    # was never expected in the EPUB and can't be "missing" from its
-    # TOC.
+    # Candidates scan `_dropped`-filtered per-line text — a numbered
+    # running head or rotated-sidebar line was never expected in the
+    # EPUB and can't be "missing" from its TOC; per-line granularity
+    # keeps a heading fused into an OCR-merged paragraph block from
+    # adopting the sentence after it.
     missing_secs = missing_sections(
-        pdf_blocks_text, entries, notes,
+        pdf_lines_text, entries, notes,
         has_headings=any(re.search(r"<h[12]\b", c)
                          for c in chapters.values()))
     shown_secs = [f"{n}. {t}" for n, t in missing_secs]
