@@ -33,7 +33,7 @@ operational failures (unreadable inputs).
 ## What the script checks
 
 - **A. Container** — required members (`mimetype`, `container.xml`,
-  `content.opf`, `nav.xhtml`, `toc.ncx`); every `.xhtml`/`.opf`/`.ncx`
+  `content.opf`, `nav.xhtml`, `toc.ncx`); every `.xhtml`/`.opf`/`.ncx`/`.xml`
   parses as XML; every spine `itemref` resolves to a manifest item.
 - **B. Metadata** — `dc:title` flagged when it looks like pagination/ID
   junk (`OP-SCAN150067 1758..1768`: `..`-ranges, digit-dominant runs,

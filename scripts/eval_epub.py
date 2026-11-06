@@ -67,9 +67,11 @@ FIG_LEGEND_RE = re.compile(
 # A caption label glued mid-paragraph: "25+ chars of sentence text, then
 # a bold Table/Fig N. legend inside the same <p>" — a legend that belongs
 # to a floating object was spliced into body flow. The run-up excludes
-# `<` so it can never cross a tag boundary — a bold caption opening its
-# own <p> has only `>` + tagname available before it, not 25 chars, while
-# text sharing the paragraph still matches. `Fig(?:ure)?` keeps parity
+# `<`/`>` so it can never cross or eat into a tag boundary — a bold
+# caption opening its own <p> has no preceding text at all, and a
+# `class="listitem"`-style attribute can't lend its characters to the
+# 25-char threshold either; text sharing the paragraph still matches.
+# `Fig(?:ure)?` keeps parity
 # with FIG_LEGEND_RE — a spelled-out `Figure N.` splice counts too.
 # A `,`/`;` right after `</b>` is sentence grammar — a bolded in-text
 # citation (`…as shown in <b>Table 2.</b>, we…`), not a splice. The
@@ -77,7 +79,7 @@ FIG_LEGEND_RE = re.compile(
 # step: an empty-able `\.?\s*` inside the repeat backtracks
 # exponentially in the length of a whitespace run.
 SPLICE_RE = re.compile(
-    r"([^<]{25,}<b>(?:Table|Fig(?:ure)?|Plate|Scheme|Chart)"
+    r"([^<>]{25,}<b>(?:Table|Fig(?:ure)?|Plate|Scheme|Chart)"
     r"(?:[.\s]|</b><b>)*" + CAP_NUM + r"(?:</b><b>\s*)*"
     + CAP_RANGE + r"\.)</b>(?!\s*[,;])", re.IGNORECASE)
 # Copied from `exegesis.lang.EN.furniture` — the eval grades English
