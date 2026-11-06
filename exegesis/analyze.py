@@ -296,38 +296,53 @@ def _tall_blocks(blocks):
     ]
 
 
-def _rotated_table_band_trigger(tall):
-    """First y-point where ≥3 ``tall`` blocks overlap, or None."""
+def _rotated_table_bands(tall):
+    """Y-ranges where ≥3 ``tall`` blocks overlap — the bands that make
+    rotated text columns stand side by side. Events at the same y are
+    applied together so a same-y end/start can't split a band."""
     if len(tall) < 3:
-        return None
+        return []
     events = sorted(
         [(b["bbox"][1], 1) for b in tall] + [(b["bbox"][3], -1) for b in tall]
     )
+    bands = []
     cov = 0
-    for y, d in events:
-        cov += d
-        if cov >= 3:
-            return y
-    return None
+    start = None
+    i = 0
+    while i < len(events):
+        y = events[i][0]
+        while i < len(events) and events[i][0] == y:
+            cov += events[i][1]
+            i += 1
+        if start is None:
+            if cov >= 3:
+                start = y
+        elif cov < 3:
+            bands.append((start, y))
+            start = None
+    return bands
 
 
 def _rotated_table_seeds(blocks):
-    """The tall blocks establishing a rotated table's shared band, or [].
+    """The tall blocks belonging to a rotated table's shared band, or [].
 
-    Seeds are the band members — the blocks covering the first ≥3-overlap
-    y-point — not every tall block the union bbox later absorbs."""
+    A member covers at least one band point — in *any* ≥3-coverage
+    range, not only the first — so a band that opens in the margins and
+    gains a body-reaching member later still counts, while a tall block
+    disjoint from every band never seeds."""
     tall = _tall_blocks(blocks)
-    trigger = _rotated_table_band_trigger(tall)
-    if trigger is None:
-        return []
-    return [b for b in tall if b["bbox"][1] <= trigger < b["bbox"][3]]
+    bands = _rotated_table_bands(tall)
+    return [
+        b for b in tall
+        if any(b["bbox"][1] < e and b["bbox"][3] > s for s, e in bands)
+    ]
 
 
 def _rotated_table_region(blocks):
     """Bbox of a rotated (landscape) table: ≥3 tall-narrow text blocks sharing
     a common y-point, i.e. rotated text columns standing side by side."""
     tall = _tall_blocks(blocks)
-    if _rotated_table_band_trigger(tall) is None:
+    if not _rotated_table_bands(tall):
         return None
     return fitz.Rect(
         min(b["bbox"][0] for b in tall),

@@ -281,11 +281,13 @@ cases deselected). Converter heuristics and golden snapshots are unchanged.
   body flow — blocks the signature or pattern arm removes (and
   empty-text blocks) can no more seed it than they can seed render's
   region — and it forms only when a *band member* (a tall block
-  covering the shared ≥3-overlap y-point, `_rotated_table_seeds`)
-  reaches the body band (`x0 <= 0.9W and x1 >= 0.1W` on the member, not
-  the union). Testing the union rect's span instead let left+right
-  margin strips satisfy it jointly and self-exempt into a fake
-  rasterized table that swallowed intersecting body text.
+  covering a shared ≥3-overlap y-point in any band, not just the first
+  trigger, `_rotated_table_seeds`) reaches the body band (`x0 <= 0.9W
+  and x1 >= 0.1W` on the member, not the union). Testing the union
+  rect's span instead let left+right margin strips satisfy it jointly
+  and self-exempt into a fake rasterized table that swallowed
+  intersecting body text; sampling membership only at the first ≥3
+  point refused legit tables whose margin cells open the band earliest.
 - `scripts/eval_epub.py` mirrors via a per-page `_page_ctx` (displayed
   rect, mediabox width, upright dir, dict blocks keyed by bbox) plus the
   same `_strip_clip`, seeded by the eval's own boilerplate set and

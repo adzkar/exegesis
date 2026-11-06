@@ -17,6 +17,7 @@ from furniture_fixtures import (
     rotated_margin_stamp,
     rotated_page_upright_margin,
     rotated_table_margin_cells,
+    rotated_table_staggered_cells,
 )
 
 from exegesis import convert
@@ -259,6 +260,19 @@ def test_eval_dual_margin_strips_are_dropped(tmp_path):
     pdf = tmp_path / "dual.pdf"
     dual_margin_strips(pdf)
     epub = tmp_path / "dual.epub"
+    convert(pdf, epub)
+    r = _run(pdf, epub)
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_eval_staggered_cells_rasterize_excused(tmp_path):
+    """The staggered band — margin cells opening, body cells joining
+    late — rasterizes whole; the mirrored clip legitimates it through
+    band membership across ranges, and every cell excuses through the
+    raster arm rather than furniture or loss (#45)."""
+    pdf = tmp_path / "stag.pdf"
+    rotated_table_staggered_cells(pdf)
+    epub = tmp_path / "stag.epub"
     convert(pdf, epub)
     r = _run(pdf, epub)
     assert r.returncode == 0, r.stdout + r.stderr

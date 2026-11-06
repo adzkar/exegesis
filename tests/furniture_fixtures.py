@@ -93,6 +93,20 @@ DUAL_BODY = (
     "the three rotated sidebars project across the page.",
 )
 
+STAG_CELLS = (
+    "StagLeftA Journal Tests",
+    "StagLeftB More Margin",
+    "StagRightC Vol 12",
+    "StagBodyD Data Words",
+    "StagBodyE Other Cells",
+)
+STAG_CELL_X = (30, 50, 575, 300, 320)
+STAG_CELL_BASE = (360, 360, 360, 460, 460)
+STAG_BODY = (
+    "Body prose below the staggered rotated table stays text.",
+    "The grid above it can only survive as a raster image.",
+)
+
 OVER_CHAR_HEAD = (
     ("Specimen identifier collection site coordinates depth measured "
      "values replicate counts treatment group dosage regimen"),
@@ -244,6 +258,21 @@ def dual_margin_strips(path):
     for x, cell in zip(DUAL_STRIP_X, DUAL_STRIPS):
         text(page, x, 500, cell, size=10, rotate=90)
     block(page, 72, 380, DUAL_BODY, leading=14)
+    return _save(doc, path)
+
+
+def rotated_table_staggered_cells(path):
+    """A rotated table whose margin cells open the band and whose body
+    cells join later — three left/right margin cells span the upper band
+    (the first >=3-overlap point has only margin members), two inner
+    cells join lower, so membership must be sampled across every band
+    range or the outer cells lose their clip and drop as strips."""
+    doc = fitz.open()
+    page = _page(doc)
+    text(page, 72, 100, "A staggered rotated table", size=18)
+    for x, base, cell in zip(STAG_CELL_X, STAG_CELL_BASE, STAG_CELLS):
+        text(page, x, base, cell, size=10, rotate=90)
+    block(page, 72, 620, STAG_BODY, leading=14)
     return _save(doc, path)
 
 

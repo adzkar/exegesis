@@ -37,6 +37,10 @@ from furniture_fixtures import (
     ROTATED_PREFIX,
     ROTATED_STAMP,
     ROTATED_SUFFIX,
+    STAG_BODY,
+    STAG_CELL_BASE,
+    STAG_CELL_X,
+    STAG_CELLS,
     TABLE_BODY,
     TABLE_CELLS,
     UPRIGHT_BODY,
@@ -52,6 +56,7 @@ from furniture_fixtures import (
     rotated_margin_stamp,
     rotated_page_upright_margin,
     rotated_table_margin_cells,
+    rotated_table_staggered_cells,
 )
 from helpers import chapter_body_text, doc_html, lint_epub
 from layout_assertions import (
@@ -232,6 +237,13 @@ def bottom_foot_pdf(tmp_path_factory):
 
 
 @pytest.fixture(scope="module")
+def stag_cells_pdf(tmp_path_factory):
+    """Generate the staggered-cells source before any conversion runs."""
+    directory = tmp_path_factory.mktemp("rotated_table_staggered_cells")
+    return rotated_table_staggered_cells(directory / "input.pdf")
+
+
+@pytest.fixture(scope="module")
 def rotated_keep_case(rotated_pdf):
     """--keep-headers conversion of the stamp source: furniture stays inert."""
     case = _converted_case(rotated_pdf, drop_edges=False)
@@ -312,6 +324,14 @@ def bottom_foot_case(bottom_foot_pdf):
         part.format(number) for number in (1, 2, 3)
         for part in (BOTTOM_BODY[0], BOTTOM_BODY[3])
     ))
+    return case
+
+
+@pytest.fixture(scope="module")
+def stag_cells_case(stag_cells_pdf):
+    """Convert the staggered-cells source once; the table rasterizes."""
+    case = _converted_case(stag_cells_pdf)
+    assert_retained_once(case.text, "A staggered rotated table", *STAG_BODY)
     return case
 
 
@@ -859,7 +879,7 @@ def test_strip_clip_ignores_off_flow_and_non_member_seeds():
     """Only surviving body-flow blocks seed the clip, and only band
     members count: signature furniture is gone before render's region
     detection, an empty-text block never reaches `ordered`, and a
-    body-band tall block disjoint from the band can't rescue an
+    body-band tall block disjoint from every band can't rescue an
     all-margin run (#45)."""
     doc = fitz.open()
     page = doc.new_page(width=W, height=H)
@@ -884,6 +904,31 @@ def test_strip_clip_ignores_off_flow_and_non_member_seeds():
         [*strips, _strip_block(
             [(0.0, -1.0)], bbox=(300.0, 650.0, 320.0, 750.0))])
     assert len(seeds) == 4
+
+
+def test_strip_clip_body_member_joining_late():
+    """Membership is checked across every >=3-overlap range, not just the
+    first trigger: a band that opens all-margin but gains a body-
+    reaching member later still legitimates the clip, and so does a
+    second, disjoint legit band following an all-margin run (#45)."""
+    doc = fitz.open()
+    page = doc.new_page(width=W, height=H)
+    strips = [
+        _strip_block([(0.0, -1.0)], bbox=(x, 100, x + 20, 400))
+        for x in (10.0, 30.0, 570.0)
+    ]
+    # the band opens at y=100 with only margin members; the body member
+    # joins at y=300 — first-trigger sampling would refuse it
+    late = _strip_block([(0.0, -1.0)], bbox=(300.0, 300.0, 320.0, 500.0))
+    assert _rotated_table_seeds([*strips, late]) == [*strips, late]
+    assert _strip_clip(page, [*strips, late], frozenset()) is not None
+    # a disjoint all-margin run followed by a second legit band: the
+    # union clip covers both, matching render's single region
+    band2 = [
+        _strip_block([(0.0, -1.0)], bbox=(x, 500, x + 20, 700))
+        for x in (300.0, 330.0, 360.0)
+    ]
+    assert _strip_clip(page, [*strips, *band2], frozenset()) is not None
 
 
 def test_dual_margin_strips_extraction_contract(dual_strips_pdf):
@@ -989,3 +1034,61 @@ def test_repeated_bottom_foot_is_dropped(bottom_foot_case):
         *(f"page {tag}" for tag in BOTTOM_COPY_TAGS),
         issue="#45: bottom-edge furniture leaked into the article body",
     )
+
+
+def test_staggered_cells_extraction_contract(stag_cells_pdf):
+    """Pin the staggered rotated table (#45): three margin cells open the
+    band — the first >=3-overlap point has only margin members — while
+    two inner cells join lower, so the clip must be legitimated by
+    membership across band ranges, not the first trigger."""
+    with fitz.open(stag_cells_pdf) as doc:
+        assert len(doc) == 1
+        page = doc[0]
+        pdict = page.get_text("dict")
+        blocks = _text_blocks(pdict)
+        cells = [_containing(blocks, cell) for cell in STAG_CELLS]
+        assert len({id(c) for c in cells}) == 5
+        for cell, x in zip(cells, STAG_CELL_X):
+            assert len(cell["lines"]) == 1
+            assert tuple(cell["lines"][0]["dir"]) == (0.0, -1.0)
+            assert cell["bbox"][3] - cell["bbox"][1] > 60
+        margin_cells, body_cells = cells[:3], cells[3:]
+        for cell in margin_cells:
+            x0, _, x1, _ = cell["bbox"]
+            assert x1 < W * 0.1 or x0 > W * 0.9
+            assert _is_margin_strip(cell, page)
+        for cell, base in zip(cells, STAG_CELL_BASE):
+            assert cell["bbox"][3] == pytest.approx(base, abs=4)
+        # the first >=3-overlap point is the third margin-cell start,
+        # before either body cell has joined — first-trigger sampling
+        # would see only margin members and refuse the clip
+        trigger = max(c["bbox"][1] for c in margin_cells)
+        assert all(
+            c["bbox"][1] <= trigger < c["bbox"][3] for c in margin_cells)
+        assert all(c["bbox"][1] > trigger for c in body_cells)
+        # the last joiner's start is covered by all five cells — a body
+        # member shares the band even though it joined late
+        opener = max(c["bbox"][1] for c in body_cells)
+        assert all(
+            c["bbox"][1] <= opener < c["bbox"][3] for c in cells)
+        seeds = _rotated_table_seeds(pdict["blocks"])
+        assert {id(s) for s in seeds} == {id(c) for c in cells}
+        clip = _strip_clip(page, pdict["blocks"], frozenset())
+        assert clip is not None
+        assert not any(
+            _is_margin_strip(c, page, clip) for c in margin_cells)
+        edges = _doc_column_edges(
+            [(page, pdict)], _boilerplate_signatures([(page, pdict)]))
+        assert edges == pytest.approx([72])
+
+
+def test_staggered_cells_rasterize_whole(stag_cells_case):
+    """All five cells rasterize with the table — margin cells lose their
+    text like the inner ones — and the prose below survives (#45)."""
+    case = stag_cells_case
+    assert case.stats["raster_tables"] == 1
+    assert case.stats["images"] == 1
+    assert case.stats["chapters"] == 1
+    lint_epub(case.epub)
+    for cell in STAG_CELLS:
+        assert cell not in case.text
