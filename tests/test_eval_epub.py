@@ -2,8 +2,10 @@
 fitz, convert it, and run the eval CLI as a subprocess — pinning the
 exit-code contract (0 clean / 1 High findings / 2 operational) so the
 CI gate can't drift silently."""
+import re
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 import fitz
@@ -32,9 +34,46 @@ def _clean_pdf(path):
     doc.close()
 
 
-def _run(pdf, epub):
-    return subprocess.run([sys.executable, str(EVAL), str(pdf), str(epub)],
-                          check=False, capture_output=True, text=True)
+def _de_legend_pdf(path):
+    """A standalone `Tabelle 1.` legend block mid-flow — German caption
+    vocabulary the en profile can't see."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(fitz.Rect(72, 90, 540, 130),
+                     "Eine Synthetische Studie", fontsize=18)
+    p.insert_textbox(fitz.Rect(72, 180, 540, 300),
+                     "Fliesstext mit mehreren Saetzen. Noch mehr Text "
+                     "folgt hier fuer die Wortabdeckung.", fontsize=BODY)
+    p.insert_textbox(fitz.Rect(72, 320, 540, 350),
+                     "Tabelle 1.", fontsize=BODY)
+    p.insert_textbox(fitz.Rect(72, 370, 540, 470),
+                     "Weiterer Fliesstext nach der Legende, damit der "
+                     "Tabellenblock mitten im Textfluss bleibt.",
+                     fontsize=BODY)
+    doc.save(str(path))
+    doc.close()
+
+
+def _set_language(epub: Path, code: str):
+    """Rewrite `<dc:language>` inside content.opf — simulates an EPUB
+    whose language `get_lang` doesn't know (the converter itself
+    refuses unknown codes)."""
+    with zipfile.ZipFile(epub) as z:
+        members = {n: z.read(n) for n in z.namelist()}
+    opf_name = next(n for n in members if n.endswith("content.opf"))
+    members[opf_name] = re.sub(
+        r"<dc:language[^>]*>[^<]*</dc:language>",
+        f"<dc:language>{code}</dc:language>",
+        members[opf_name].decode()).encode()
+    with zipfile.ZipFile(epub, "w") as z:
+        for n, data in members.items():
+            z.writestr(n, data)
+
+
+def _run(pdf, epub, *args):
+    return subprocess.run(
+        [sys.executable, str(EVAL), str(pdf), str(epub), *args],
+        check=False, capture_output=True, text=True)
 
 
 def test_eval_clean_conversion_exits_0(tmp_path):
@@ -67,16 +106,44 @@ def test_eval_missing_sections_exits_1(tmp_path):
     assert "missing" in r.stdout.lower()
 
 
-def test_eval_non_english_bails_2(tmp_path):
-    """A de conversion stamps dc:language=de — the eval must bail as
-    operational rather than grade against English patterns."""
+def test_eval_localized_legends_de(tmp_path):
+    """The `Tabelle 1.` legend grades under the dc:language-resolved de
+    profile — a disposition row names it — while `--lang en` leaves the
+    German label uncollected and sees no table at all."""
     pdf = tmp_path / "de.pdf"
-    _clean_pdf(pdf)
+    _de_legend_pdf(pdf)
     epub = tmp_path / "de.epub"
     convert(pdf, epub, lang="de")
     r = _run(pdf, epub)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "Table 1:" in r.stdout
+    r_en = _run(pdf, epub, "--lang", "en")
+    assert r_en.returncode == 0, r_en.stdout + r_en.stderr
+    assert "Table 1:" not in r_en.stdout
+
+
+def test_eval_unsupported_language_bails_2(tmp_path):
+    """dc:language=ja has no LangProfile — the eval must bail as
+    operational rather than grade against English patterns."""
+    pdf = tmp_path / "clean.pdf"
+    _clean_pdf(pdf)
+    epub = tmp_path / "ja.epub"
+    convert(pdf, epub)
+    _set_language(epub, "ja")
+    r = _run(pdf, epub)
     assert r.returncode == 2, r.stdout + r.stderr
-    assert "English-only" in r.stdout
+    assert "unsupported language" in r.stdout
+
+
+def test_eval_lang_flag_bad_code_bails_2(tmp_path):
+    """`--lang tlh` resolves no profile either — same operational bail."""
+    pdf = tmp_path / "clean.pdf"
+    _clean_pdf(pdf)
+    epub = tmp_path / "clean.epub"
+    convert(pdf, epub)
+    r = _run(pdf, epub, "--lang", "tlh")
+    assert r.returncode == 2, r.stdout + r.stderr
+    assert "unsupported language" in r.stdout
 
 
 def test_eval_non_zip_epub_exits_2(tmp_path):

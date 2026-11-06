@@ -23,14 +23,17 @@ comparable across documents and regressions are visible. Runs
 ## Usage
 
 ```bash
-python3 scripts/eval_epub.py <input.pdf> <output.epub>
+python3 scripts/eval_epub.py <input.pdf> <output.epub> [--lang CODE]
 ```
 
 Prints a markdown report. Exit code is `1` when any High-severity
 finding exists (usable as a CI gate), `0` otherwise; `2` marks
-operational failures (unreadable inputs, or a non-English
-`dc:language` — the patterns are English-scoped, so other languages
-bail rather than report a wrong verdict).
+operational failures (unreadable inputs, or a language with no
+`LangProfile` — `get_lang` resolves `en`/`de`/`fr`/`es`; anything else
+bails rather than report a wrong verdict). Language-bound patterns
+(legend labels, furniture vocabulary, notes/nav titles) come from the
+profile the same way the converter's do: `--lang` overrides the EPUB's
+`dc:language`, which overrides the `en` default.
 
 ## What the script checks
 
