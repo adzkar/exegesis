@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Evaluate a PDF -> EPUB conversion and print a severity-ranked report.
 
-Usage: python3 scripts/eval_epub.py <input.pdf> <output.epub>
+Usage: python3 scripts/eval_epub.py <input.pdf> <output.epub> [--lang CODE]
 
 The report grades one conversion the same way every time so regressions
 are visible: container validity, metadata sanity, classified word
@@ -10,10 +10,20 @@ figure coverage, notes integrity, and whether odd artifacts came from
 the source text layer or the converter. Output is markdown; paste it
 into an issue or read it inline. Exit code is `1` when any
 High-severity finding exists (usable as a CI gate), `0` otherwise —
-`2` marks operational failures (unreadable inputs, or a non-English
-`dc:language` — every pattern is English-scoped today, so grading
-another language would assert a confident wrong verdict) — a broken
+`2` marks operational failures (unreadable inputs, or a language the
+pipeline has no `LangProfile` for — grading a `ja` conversion on
+English patterns would assert a confident wrong verdict) — a broken
 or ungradeable run can't masquerade as a gate failure.
+
+Language: every language-bound pattern (legend labels, furniture
+vocabulary, the notes-chapter title, the table-alt literal) resolves
+through `exegesis.lang`'s `LangProfile` — `--lang` overrides the
+EPUB's `dc:language`, which overrides the `en` default. Still
+English-scoped (documented limits, not graded wrong — just blind
+spots): the affiliation/contamination vocabulary, the references-zone
+anchor, and the numbered-heading shape, plus `WORD_RE`'s ASCII word
+model which fragments non-ASCII text identically on both sides of the
+coverage diff so the bias mostly cancels.
 """
 from __future__ import annotations
 
@@ -28,7 +38,7 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from exegesis.lang import EN
+from exegesis.lang import LangProfile, get_lang
 from exegesis.text import _join_lines
 
 WORD_RE = re.compile(r"[A-Za-z0-9]+")
@@ -69,14 +79,31 @@ _CAP_TAIL_XML = (r"(?:\s+[—–-]|\s*[.:)]|\s{2,}|\s+(?-i:[A-Z])|"
 # full `_CAP_TAIL` set is accepted — `Table 5:`, `Table 5 —`, the
 # Springer `Table 5  Title` two-space style, and bare-EOL `Table 5`
 # labels all grade; only the single-space periodless style (`Table 5
-# Descriptive`) stays unchecked — documented limit.
-TABLE_LEGEND_RE = re.compile(
-    rf"(?:^|\n)\s*Table\b\s*\.?\s*({CAP_NUM}){CAP_RANGE}{_CAP_TAIL_TXT}",
-    re.IGNORECASE)
-FIG_LEGEND_RE = re.compile(
-    rf"(?:^|\n)\s*(?:Fig(?:ure)?|Plate|Scheme|Chart)\b\s*\.?\s*"
-    rf"({CAP_NUM}){CAP_RANGE}{_CAP_TAIL_TXT}",
-    re.IGNORECASE)
+# Descriptive`) stays unchecked — documented limit. The label
+# alternations ride the resolved `LangProfile`'s
+# `table_labels`/`figure_labels` so a `de` conversion collects
+# `Tabelle`/`Abb.` legends with identical anchoring; the eval keeps its
+# own capture/tail shapes (`(num)` group, `(?:^|\n)` block anchor, the
+# wider TXT/XML terminators) because the profile's compiled
+# `table_caption`/`figure_caption` are per-text, group-less, and use
+# the narrower pipeline `_CAP_TAIL`.
+def _table_legend_re(lang: LangProfile) -> re.Pattern:
+    """`Table N`-equivalent source-side collector for `lang`'s table
+    labels — see the collection comment above."""
+    return re.compile(
+        rf"(?:^|\n)\s*(?:{lang.table_labels})\b\s*\.?\s*"
+        rf"({CAP_NUM}){CAP_RANGE}{_CAP_TAIL_TXT}",
+        re.IGNORECASE)
+
+
+def _fig_legend_re(lang: LangProfile) -> re.Pattern:
+    """Same collector for `lang`'s figure-label set."""
+    return re.compile(
+        rf"(?:^|\n)\s*(?:{lang.figure_labels})\b\s*\.?\s*"
+        rf"({CAP_NUM}){CAP_RANGE}{_CAP_TAIL_TXT}",
+        re.IGNORECASE)
+
+
 # A caption label glued mid-paragraph: "25+ chars of sentence text, then
 # a bold Table/Fig N. legend inside the same <p>" — a legend that belongs
 # to a floating object was spliced into body flow. The run-up excludes
@@ -84,40 +111,47 @@ FIG_LEGEND_RE = re.compile(
 # caption opening its own <p> has no preceding text at all, and a
 # `class="listitem"`-style attribute can't lend its characters to the
 # 25-char threshold either; text sharing the paragraph still matches.
-# `Fig(?:ure)?` keeps parity
-# with FIG_LEGEND_RE — a spelled-out `Figure N.` splice counts too.
-# A `,`/`;` right after `</b>` is sentence grammar — a bolded in-text
-# citation (`…as shown in <b>Table 2.</b>, we…`), not a splice. The
-# label→number junction loop takes one dot, space, or `</b><b>` per
-# step: an empty-able `\.?\s*` inside the repeat backtracks
-# exponentially in the length of a whitespace run.
-SPLICE_RE = re.compile(
-    r"([^<>]{25,}<b>(?:Table|Fig(?:ure)?|Plate|Scheme|Chart)"
-    r"(?:[.\s]|</b><b>)*" + CAP_NUM + r"(?:</b><b>\s*)*"
-    + CAP_RANGE + r"\.)</b>(?!\s*[,;])", re.IGNORECASE)
-# `EN.furniture` aliased, not copied — the eval grades English
-# conversions until the legend-pattern localization follow-up lands,
-# and a verbatim re-compile is exactly the drift surface AGENTS.md
-# warns about when the profile's vocabulary next changes.
-FURNITURE_RE = EN.furniture
+# The fig-and-table label union keeps parity
+# with the figure collector — a spelled-out `Figure N.` splice counts
+# too. A `,`/`;` right after `</b>` is sentence grammar — a bolded
+# in-text citation (`…as shown in <b>Table 2.</b>`, we…`), not a
+# splice. The label→number junction loop takes one dot, space, or
+# `</b><b>` per step: an empty-able `\.?\s*` inside the repeat
+# backtracks exponentially in the length of a whitespace run.
+def _splice_re(lang: LangProfile) -> re.Pattern:
+    """Mid-paragraph glued-legend detector — see the comment above."""
+    return re.compile(
+        rf"([^<>]{{25,}}<b>(?:{lang.figure_labels}|{lang.table_labels})"
+        rf"(?:[.\s]|</b><b>)*" + CAP_NUM + r"(?:</b><b>\s*)*"
+        + CAP_RANGE + r"\.)</b>(?!\s*[,;])", re.IGNORECASE)
+
+
 # 'center'/'centre'/'college' are plausible surnames — flag them only in
 # affiliation context (after a comma or `of`); the rest are never names,
 # so a bare word match suffices (`laborator` is a stem, left unbound).
 # One token may intervene — `Smith J, Boston College` and `Roe, Mayo
-# Center` are the natural `Name, Place Institution` tail.
+# Center` are the natural `Name, Place Institution` tail. English-only:
+# `profile.affiliation` can't substitute — its bare `\s+Center\b` shape
+# exists to *split* a byline tail, and on creator strings would flag
+# surnames the name-context gate here was built to spare.
 AFFIL_NAME_RE = re.compile(
     r"(?:,|\bof)\s+(?:\w+\s+)?(?:center|centre|college)\b",
     re.IGNORECASE)
 AFFIL_WORD_RE = re.compile(
     r"\b(?:university|department|institute|hospital|school of)\b|"
     r"\blaborator", re.IGNORECASE)
-# The byline merge can absorb a caption block whole — `Table 1.` has
-# reached dc:creator — and it clears every affiliation/title gate.
-# Names never carry a caption label + number, so it matches anywhere:
-# a legend glued after the names is the same contamination.
-CREATOR_CAPTION_RE = re.compile(
-    rf"\b(?:Table|Fig(?:ure)?|Plate|Scheme|Chart)\b\s*\.?\s*{CAP_NUM}",
-    re.IGNORECASE)
+
+
+def _creator_caption_re(lang: LangProfile) -> re.Pattern:
+    """The byline merge can absorb a caption block whole — `Table 1.`
+    has reached dc:creator — and it clears every affiliation/title
+    gate. Names never carry a caption label + number, so it matches
+    anywhere: a legend glued after the names is the same
+    contamination."""
+    return re.compile(
+        rf"\b(?:{lang.figure_labels}|{lang.table_labels})\b\s*\.?\s*"
+        rf"{CAP_NUM}",
+        re.IGNORECASE)
 
 
 def _flatten(block_text: str) -> str:
@@ -153,12 +187,14 @@ def xhtml_text(raw: str) -> str:
     return html.unescape(TAG_RE.sub(" ", body))
 
 
-def notes_text(raw: str) -> str:
+def notes_text(raw: str, lang: LangProfile) -> str:
     """`xhtml_text` for notes.xhtml additionally drops the injected
-    `<h1>Notes</h1>` chapter title — emit machinery, not PDF words,
-    so it can't count toward coverage either."""
+    `<h1>{notes_title}</h1>` chapter title — emit machinery, not PDF
+    words, so it can't count toward coverage either. The title comes
+    from `lang` (`Anmerkungen`, `Notes`, `Notas`) so a localized notes
+    heading isn't counted as lost source vocabulary."""
     return xhtml_text(re.sub(
-        rf"<h1[^>]*>\s*{re.escape(EN.notes_title)}\s*</h1>", " ", raw,
+        rf"<h1[^>]*>\s*{re.escape(lang.notes_title)}\s*</h1>", " ", raw,
         flags=re.IGNORECASE))
 
 
@@ -217,7 +253,8 @@ def boilerplate_signatures(pdf_pages) -> set[str]:
             if n >= max(2, int(len(pdf_pages) * 0.4))}
 
 
-def _dropped(block, rect, boilerplate: set[str]) -> bool:
+def _dropped(block, rect, boilerplate: set[str],
+             lang: LangProfile) -> bool:
     """Does `order._ordered_blocks` drop this `get_text("blocks")` tuple?
     Mirrors its rule exactly — `analyze._is_signature_furniture` (an
     edge-zone sig in the boilerplate set) or `analyze._is_furniture`:
@@ -236,18 +273,23 @@ def _dropped(block, rect, boilerplate: set[str]) -> bool:
     # the gate runs the pipeline's own `_join_lines` on the block's
     # lines rather than re-approximating its sequential per-fragment
     # arms (hyphen joins before lone-uppercase drop caps, both after
-    # per-line strip, honoring `single_letter_words`).
-    dehyph = _join_lines(text.split("\n"), EN)
+    # per-line strip, honoring `lang`'s `single_letter_words`), and
+    # the furniture vocabulary is `lang.furniture` itself, not a copy —
+    # a verbatim re-list is exactly the drift surface AGENTS.md warns
+    # about when the profile's vocabulary next changes.
+    dehyph = _join_lines(text.split("\n"), lang)
     return bool(
         ((y1 < h * 0.20 or y0 > h * 0.80)
          and SIG_RE.sub("", text.lower()) in boilerplate)
         or ((y0 > h * 0.93 or y1 < h * 0.07)
-            and (FURNITURE_RE.search(dehyph) or re.fullmatch(r"\d{1,4}", joined)))
+            and (lang.furniture.search(dehyph)
+                 or re.fullmatch(r"\d{1,4}", joined)))
         or (x1 - x0 < 25 and y1 - y0 > 4 * (x1 - x0)
             and (x0 > w * 0.9 or x1 < w * 0.1)))
 
 
-def furniture_words(pdf_pages, boilerplate: set[str]) -> Counter:
+def furniture_words(pdf_pages, boilerplate: set[str],
+                    lang: LangProfile) -> Counter:
     """Counted vocabulary of words the converter *should* have stripped
     — the words of every block `_dropped` holds for, so the excuse
     mirrors the pipeline's own signals rather than approximating them.
@@ -259,12 +301,13 @@ def furniture_words(pdf_pages, boilerplate: set[str]) -> Counter:
     furn: Counter = Counter()
     for page in pdf_pages:
         for b in page.get_text("blocks"):
-            if b[6] == 0 and _dropped(b, page.rect, boilerplate):
+            if b[6] == 0 and _dropped(b, page.rect, boilerplate, lang):
                 furn.update(WORD_RE.findall(b[4].lower()))
     return furn
 
 
-def rasterized_blocks(pdf_pages, boilerplate: set[str]):
+def rasterized_blocks(pdf_pages, boilerplate: set[str],
+                      lang: LangProfile):
     """Words the rotated-table path carries only as pixels. Mirrors
     `analyze._rotated_table_region` over the page's body blocks
     (non-empty text blocks `_dropped` keeps): >=3 tall-narrow blocks
@@ -289,7 +332,7 @@ def rasterized_blocks(pdf_pages, boilerplate: set[str]):
         raw = page.get_text("blocks")
         body = [(bi, b) for bi, b in enumerate(raw)
                 if b[6] == 0 and b[4].strip()
-                and not _dropped(b, page.rect, boilerplate)]
+                and not _dropped(b, page.rect, boilerplate, lang)]
         tall = [b for _, b in body
                 if b[3] - b[1] > 4 * max(1, b[2] - b[0]) and b[3] - b[1] > 60]
         cov, shared = 0, False
@@ -307,10 +350,12 @@ def rasterized_blocks(pdf_pages, boilerplate: set[str]):
             if fitz.Rect(b[:4]).intersects(region):
                 claimed.add((pi, bi))
                 words.update(WORD_RE.findall(b[4].lower()))
-                legends.update(n.upper() for n in TABLE_LEGEND_RE.findall(
-                    _flatten(b[4])))
-                fig_legends.update(n.upper() for n in FIG_LEGEND_RE.findall(
-                    _flatten(b[4])))
+                legends.update(
+                    n.upper() for n in _table_legend_re(lang).findall(
+                        _flatten(b[4])))
+                fig_legends.update(
+                    n.upper() for n in _fig_legend_re(lang).findall(
+                        _flatten(b[4])))
     return words, frozenset(legends), frozenset(fig_legends), regions, claimed
 
 
@@ -421,7 +466,8 @@ def header_like_titles(entries: list[str]) -> list[str]:
 
 
 def missing_sections(pdf_text: str, entries: list[str],
-                     notes: str, has_headings: bool = True) -> list[str]:
+                     notes: str, lang: LangProfile,
+                     has_headings: bool = True) -> list[str]:
     """Numbered headings (`2. Methods`, `3.1. Participants`) present in the
     source but absent from the TOC — the converter emits them as plain
     paragraphs, so the reader gets no way into the body. The alphabetic
@@ -489,15 +535,16 @@ def missing_sections(pdf_text: str, entries: list[str],
     nav_numbered = Counter((n, t) for n, t in raw_pairs if n)
     nav_generic = Counter(t for n, t in raw_pairs if not n)
     # Subtract the synthesized entries: the notes-chapter link (one
-    # exists iff notes content did) and a lone headingless-doc "Start"
-    # seed — all unnumbered. Each subtracts one occurrence, so a real
-    # covered heading titled `Notes` — a second identical entry —
-    # still masks; an *uncovered* one doesn't. (Untitled-chapter
-    # `Section N` titles never reach book.toc — they live on the
-    # EpubHtml `<title>` — so no subtraction exists for them; masking
-    # a real entry titled that would fabricate a finding.)
+    # exists iff notes content did — its title is `lang.notes_title`)
+    # and a lone headingless-doc "Start" seed — all unnumbered. Each
+    # subtracts one occurrence, so a real covered heading titled
+    # `Notes` — a second identical entry — still masks; an *uncovered*
+    # one doesn't. (Untitled-chapter `Section N` titles never reach
+    # book.toc — they live on the EpubHtml `<title>` — so no
+    # subtraction exists for them; masking a real entry titled that
+    # would fabricate a finding.)
     if notes.strip():
-        nav_generic.subtract({"notes": 1})
+        nav_generic.subtract({lang.notes_title.lower(): 1})
     if len(entries) == 1 and not has_headings:
         # The seed only fires on an EMPTY toc — a lone entry beside
         # real <h1>/<h2> markup is a legitimate single-heading TOC and
@@ -615,7 +662,7 @@ def _num_key(n: str) -> tuple:
     return (n.startswith("S"), int(re.sub(r"\D", "", n) or 0), n)
 
 
-def _legend_present(raw: str, num: str) -> bool:
+def _legend_present(raw: str, num: str, lang: LangProfile) -> bool:
     """A `Table N.` only counts as *the legend* in legend position — the
     start of a block element or extracted line. `results appear in
     <b>Table 3.</b>` ends a sentence with the same shape and the same
@@ -623,12 +670,14 @@ def _legend_present(raw: str, num: str) -> bool:
     lets a citation fake the landing spot — a swept or dropped table
     reporting 'prose' instead of 'notes'/'missing'."""
     return bool(
-        re.search(rf"{_LEGEND_AT}Table\b\s*\.?\s*{_num_pat(num)}"
-                  rf"{CAP_RANGE}{_CAP_TAIL_XML}", raw, re.IGNORECASE)
+        re.search(rf"{_LEGEND_AT}(?:{lang.table_labels})\b\s*\.?\s*"
+                  rf"{_num_pat(num)}{CAP_RANGE}{_CAP_TAIL_XML}",
+                  raw, re.IGNORECASE)
     )
 
 
-def _legend_in_notes(notes: str, num: str | None = None) -> bool:
+def _legend_in_notes(notes: str, lang: LangProfile,
+                     num: str | None = None) -> bool:
     """A `Table N.` in notes.xhtml — legend-position anchored first.
     With `num` None it answers 'any table legend at all' and stays
     anchored-only: a sentence-ending citation (`…appear in Table 5.`)
@@ -645,17 +694,19 @@ def _legend_in_notes(notes: str, num: str | None = None) -> bool:
     (absent legend + same-number note citation), accepted for now."""
     if num is None:
         return bool(
-            re.search(rf"{_LEGEND_AT}Table\b\s*\.?\s*{CAP_NUM}{CAP_RANGE}"
-                      rf"{_CAP_TAIL_XML}", notes, re.IGNORECASE))
-    if _legend_present(notes, num):
+            re.search(rf"{_LEGEND_AT}(?:{lang.table_labels})\b\s*\.?\s*"
+                      rf"{CAP_NUM}{CAP_RANGE}{_CAP_TAIL_XML}",
+                      notes, re.IGNORECASE))
+    if _legend_present(notes, num, lang):
         return True
     return bool(
-        re.search(rf"\bTable\b\s*\.?\s*{_num_pat(num)}{CAP_RANGE}"
+        re.search(rf"\b(?:{lang.table_labels})\b\s*\.?\s*"
+                  rf"{_num_pat(num)}{CAP_RANGE}"
                   rf"(?:\s*[.:—–-]|\s{{2,}})\s*[^\s<]",
                   notes, re.IGNORECASE))
 
 
-def _legend_near(chap: str, num: str, needle: str,
+def _legend_near(chap: str, num: str, needle: str, lang: LangProfile,
                  radius: int = 1500) -> float:
     """Distance to the nearest `needle` occurrence within `radius` chars
     of this table's legend inside one chapter — `inf` when none. A
@@ -672,8 +723,9 @@ def _legend_near(chap: str, num: str, needle: str,
     pass a prose-flattened legend beside a foreign table misdiagnoses
     as 'detached'/'rasterized' (a Low) when the truth is 'prose'
     (a Med)."""
-    m = re.search(rf"{_LEGEND_AT}Table\b\s*\.?\s*{_num_pat(num)}"
-                  rf"{CAP_RANGE}{_CAP_TAIL_XML}", chap, re.IGNORECASE)
+    m = re.search(rf"{_LEGEND_AT}(?:{lang.table_labels})\b\s*\.?\s*"
+                  rf"{_num_pat(num)}{CAP_RANGE}{_CAP_TAIL_XML}",
+                  chap, re.IGNORECASE)
     if not m:
         return float("inf")
     lo, hi = max(0, m.start() - radius), m.end() + radius
@@ -685,15 +737,17 @@ def _legend_near(chap: str, num: str, needle: str,
         if needle == "<table":
             end = chap.find("</table>", p)
             seg = xhtml_text(chap[p:end if end != -1 else len(chap)])
-            if re.search(rf"Table\b\s*\.?\s*{CAP_NUM}{CAP_RANGE}"
-                         rf"{_CAP_TAIL_TXT}", seg, re.IGNORECASE):
+            if re.search(rf"(?:{lang.table_labels})\b\s*\.?\s*{CAP_NUM}"
+                         rf"{CAP_RANGE}{_CAP_TAIL_TXT}",
+                         seg, re.IGNORECASE):
                 continue
         elif needle == "images/table_" and any(
                 lm.group(1).upper() != num.upper()
                 and abs(lm.start() - p) < abs(p - m.start())
                 for lm in re.finditer(
-                    rf"{_LEGEND_AT}Table\b\s*\.?\s*({CAP_NUM})"
-                    rf"{CAP_RANGE}{_CAP_TAIL_XML}", chap, re.IGNORECASE)):
+                    rf"{_LEGEND_AT}(?:{lang.table_labels})\b\s*\.?\s*"
+                    rf"({CAP_NUM}){CAP_RANGE}{_CAP_TAIL_XML}",
+                    chap, re.IGNORECASE)):
             continue
         best = min(best, abs(p - m.start()))
     return best
@@ -702,6 +756,7 @@ def _legend_near(chap: str, num: str, needle: str,
 def table_dispositions(blocks_text: str, win_text: str,
                        chapters: dict[str, str],
                        notes: str, furniture: Counter,
+                       lang: LangProfile,
                        raster_legends: frozenset[str] = frozenset()):
     """For each `Table N` legend in the source, decide where it landed:
     inside <table> markup, beside <table> markup it failed to join
@@ -738,14 +793,15 @@ def table_dispositions(blocks_text: str, win_text: str,
     epub_tokens = []
     for c in chapters.values():
         epub_tokens += WORD_RE.findall(xhtml_text(c).lower())
-    epub_tokens += WORD_RE.findall(notes_text(notes).lower())
+    epub_tokens += WORD_RE.findall(notes_text(notes, lang).lower())
     grams = {tuple(epub_tokens[i:i + 4]) for i in range(len(epub_tokens) - 3)}
-    bounds = sorted(m.start() for m in TABLE_LEGEND_RE.finditer(win_text))
+    legend_collect = _table_legend_re(lang)
+    bounds = sorted(m.start() for m in legend_collect.finditer(win_text))
     out = []
-    for num in sorted({n.upper() for n in TABLE_LEGEND_RE.findall(blocks_text)},
+    for num in sorted({n.upper() for n in legend_collect.findall(blocks_text)},
                       key=_num_key):
-        legend_re = (rf"(?:^|\n)\s*Table\b\s*\.?\s*{_num_pat(num)}"
-                     rf"{CAP_RANGE}{_CAP_TAIL_TXT}")
+        legend_re = (rf"(?:^|\n)\s*(?:{lang.table_labels})\b\s*\.?\s*"
+                     rf"{_num_pat(num)}{CAP_RANGE}{_CAP_TAIL_TXT}")
         coverages = []
         for m in re.finditer(legend_re, win_text, re.IGNORECASE):
             nxt = next((b for b in bounds if b > m.start()), m.end() + 700)
@@ -757,7 +813,7 @@ def table_dispositions(blocks_text: str, win_text: str,
                 continue
             coverages.append(sum(g in grams for g in win) / len(win))
         coverage = min(coverages) if coverages else None  # unassessed
-        in_markup = any(_legend_present(seg, num)
+        in_markup = any(_legend_present(seg, num, lang)
                         for c in chapters.values()
                         for seg in re.findall(r"<table\b.*?</table>", c, re.DOTALL))
         # Anchored notes presence beats the raster claim: if the legend
@@ -765,18 +821,19 @@ def table_dispositions(blocks_text: str, win_text: str,
         # was wrong, not the pipeline. The loose fallback comes after —
         # a rasterized legend whose number a footnote merely *cites*
         # must not resolve 'notes'/High over 'rasterized'/Low.
-        notes_anchored = _legend_present(notes, num)
-        in_notes = _legend_in_notes(notes, num)
-        in_chaps = any(_legend_present(c, num) for c in chapters.values())
+        notes_anchored = _legend_present(notes, num, lang)
+        in_notes = _legend_in_notes(notes, lang, num)
+        in_chaps = any(_legend_present(c, num, lang)
+                       for c in chapters.values())
         if in_markup:
             where = "table"
         else:
             # Attribute the *nearest* floating object — a foreign
             # `<table>` can't label a legend `detached` when the
             # legend's own `table_*.png` sits closer.
-            tbl_d = min((_legend_near(c, num, "<table")
+            tbl_d = min((_legend_near(c, num, "<table", lang)
                          for c in chapters.values()), default=float("inf"))
-            img_d = min((_legend_near(c, num, "images/table_")
+            img_d = min((_legend_near(c, num, "images/table_", lang)
                          for c in chapters.values()), default=float("inf"))
             if img_d != float("inf") and img_d <= tbl_d:
                 # the intended rotated-table path: legend stays in
@@ -816,6 +873,9 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Evaluate a PDF->EPUB conversion.")
     ap.add_argument("pdf", type=Path)
     ap.add_argument("epub", type=Path)
+    ap.add_argument("--lang", default=None, metavar="CODE",
+                    help="language profile to grade against (en/de/fr/es); "
+                         "overrides the EPUB's dc:language")
     args = ap.parse_args()
     if not args.pdf.exists() or not args.epub.exists():
         print("error: input file not found", file=sys.stderr)
@@ -862,21 +922,30 @@ def main() -> int:
 
     # ---- B. metadata ----
     meta = opf_metadata(opf)
-    # Language-bound grading is English-only today: furniture vocab,
-    # legend labels, section/ref-zone patterns, nav-title subtractions,
-    # and ASCII `WORD_RE` coverage (umlauts/ß fragment into fake loss).
-    # A de/fr/es EPUB graded against English reports confident wrong
-    # verdicts both ways (correct conversion → High; dropped localized
-    # legends → false clean), so bail as operational rather than assert
-    # a verdict. Findings collected so far still print — container
-    # checks are language-agnostic. Missing `dc:language` assumes en,
-    # same as before.
-    lang_code = (meta.get("language") or "en").split("-")[0].strip().lower()
-    if lang_code != "en":
+    # Language-bound patterns (legend labels, furniture vocabulary, the
+    # notes/nav title literals) resolve through the pipeline's own
+    # LangProfile so a `de` conversion grades `Tabelle`/`Abb.` legends
+    # instead of silently skipping checks F/G. `--lang` wins, then
+    # dc:language, then the en default; a code `get_lang` can't resolve
+    # — or a hand-built profile that never declared its caption-label
+    # vocabulary — is ungradeable, so bail as operational rather than
+    # assert a verdict against English patterns. Findings collected so
+    # far still print — container checks are language-agnostic. Missing
+    # `dc:language` assumes en, same as before.
+    lang_code = (args.lang or meta.get("language") or "en")
+    lang_code = lang_code.split("-")[0].strip().lower()
+    try:
+        lang = get_lang(lang_code)
+    except ValueError as e:
         for sev, chk, detail in findings:
             print(f"| {sev} | {chk} | {detail.replace('|', '/')} |")
-        print(f"NOTE: dc:language {meta['language']!r} — eval patterns are "
-              "English-only; grading deferred to the localization follow-up")
+        print(f"NOTE: {e} — eval can't grade")
+        return 2
+    if lang.table_labels is None or lang.figure_labels is None:
+        for sev, chk, detail in findings:
+            print(f"| {sev} | {chk} | {detail.replace('|', '/')} |")
+        print(f"NOTE: profile {lang.code!r} declares no caption labels — "
+              "eval can't grade")
         return 2
     if looks_like_junk_title(meta["title"]):
         findings.append(("High", "B", f"dc:title looks like junk: {meta['title']!r}"))
@@ -892,7 +961,8 @@ def main() -> int:
     # `* †`) names nobody at all.
     nameless = bool(creator) and not re.search(r"[^\W\d_]", creator)
     if (AFFIL_NAME_RE.search(creator) or AFFIL_WORD_RE.search(creator)
-            or absorbed or nameless or CREATOR_CAPTION_RE.search(creator)):
+            or absorbed or nameless
+            or _creator_caption_re(lang).search(creator)):
         findings.append(("High", "B", f"dc:creator contaminated (len={len(creator)}): {creator[:80]!r}…"))
 
     # ---- C. coverage ----
@@ -907,7 +977,7 @@ def main() -> int:
     pdf_text = "\n".join(p.get_text("text") for p in pdf)
     boilerplate = boilerplate_signatures(pdf)
     raster_vocab, raster_legends, fig_raster_legends, n_regions, \
-        raster_claimed = rasterized_blocks(pdf, boilerplate)
+        raster_claimed = rasterized_blocks(pdf, boilerplate, lang)
     # Table and figure legends collect on block-joined text: each
     # extracted block flattens to one line, so `\n` anchors mean block
     # starts — a real caption opens its own block, while a sentence
@@ -918,7 +988,7 @@ def main() -> int:
     # landscape table mustn't open a disposition row.
     kept_text = [b[4]
                  for p in pdf for b in p.get_text("blocks")
-                 if b[6] == 0 and not _dropped(b, p.rect, boilerplate)]
+                 if b[6] == 0 and not _dropped(b, p.rect, boilerplate, lang)]
     pdf_blocks_text = "\n".join(
         _flatten(t)
         for t in kept_text)
@@ -933,7 +1003,7 @@ def main() -> int:
     pdf_lines_text = "\n".join(
         b[4]
         for pi, p in enumerate(pdf) for bi, b in enumerate(p.get_text("blocks"))
-        if b[6] == 0 and not _dropped(b, p.rect, boilerplate)
+        if b[6] == 0 and not _dropped(b, p.rect, boilerplate, lang)
         and (pi, bi) not in raster_claimed)
     # Coverage windows additionally mask region-claimed cell blocks:
     # rasterized text can only survive as pixels, so its grams could
@@ -942,14 +1012,15 @@ def main() -> int:
     win_text = "\n".join(
         _flatten(b[4])
         for pi, p in enumerate(pdf) for bi, b in enumerate(p.get_text("blocks"))
-        if b[6] == 0 and not _dropped(b, p.rect, boilerplate)
+        if b[6] == 0 and not _dropped(b, p.rect, boilerplate, lang)
         and (pi, bi) not in raster_claimed)
-    epub_text = " ".join(xhtml_text(c) for c in chapters.values()) + " " + notes_text(notes)
+    epub_text = (" ".join(xhtml_text(c) for c in chapters.values())
+                 + " " + notes_text(notes, lang))
     pw, ew = Counter(WORD_RE.findall(pdf_text.lower())), Counter(WORD_RE.findall(epub_text.lower()))
     if not pw:
         findings.append(("High", "C", ("no extractable text in PDF — scanned/"
                                       "image-only input, eval is blind")))
-    furn_vocab = furniture_words(pdf, boilerplate)
+    furn_vocab = furniture_words(pdf, boilerplate, lang)
     # The rotated-table path drops its text blocks in every mode and
     # emits only an `images/table_*.png`, so those words were never
     # expected in the text. They leave the expected side *before* the
@@ -1008,7 +1079,7 @@ def main() -> int:
     # keeps a heading fused into an OCR-merged paragraph block from
     # adopting the sentence after it.
     missing_secs = missing_sections(
-        pdf_lines_text, entries, notes,
+        pdf_lines_text, entries, notes, lang,
         has_headings=any(re.search(r"<h[12]\b", c)
                          for c in chapters.values()))
     shown_secs = [f"{n}. {t}" for n, t in missing_secs]
@@ -1024,15 +1095,17 @@ def main() -> int:
         findings.append(("Med", "D", "no <h1> emitted — title never promoted, flat TOC"))
 
     # ---- E. mid-paragraph splices ----
+    splice_re = _splice_re(lang)
     for name, raw in sorted(chapters.items()):
-        for m in SPLICE_RE.finditer(raw):
+        for m in splice_re.finditer(raw):
             frag = xhtml_text(m.group(1))[-70:].strip()
             findings.append(("Med", "E", f"{Path(name).name}: legend spliced mid-sentence: …{frag}"))
 
     # ---- F. tables ----
     for num, where, cov in table_dispositions(pdf_blocks_text, win_text,
                                               chapters, notes,
-                                              furn_vocab, raster_legends):
+                                              furn_vocab, lang,
+                                              raster_legends):
         if where == "missing":
             # A dropped legend on an intact grid scores high coverage —
             # the data survived, so 'legend+data absent' would misstate
@@ -1080,9 +1153,10 @@ def main() -> int:
     # block-flattened text and require legend position in the raw xhtml
     # — an in-text 'as shown in Figure 3' can't satisfy a dropped
     # caption.
-    for num in sorted({n.upper() for n in FIG_LEGEND_RE.findall(pdf_blocks_text)},
+    for num in sorted({n.upper()
+                       for n in _fig_legend_re(lang).findall(pdf_blocks_text)},
                       key=_num_key):
-        fig_re = (rf"{_LEGEND_AT}(?:Fig(?:ure)?|Plate|Scheme|Chart)\b"
+        fig_re = (rf"{_LEGEND_AT}(?:{lang.figure_labels})\b"
                   rf"\s*\.?\s*{_num_pat(num)}{CAP_RANGE}{_CAP_TAIL_XML}")
         if not re.search(fig_re, all_chap, re.IGNORECASE):
             if re.search(fig_re, notes, re.IGNORECASE):
@@ -1115,8 +1189,8 @@ def main() -> int:
         # a ruled grid.
         t = "\n".join(_flatten(b[4]) for b in pdf[i].get_text("blocks")
                       if b[6] == 0 and not _dropped(b, pdf[i].rect,
-                                                  boilerplate))
-        if TABLE_LEGEND_RE.search(t):
+                                                  boilerplate, lang))
+        if _table_legend_re(lang).search(t):
             return True
         toks = WORD_RE.findall(t)
         return bool(toks) and sum(x.isdigit() for x in toks) / len(toks) > 0.5
@@ -1139,11 +1213,11 @@ def main() -> int:
             # those are the meaningful misses; a short real caption
             # (alt="Fig. 1") is fine.
             alt = re.search(r'alt="([^"]*)"', img)
-            if not alt or alt.group(1) in ("", "table"):
+            if not alt or alt.group(1) in ("", lang.table_alt):
                 findings.append(("Low", "G", f"{Path(name).name}: <img> missing caption alt text"))
 
     # ---- H. notes ----
-    if notes and _legend_in_notes(notes):
+    if notes and _legend_in_notes(notes, lang):
         findings.append(("Med", "H", "notes.xhtml contains table legends — notes zone swallowing grid content"))
     # Unguarded: links pointing at #fnN with no notes.xhtml (or no
     # matching anchor) are dead by construction — that's the defect.
