@@ -13,8 +13,6 @@ from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree as ET
 
-import pytest
-
 ROOT = Path(__file__).resolve().parent.parent
 DOCTYPE_RE = re.compile(r"<!DOCTYPE[^>]*>")
 TOP_TAGS = {"h1", "h2", "h3", "p", "blockquote", "table"}
@@ -23,7 +21,13 @@ CONTAINER_NS = "{urn:oasis:names:tc:opendocument:xmlns:container}"
 
 
 def corpus_pdf(name):
-    """Path of a gitignored corpus PDF; caller's test skips when absent."""
+    """Path of a gitignored corpus PDF; caller's test skips when absent.
+
+    ``pytest`` stays a call-time import so non-test tooling (the dev layout
+    survey) can reuse the EPUB inspection helpers on runtime deps alone.
+    """
+    import pytest
+
     p = ROOT / name
     if not p.is_file():
         pytest.skip(f"corpus PDF not present: {name}")
@@ -201,6 +205,24 @@ def chapter_text(path):
             for name in spine_files(zf)
             if name.rsplit("/", 1)[-1].startswith("chap_")
         )
+
+
+def chapter_body_text(path):
+    """Read spine-ordered body text without repeated chapter titles from XHTML heads.
+
+    Ordering gates must inspect rendered content: a chapter's head/title can
+    otherwise appear to move its heading ahead of real preceding paragraphs.
+    """
+    texts = []
+    with zipfile.ZipFile(path) as zf:
+        for name in spine_files(zf):
+            if not name.rsplit("/", 1)[-1].startswith("chap_"):
+                continue
+            root = ET.fromstring(DOCTYPE_RE.sub("", zf.read(name).decode("utf8")))
+            body = root.find("{http://www.w3.org/1999/xhtml}body")
+            assert body is not None, f"chapter has no XHTML body: {name}"
+            texts.append(" ".join(" ".join(body.itertext()).split()))
+    return "\n".join(texts)
 
 
 def lint_epub(path):
