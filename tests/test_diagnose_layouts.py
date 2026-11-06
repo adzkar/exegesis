@@ -17,7 +17,10 @@ DIAGNOSTIC = ROOT / "dev" / "diagnose_layouts.py"
 def reports(tmp_path_factory):
     """A corpus-free subprocess also guards the diagnostic's private render-trace contract."""
     directory = tmp_path_factory.mktemp("diagnostic-cli")
-    for name in ("vector_figure", "raster_figure", "outdented_two_spans", "heads_only_phantom"):
+    for name in (
+        "vector_figure", "raster_figure", "outdented_two_spans",
+        "heads_only_phantom", "scan_2up",
+    ):
         GENERATORS[name](directory / f"{name}.pdf")
     rotated_margin_stamp(directory / "rotated_stamp.pdf")
     doc = fitz.open()
@@ -32,7 +35,7 @@ def reports(tmp_path_factory):
         cwd=ROOT, capture_output=True, text=True, check=False, timeout=60,
     )
     assert result.returncode == 0, result.stdout + result.stderr
-    assert result.stdout.count("epub: lint=clean") == 6
+    assert result.stdout.count("epub: lint=clean") == 7
     return result.stdout
 
 
@@ -76,3 +79,9 @@ def test_diagnostic_reports_nonspanning_outdent_shares(reports):
     assert "edge=90.0" in heads and "INPUT 6/6 (100.0%)" in heads
     assert "heading-like single-line share (<=120 chars)" in spans
     assert "total=6 non-spanning=6 spanning=0" in heads
+
+
+def test_diagnostic_flags_twoup_whitespace(reports):
+    """The symmetric spread trips the central-strip probe; ordinary pages do not."""
+    assert "2-up-whitespace-pages=1" in _report(reports, "scan_2up")
+    assert "2-up-whitespace-pages=0" in _report(reports, "furniture")
