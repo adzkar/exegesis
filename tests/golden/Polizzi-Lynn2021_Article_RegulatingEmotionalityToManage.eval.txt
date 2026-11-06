@@ -1,0 +1,32 @@
+# epub-eval: Polizzi-Lynn2021_Article_RegulatingEmotionalityToManage.pdf
+
+**Verdict:** 0 high-severity findings — clean; verbatim word coverage 96.0% (13817/14397, epub emitted 14106 words after rejoins)
+
+## Checks
+- A container: PASS — 36 members, 24 chapters, 1 images
+- B metadata: title='Regulating Emotionality to Manage Adversity: A Systematic Re'
+- C coverage: rejoined 561, furniture 79, rasterized table cells 1834, superscript splits 2, genuine loss 17
+- D toc: 25 entries, h1=0 h2=24, dupes=none
+- G figures: pdf rasters=1, embedded=1, vector pages=[4]
+
+## Findings (severity-ranked)
+| Sev | Check | Finding |
+|-----|-------|---------|
+| Med | C | genuine word loss 17: [('tion', 3), ('ing', 2), ('emo', 2), ('by', 1), ('func', 1), ('cog', 1), ('nitive', 1), ('post', 1), ('ity', 1), ('tional', 1)] |
+| Med | D | no <h1> emitted — title never promoted, flat TOC |
+| Low | F | Table 1: rasterized to image (cells not text-checkable) |
+| Low | G | vector graphics on pages [4] not capturable — verify content survived as text |
+| Low | G | chap_1.xhtml: <img> missing caption alt text |
+| Low | G | chap_4.xhtml: <img> missing caption alt text |
+| Low | G | chap_4.xhtml: <img> missing caption alt text |
+| Low | G | chap_4.xhtml: <img> missing caption alt text |
+| Low | G | chap_4.xhtml: <img> missing caption alt text |
+
+## Classified word loss
+| class | words | top examples |
+|-------|-------|--------------|
+| rejoined hyphenation | 561 | tion, tive, ing, emo, sion, resil, ience, strate |
+| stripped furniture | 79 | therapy, and, research, cognitive |
+| rasterized table cells | 1834 | with, pr, and, age, female, er, mean, et |
+| superscript splits | 2 | polizzi1, lynn1 |
+| genuine loss | 17 | tion, ing, emo, by, func, cog, nitive, post |

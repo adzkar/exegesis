@@ -1,0 +1,28 @@
+# epub-eval: Negativity_Bias_Negativity_Dominance_and_Contagion.pdf
+
+**Verdict:** 0 high-severity findings — clean; verbatim word coverage 94.5% (18820/19913, epub emitted 19363 words after rejoins)
+
+## Checks
+- A container: PASS — 41 members, 32 chapters, 1 images
+- B metadata: title='Negativity Bias, Negativity Dominance, and Contagion'
+- C coverage: rejoined 1073, furniture 71, rasterized table cells 141, superscript splits 0, genuine loss 20
+- D toc: 33 entries, h1=1 h2=31, dupes=['Contagion']
+- G figures: pdf rasters=1, embedded=1, vector pages=[]
+
+## Findings (severity-ranked)
+| Sev | Check | Finding |
+|-----|-------|---------|
+| Med | C | genuine word loss 20: [('bias', 2), ('able', 1), ('ing', 1), ('un', 1), ('co', 1), ('son', 1), ('pleas', 1), ('ant', 1), ('sys', 1), ('tem', 1)] |
+| Low | D | duplicate TOC titles: ['Contagion'] |
+| Low | F | Table 1: rasterized to image (cells not text-checkable) |
+| Low | G | chap_21.xhtml: <img> missing caption alt text |
+| Low | G | chap_32.xhtml: <img> missing caption alt text |
+
+## Classified word loss
+| class | words | top examples |
+|-------|-------|--------------|
+| rejoined hyphenation | 1073 | tive, in, tion, nega, re, ing, ative, con |
+| stripped furniture | 71 | negativity, bias, rozin, royzman, 296, 320, 315, 297 |
+| rasterized table cells | 141 | x, positive, emotion, additional, table, 1, taxonomies, source |
+| superscript splits | 0 |  |
+| genuine loss | 20 | bias, able, ing, un, co, son, pleas, ant |
