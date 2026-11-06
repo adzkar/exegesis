@@ -13,8 +13,6 @@ from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree as ET
 
-import pytest
-
 ROOT = Path(__file__).resolve().parent.parent
 DOCTYPE_RE = re.compile(r"<!DOCTYPE[^>]*>")
 TOP_TAGS = {"h1", "h2", "h3", "p", "blockquote", "table"}
@@ -23,7 +21,13 @@ CONTAINER_NS = "{urn:oasis:names:tc:opendocument:xmlns:container}"
 
 
 def corpus_pdf(name):
-    """Path of a gitignored corpus PDF; caller's test skips when absent."""
+    """Path of a gitignored corpus PDF; caller's test skips when absent.
+
+    ``pytest`` stays a call-time import so non-test tooling (the dev layout
+    survey) can reuse the EPUB inspection helpers on runtime deps alone.
+    """
+    import pytest
+
     p = ROOT / name
     if not p.is_file():
         pytest.skip(f"corpus PDF not present: {name}")

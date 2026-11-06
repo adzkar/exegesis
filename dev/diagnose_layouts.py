@@ -29,6 +29,8 @@ Preparation and rendering run through ``convert`` itself. A temporary profiling
 hook reads private renderer locals at return, before convert releases each page.
 Keep that small instrumentation contract in sync if those locals change. This
 manual corpus tool is not a test helper and must never be imported by tests.
+It runs on ``requirements.txt`` alone, so the test helpers it borrows must not
+require test-only deps at import time.
 
 Usage: ``python3 dev/diagnose_layouts.py [--journals-dir DIR] [name-substring ...]``
 """
