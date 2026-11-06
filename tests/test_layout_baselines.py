@@ -1,0 +1,494 @@
+"""Independent extraction, EPUB validity, and owned semantic gates for issue #33."""
+from __future__ import annotations
+
+import re
+from collections import Counter
+
+import fitz
+import pytest
+from helpers import chapter_body_text, doc_html, lint_epub
+from layout_assertions import (
+    SemanticMismatch,
+    assert_retained_once,
+    require,
+    require_absent,
+    require_order,
+)
+from layout_fixtures import GENERATORS
+
+from exegesis import convert
+from exegesis.analyze import (
+    _assign_column,
+    _boilerplate_signatures,
+    _column_edges,
+    _doc_column_edges,
+    _is_furniture,
+    _is_signature_furniture,
+    _is_spanning,
+)
+from exegesis.text import _block_text
+
+REQUIRED_CONTENT = {
+    "mixed_1col_plus_2col": [
+        *(f"Single page {number} {part}" for number in range(4) for part in ("opening", "closing")),
+        *(f"{side} {part} minority" for side in ("Left", "Right") for part in ("upper", "lower")),
+    ],
+    "magazine_wrap": ["Wrap opening", "Near upper", "Near lower", "Far upper", "Far lower", "Resumed body"],
+    "scan_2up": [f"{side} spread {part}" for side in ("Left", "Right")
+                 for part in ("opening", "middle", "closing")],
+    "vector_figure": ["Vector body", "Figure 1. Vector trend.", "Vector continuation"],
+    "raster_figure": ["Raster body", "Figure 2. Raster panels.", "Raster continuation"],
+    "outdented_heads": [
+        *(f"Reference span {number} {part}" for number in range(3) for part in ("first", "last")),
+        *(f"Reference body {number} {part}" for number in range(3) for part in ("upper", "lower")),
+        *(f"Section {number} {part}" for number in range(3, 6) for part in ("alpha", "beta")),
+        *(f"Outdent body {number} {part}" for number in range(3, 6)
+          for part in ("opening", "middle", "closing")),
+    ],
+    "outdented_two_spans": [f"{part} {number}" for number in range(4)
+                            for part in ("First span", "Between spans", "Between body", "Last span", "Final body")],
+    "signature_outdent_margin": [
+        *(f"Manuscript body {number} {part}" for number in range(29)
+          for part in ("opening", "middle", "closing")),
+        *(f"Aim {number:02d}" for number in range(17)),
+        *(f"Data {number:02d}" for number in range(13)),
+    ],
+    "heads_only_phantom": [
+        *(f"Latent body {number} {part}" for number in range(6)
+          for part in ("opening", "middle", "closing")),
+        *(f"{part} {number:02d}" for number in range(3) for part in ("Aim", "Data")),
+    ],
+    "retained_content": ["Negative opening", "Normal margin prose", "continues as real content.",
+                         "Full-width content", "Negative closing"],
+}
+
+
+@pytest.fixture(scope="module")
+def source(request, tmp_path_factory):
+    """Build every source from scratch without converting or reading a local corpus."""
+    name = request.param
+    path = tmp_path_factory.mktemp(name) / f"{name}.pdf"
+    return name, GENERATORS[name](path)
+
+
+@pytest.fixture(scope="module")
+def converted(source):
+    """Run ordinary setup outside semantic assertions so operational failures stay red."""
+    name, path = source
+    out = path.with_suffix(".epub")
+    stats = convert(path, out)
+    body = chapter_body_text(out)
+    assert_retained_once(body, *REQUIRED_CONTENT[name])
+    return name, out, stats, body, doc_html(out)
+
+
+def _texts(pdict):
+    """Retain the original extracted blocks so identity and fusion can be checked."""
+    return [block for block in pdict["blocks"] if block["type"] == 0]
+
+
+def _find(pdict, needle):
+    """Require one physical block, not a substring assembled from several blocks."""
+    found = [block for block in _texts(pdict) if needle in _block_text(block)]
+    assert len(found) == 1, (needle, [_block_text(block) for block in found])
+    return found[0]
+
+
+def _upright(block):
+    """Exclude accidental rotation as a source of these horizontal-layout failures."""
+    assert all(tuple(line["dir"]) == (1, 0) for line in block["lines"])
+
+
+def _eligible(page, pdict, boilerplate=frozenset()):
+    """Count votes using the same furniture eligibility as document column analysis."""
+    return [
+        block for block in _texts(pdict)
+        if not _is_furniture(block, page.rect, _block_text(block))
+        and not _is_signature_furniture(block, page.rect.height, boilerplate)
+    ]
+
+
+def _votes(pages, boilerplate=frozenset()):
+    """Expose page-level quorum support without pinning a future reading-column fix."""
+    return Counter(
+        round(edge) for page, pdict in pages
+        for edge in _column_edges(_eligible(page, pdict, boilerplate))
+    )
+
+
+def _contract_mixed(pages):
+    """Four one-column pages outvote one genuinely separated two-column page."""
+    assert len(pages) == 5
+    assert [_column_edges(_texts(pdict)) for _, pdict in pages[:4]] == [[72]] * 4
+    minority = pages[-1][1]
+    assert _column_edges(_texts(minority)) == [72, 340]
+    blocks = [_find(minority, f"{side} {part} minority")
+              for side in ("Left", "Right") for part in ("upper", "lower")]
+    assert len({id(block) for block in blocks}) == 4
+    for block in blocks:
+        _upright(block)
+        assert len(block["lines"]) >= 2
+        assert block["bbox"][0] in (72, 340)
+    assert max(block["bbox"][2] for block in blocks[:2]) < 330
+    assert _votes(pages)[340] == 1 < len(pages) // 2
+
+
+def _contract_wrap(pages):
+    """The same image band has separate near/far lines and resumed full-width prose."""
+    assert len(pages) == 1
+    page, pdict = pages[0]
+    images = [block for block in pdict["blocks"] if block["type"] == 1]
+    assert len(images) == 1
+    region = fitz.Rect(images[0]["bbox"])
+    assert tuple(region) == pytest.approx((230, 290, 340, 440))
+    for label in ("upper", "lower"):
+        near = _find(pdict, f"Near {label}")
+        far = _find(pdict, f"Far {label}")
+        assert near is not far
+        assert near["bbox"][2] < region.x0 < region.x1 < far["bbox"][0]
+        assert region.y0 < near["bbox"][1] < far["bbox"][3] < region.y1
+        for block in (near, far):
+            assert len(block["lines"]) == 1
+            _upright(block)
+            assert not _is_furniture(block, page.rect, _block_text(block))
+    resumed = _find(pdict, "Resumed body")
+    assert resumed["bbox"][1] > region.y1
+    edges = _column_edges(_texts(pdict))
+    assert edges == [72, 365]
+    assert _is_spanning(resumed, edges)
+    assert _assign_column(resumed, edges) == 0
+    assert _assign_column(_find(pdict, "Far upper"), edges) == 1
+
+
+def _contract_twoup(pages):
+    """Both half-pages span the page height while leaving a clean symmetric seam."""
+    assert len(pages) == 1
+    page, pdict = pages[0]
+    assert page.rect.width == 1000
+    assert _column_edges(_texts(pdict)) == [60, 580]
+    assert len(_texts(pdict)) == 6
+    for block in _texts(pdict):
+        _upright(block)
+        assert block["bbox"][2] < 500 or block["bbox"][0] > 500
+    assert max(block["bbox"][3] for block in _texts(pdict)) > page.rect.height * 0.8
+
+
+def _contract_vector(pages):
+    """Short upright labels occupy drawn axes, with no raster block to explain them."""
+    assert len(pages) == 1
+    page, pdict = pages[0]
+    assert not any(block["type"] == 1 for block in pdict["blocks"])
+    drawings = page.get_drawings()
+    assert len(drawings) >= 6
+    region = fitz.Rect(180, 290, 440, 480)
+    labels = [_find(pdict, label) for label in ("VECTORONE", "VECTORTWO", "VECTORTHREE")]
+    assert len({id(block) for block in labels}) == 3
+    for block in labels:
+        assert len(_block_text(block)) <= 12
+        assert len(block["lines"]) == 1
+        assert region.contains(fitz.Rect(block["bbox"]))
+        _upright(block)
+    assert _find(pdict, "Figure 1.")["bbox"][1] > region.y1
+    assert 0.2 * page.rect.height < region.y0 < region.y1 < 0.8 * page.rect.height
+
+
+def _contract_raster(pages):
+    """Overlay labels lie inside a real image; panel letters lie just outside it."""
+    assert len(pages) == 1
+    page, pdict = pages[0]
+    images = [block for block in pdict["blocks"] if block["type"] == 1]
+    assert len(images) == 1 and len(images[0]["image"]) > 2048
+    region = fitz.Rect(images[0]["bbox"])
+    assert tuple(region) == pytest.approx((180, 290, 440, 470))
+    labels = [_find(pdict, label) for label in ("RASTERONE", "RASTERTWO")]
+    for block in labels:
+        assert region.contains(fitz.Rect(block["bbox"]))
+        assert len(block["lines"]) == 1 and len(_block_text(block)) <= 12
+        _upright(block)
+    panels = [block for block in _texts(pdict) if _block_text(block) in {"A", "B"}]
+    assert len(panels) == 2
+    assert all(not region.intersects(fitz.Rect(block["bbox"])) for block in panels)
+    assert all(min(abs(block["bbox"][2] - region.x0),
+                   abs(block["bbox"][0] - region.x1)) < 15 for block in panels)
+    assert _find(pdict, "Figure 2.")["bbox"][1] > region.y1
+    assert region.y0 > page.rect.height * 0.2
+
+
+def _contract_outdent(pages):
+    """Full-width x36 votes reach quorum independently of distinct x42 heads."""
+    assert len(pages) == 6
+    votes = _votes(pages)
+    assert votes[36] == 3 == len(pages) // 2
+    assert votes[42] == 3 and votes[166] == 6
+    for page, pdict in pages[:3]:
+        spans = [block for block in _texts(pdict) if "Reference span" in _block_text(block)]
+        assert len(spans) == 2
+        assert all(block["bbox"][0] == 36 and _is_spanning(block, [36, 166])
+                   for block in spans)
+    for page, pdict in pages[3:]:
+        heads = [block for block in _texts(pdict) if _block_text(block).startswith("Section ")]
+        assert len(heads) == 2
+        for block in heads:
+            assert block["bbox"][0] == 42 and len(block["lines"]) == 1
+            assert not _is_spanning(block, [36, 166])
+            assert not _is_furniture(block, page.rect, _block_text(block))
+            assert not _is_signature_furniture(block, page.rect.height, _boilerplate_signatures(pages))
+            _upright(block)
+
+
+def _contract_two_spans(pages):
+    """A distinct short head and body are physically between two genuine spanning blocks."""
+    assert len(pages) == 4
+    assert _votes(pages)[36] == len(pages)
+    assert _votes(pages, _boilerplate_signatures(pages))[166] == len(pages)
+    for number, (page, pdict) in enumerate(pages):
+        first = _find(pdict, f"First span {number}")
+        head = _find(pdict, f"Between spans {number}")
+        body = _find(pdict, f"Between body {number}")
+        last = _find(pdict, f"Last span {number}")
+        assert len({id(block) for block in (first, head, body, last)}) == 4
+        assert first["bbox"][3] < head["bbox"][1] < head["bbox"][3] < body["bbox"][1]
+        assert body["bbox"][3] < last["bbox"][1]
+        assert all(_is_spanning(block, [36, 166]) for block in (first, last))
+        assert not _is_spanning(head, [36, 166])
+        assert head["bbox"][0] == 42 and body["bbox"][0] == 166
+        assert not _is_furniture(head, page.rect, _block_text(head))
+        assert len(head["lines"]) == 1
+
+
+def _contract_signature_margin(pages):
+    """Boilerplate exclusion alone changes 17 phantom-edge votes to 13, below 14."""
+    assert len(pages) == 29 and len(pages) // 2 == 14
+    boilerplate = _boilerplate_signatures(pages)
+    raw_votes, clean_votes = _votes(pages), _votes(pages, boilerplate)
+    assert raw_votes[90] + raw_votes[84] == 17
+    assert clean_votes[90] == 13
+    assert _doc_column_edges(pages, boilerplate) == [150]
+    assert _doc_column_edges(pages, frozenset()) == [90, 150]
+    for number, (page, pdict) in enumerate(pages):
+        running = _find(pdict, f"Author et al. Page {number + 1}")
+        assert running["bbox"][0] == 78
+        assert _is_signature_furniture(running, page.rect.height, boilerplate)
+        assert not _is_furniture(running, page.rect, _block_text(running))
+        heads = [block for block in _texts(pdict)
+                 if _block_text(block).startswith(("Aim ", "Data "))]
+        assert len(heads) == (2 if number < 13 else 1 if number < 17 else 0)
+        for head in heads:
+            assert head["bbox"][0] == 90 and len(head["lines"]) == 1
+            assert not _is_spanning(head, [90, 150])
+            assert head["bbox"][2] < 138
+            assert not _is_furniture(head, page.rect, _block_text(head))
+            assert not _is_signature_furniture(head, page.rect.height, boilerplate)
+
+
+def _contract_heads_only(pages):
+    """No running head exists; two distinct non-furniture heads supply each x90 vote."""
+    assert len(pages) == 6
+    assert _boilerplate_signatures(pages) == set()
+    assert _votes(pages)[90] == 3 == len(pages) // 2
+    for number, (page, pdict) in enumerate(pages):
+        heads = [block for block in _texts(pdict)
+                 if _block_text(block).startswith(("Aim ", "Data "))]
+        assert len(heads) == (2 if number < 3 else 0)
+        for head in heads:
+            assert head["bbox"][0] == 90 and len(head["lines"]) == 1
+            assert not _is_spanning(head, [90, 150])
+            assert head["bbox"][2] < 138
+            assert not _is_furniture(head, page.rect, _block_text(head))
+            _upright(head)
+
+
+def _contract_retained(pages):
+    """The negative margin block is horizontal multiline prose, not a rotated strip."""
+    assert len(pages) == 1
+    page, pdict = pages[0]
+    margin = _find(pdict, "Normal margin prose")
+    assert margin["bbox"][0] == 18 and len(margin["lines"]) == 2
+    _upright(margin)
+    assert not _is_furniture(margin, page.rect, _block_text(margin))
+    span = _find(pdict, "Full-width content")
+    assert span["bbox"][0] == 36 and span["bbox"][2] > 500
+    assert not _is_furniture(span, page.rect, _block_text(span))
+
+
+CONTRACTS = {
+    "mixed_1col_plus_2col": _contract_mixed,
+    "magazine_wrap": _contract_wrap,
+    "scan_2up": _contract_twoup,
+    "vector_figure": _contract_vector,
+    "raster_figure": _contract_raster,
+    "outdented_heads": _contract_outdent,
+    "outdented_two_spans": _contract_two_spans,
+    "signature_outdent_margin": _contract_signature_margin,
+    "heads_only_phantom": _contract_heads_only,
+    "retained_content": _contract_retained,
+}
+
+
+@pytest.mark.parametrize("source", GENERATORS, indirect=True)
+def test_layout_extraction_contract(source):
+    """Fixture geometry/extraction mistakes fail normally, never as expected regressions."""
+    name, path = source
+    with fitz.open(path) as doc:
+        pages = [(page, page.get_text("dict")) for page in doc]
+        CONTRACTS[name](pages)
+
+
+@pytest.mark.parametrize("source", GENERATORS, indirect=True)
+def test_layout_conversion_and_lint(converted):
+    """Every baseline must pass structural/link lint independently of its semantic xfail."""
+    _, out, stats, _, htmls = converted
+    assert lint_epub(out) == []
+    assert stats["pages"] >= 1
+    assert stats["chapters"] >= 1
+    assert any(name.startswith("chap_") for name in htmls)
+
+
+@pytest.mark.parametrize("source", ("outdented_heads", "outdented_two_spans"), indirect=True)
+def test_full_width_span_content_retained(converted):
+    """A reading-column repair must not solve ordering by dropping legitimate spans."""
+    name, _, _, body, _ = converted
+    labels = (
+        [f"Reference span {number} {part}" for number in range(3) for part in ("first", "last")]
+        if name == "outdented_heads"
+        else [f"{part} span {number}" for number in range(4) for part in ("First", "Last")]
+    )
+    assert all(body.count(label) == 1 for label in labels)
+
+
+@pytest.mark.parametrize("source", ("vector_figure", "raster_figure"), indirect=True)
+def test_figure_surrounding_prose_and_caption_retained(converted):
+    """Figure claims may remove labels from flow, never their neighboring body or caption."""
+    name, _, _, body, _ = converted
+    side, number = ("Vector", 1) if name == "vector_figure" else ("Raster", 2)
+    labels = (f"{side} body", f"Figure {number}.", f"{side} continuation")
+    assert all(body.count(label) == 1 for label in labels)
+    assert [body.index(label) for label in labels] == sorted(body.index(label) for label in labels)
+
+
+def _semantic_mixed(result):
+    """#37: right-upper currently interrupts the minority page's left column."""
+    require_order(result[3], "Left upper minority", "Left lower minority",
+                  "Right upper minority", "Right lower minority", issue="#37 mixed grid")
+
+
+def _semantic_wrap(result):
+    """#38: far-side lines currently follow the already-resumed body."""
+    require_order(result[3], "Near upper", "Far upper", "Near lower", "Far lower",
+                  "Resumed body", issue="#38 wrapped float")
+
+
+def _semantic_twoup(result):
+    """#39: the symmetric spread is a passing control, not a trigger for new work."""
+    require_order(result[3], "Left spread opening", "Left spread middle", "Left spread closing",
+                  "Right spread opening", "Right spread middle", "Right spread closing",
+                  issue="#39 symmetric 2-up")
+
+
+def _require_figure_output(result, caption):
+    """Claiming labels must preserve the artwork once with the unclaimed caption as alt."""
+    images = [image for name, html in result[4].items() if name.startswith("chap_")
+              for image in re.findall(r"<img\b[^>]*>", html)]
+    require(len(images) == 1 and f'alt="{caption}"' in images[0],
+            f"#35: expected one intact figure with caption alt {caption!r}; observed {images}")
+
+
+def _semantic_vector(result):
+    """#35: vector labels currently appear as ordinary chapter text."""
+    require_absent(result[3], "VECTORONE", "VECTORTWO", "VECTORTHREE", issue="#35 vector figure")
+    require_order(result[3], "Vector body", "Figure 1.", "Vector continuation", issue="#35 vector prose")
+    _require_figure_output(result, "Figure 1. Vector trend.")
+
+
+def _semantic_raster(result):
+    """#35: image overlays and nearby panel letters currently leak into the body."""
+    labels = ("RASTERONE", "RASTERTWO", "A", "B")
+    leaked = [label for label in labels if re.search(rf"\b{label}\b", result[3])]
+    require(not leaked, f"#35 raster figure: overlay/panel labels in body flow: {leaked}")
+    require_order(result[3], "Raster body", "Figure 2.", "Raster continuation", issue="#35 raster prose")
+    _require_figure_output(result, "Figure 2. Raster panels.")
+
+
+def _semantic_outdent(result):
+    """#43: heads currently emit ahead of their page's opening body paragraph."""
+    for number in range(3, 6):
+        require_order(result[3], f"Outdent body {number} opening", f"Section {number} alpha",
+                      f"Outdent body {number} middle", f"Section {number} beta",
+                      f"Outdent body {number} closing", issue="#43 quorum-reaching outdent")
+
+
+def _semantic_two_spans(result):
+    """#43: the last span currently precedes the intervening body, even if heads remap."""
+    for number in range(4):
+        require_order(result[3], f"First span {number}", f"Between spans {number}",
+                      f"Between body {number}", f"Last span {number}", f"Final body {number}",
+                      issue="#43 two-span outdent")
+        for label in (f"First span {number}", f"Last span {number}"):
+            require(result[3].count(label) == 1, f"#43 duplicate/dropped full-width span: {label}")
+
+
+def _semantic_signature_margin(result):
+    """The one-vote exclusion margin must preserve single-column order on all 29 pages."""
+    require(result[2]["columns"] == 1, "signature exclusion must retain one reading column")
+    require_absent(result[3], "Author et al.", issue="signature exclusion")
+    for number in range(29):
+        ordered = [f"Manuscript body {number} opening"]
+        if number < 17:
+            ordered.append(f"Aim {number:02d}")
+        ordered.append(f"Manuscript body {number} middle")
+        if number < 13:
+            ordered.append(f"Data {number:02d}")
+        ordered.append(f"Manuscript body {number} closing")
+        require_order(result[3], *ordered, issue="signature exclusion one-vote margin")
+
+
+def _semantic_heads_only(result):
+    """#43: head-only quorum currently creates a phantom column and front-loads headings."""
+    for number in range(3):
+        require_order(result[3], f"Latent body {number} opening", f"Aim {number:02d}",
+                      f"Latent body {number} middle", f"Data {number:02d}",
+                      f"Latent body {number} closing", issue="#43 heads-only phantom edge")
+    require(result[2]["columns"] == 1, "#43 head-only quorum must not create a reading column")
+
+
+def _semantic_retained(result):
+    """Negative controls retain margin prose and wide content once, in body reading order."""
+    require_order(result[3], "Negative opening", "Normal margin prose", "continues as real content.",
+                  "Full-width content", "Negative closing", issue="retained body negatives")
+    for label in ("Normal margin prose", "Full-width content", "Negative closing"):
+        require(result[3].count(label) == 1, f"negative control dropped/duplicated: {label}")
+
+
+SEMANTICS = {
+    "mixed_1col_plus_2col": _semantic_mixed,
+    "magazine_wrap": _semantic_wrap,
+    "scan_2up": _semantic_twoup,
+    "vector_figure": _semantic_vector,
+    "raster_figure": _semantic_raster,
+    "outdented_heads": _semantic_outdent,
+    "outdented_two_spans": _semantic_two_spans,
+    "signature_outdent_margin": _semantic_signature_margin,
+    "heads_only_phantom": _semantic_heads_only,
+    "retained_content": _semantic_retained,
+}
+SYMPTOMS = {
+    "mixed_1col_plus_2col": "#37 right-upper minority text interrupts the left column",
+    "magazine_wrap": "#38 far-side wrap lines follow resumed full-width body",
+    "vector_figure": "#35 vector axis labels leak into chapter body flow",
+    "raster_figure": "#35 raster overlays and panel letters leak into chapter body flow",
+    "outdented_heads": "#43 outdented heads precede the entire page's body",
+    "outdented_two_spans": "#43 last span precedes the body physically between spans",
+    "heads_only_phantom": "#43 quorum-reaching heads create a phantom reading column",
+}
+SEMANTIC_CASES = [
+    pytest.param(name, marks=pytest.mark.xfail(
+        strict=True, raises=SemanticMismatch, reason=SYMPTOMS[name],
+    )) if name in SYMPTOMS else name
+    for name in GENERATORS
+]
+
+
+@pytest.mark.parametrize("source", SEMANTIC_CASES, indirect=True)
+def test_layout_semantic_baseline(converted):
+    """Only an owned semantic check may xfail; lint and extraction are independent tests."""
+    SEMANTICS[converted[0]](converted)
