@@ -11,6 +11,9 @@ layout analysis over PyMuPDF blocks — no OCR, no ML dependencies.
   then spot-check a chapter's XHTML for reading order
 - Report: `python3 scripts/build_report.py` (converts root `*.pdf` corpus
   → `docs/report/` for GitHub Pages)
+- Eval: `python3 scripts/eval_epub.py <input.pdf> <output.epub>` —
+  severity-ranked quality report; exits 1 on High findings (CI gate),
+  0 clean, 2 on operational failure or non-English `dc:language`
 - Release: `scripts/bump.sh X.Y.Z` then `scripts/release.sh X.Y.Z`
   (prep + tag/publish; see `RELEASE.md`)
 
@@ -212,6 +215,30 @@ chapters.
   `*.pdf` corpus and the python env (either can be absent in a
   worktree/fresh clone) so a missing dependency can't strand a dirty
   tree mid-prep.
+- Eval/tooling that reimplements a pipeline signal must mirror the
+  pipeline's constants and floors, not approximate them —
+  `scripts/eval_epub.py`'s furniture vocabulary copies
+  `analyze._boilerplate_signatures` (edge-zone restriction, letters-only
+  sig, `max(2, int(n * 0.4))` page floor) and `analyze._is_furniture`
+  (outer-7% content/digit gate, margin-strip shape). A looser
+  re-implementation (page-wide signatures, no floor, unconditional edge
+  zone) produces false "clean" verdicts on 1-page inputs, repeated body
+  text, and real content near the edge — the same drift applies to any
+  check that borrows a pipeline heuristic. Mirror every path that drops
+  text *by design*, not just furniture: rotated tables leave the flow as
+  `images/table_*.png`, so `rasterized_blocks` copies
+  `analyze._rotated_table_region` plus `render`'s `tbl_ids` intersect —
+  an unmodeled path grades intended behavior as loss, the report
+  contradicts itself, and the High gate fails a correct conversion.
+- A repeated regex group must match its text exactly one way — no
+  empty-able repeat nested inside it (`(?:<t>x</t>|[^<]*)*`,
+  `(?:\.?\s*)*`) and no two alternatives that can consume the same
+  text (a generic `<[^>]+>` beside a `<sup>…</sup>` arm): py39 `re` has
+  no atomic groups or possessive quantifiers, so a failing match
+  backtracks exponentially — a 107-char `<sup>` hung `eval_epub.py`.
+  Make each loop step consume one unambiguous unit
+  (`(?:[^<]|<(?!/sup>)[^>]*>)*`, `<(?!sup\b)[^>]+>`,
+  `(?:[.\s]|</b><b>)*`).
 
 ## Git hygiene
 
