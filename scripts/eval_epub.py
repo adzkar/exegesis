@@ -440,7 +440,10 @@ def missing_sections(pdf_text: str, entries: list[str],
     order (per-line text with `_dropped` blocks already out), not
     reading order, and the lowercase-run guard sacrifices recall on
     sentence-case heading styles (`4. Strengths and limitations of
-    this study`) — a missing one is never reported. On scrambled-order
+    this study`) — a missing one is never reported. And the sublevel
+    pattern caps at one digit after the dot: `2.10`/`10.11` subsections
+    never collect at all (the anti-decimal trade — `6.14` must stay a
+    number, not become `6.1` + stray digit). On scrambled-order
     or column-interleaved sources — the condition `order.py` exists to
     fix — the 'next line' can be an adjacent column's line or a
     footer, and its lowercase start (or a coincidental `N±1.` line)
@@ -620,7 +623,12 @@ def _legend_in_notes(notes: str, num: str | None = None) -> bool:
     (emit's `num is None` continuation merge) — it requires the match
     be followed by non-terminal content in the same paragraph, since a
     swept legend is followed by its cell/caption text while a citation
-    ends the sentence at `</p>`."""
+    ends the sentence at `</p>`. Documented bound: a citation that is
+    NOT the paragraph's last sentence (`See data in Table 4. The
+    authors…`) is textually identical to the fused-continuation case —
+    legend-text follows either way — so a stray mid-paragraph citation
+    can escalate a 'missing' table to 'notes'/High. Narrow coincidence
+    (absent legend + same-number note citation), accepted for now."""
     if num is None:
         return bool(
             re.search(rf"{_LEGEND_AT}Table\b\s*\.?\s*{CAP_NUM}{CAP_RANGE}\.",
@@ -1053,7 +1061,11 @@ def main() -> int:
                       key=_num_key):
         fig_re = (rf"{_LEGEND_AT}(?:Fig(?:ure)?|Plate|Scheme|Chart)\b"
                   rf"\s*\.?\s*{_num_pat(num)}{CAP_RANGE}"
-                  rf"(?:\s+[—–-]|\s*[.:)]|\s{{2,}}|\s*<[^>]+>|$)")
+                  # The tag arm must enclose a terminator (`3<b>.</b>`)
+                  # — a bare tag boundary lets `Figure 3 <b>shows</b>`
+                  # satisfy the check it exists to discriminate.
+                  rf"(?:\s+[—–-]|\s*[.:)]|\s{{2,}}|"
+                  rf"\s*<[^>]+>\s*[—–.:)-]|$)")
         if not re.search(fig_re, all_chap, re.IGNORECASE):
             if re.search(fig_re, notes, re.IGNORECASE):
                 # present but mislocated — a bottom-zone caption block
