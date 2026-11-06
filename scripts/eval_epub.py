@@ -133,8 +133,22 @@ def read_member(path: Path, name: str) -> str:
 
 
 def xhtml_text(raw: str) -> str:
-    """Strip markup to plain text for word-level comparisons."""
-    return html.unescape(TAG_RE.sub(" ", raw))
+    """Strip markup to plain text for word-level comparisons. `<head>`
+    is dropped whole: every chapter `<title>` repeats the doc title,
+    and counting it would inflate the emitted-word side once per
+    chapter — enough to mask real loss near the >1% gate."""
+    body = re.sub(r"<head\b.*?</head>", " ", raw,
+                  flags=re.DOTALL | re.IGNORECASE)
+    return html.unescape(TAG_RE.sub(" ", body))
+
+
+def notes_text(raw: str) -> str:
+    """`xhtml_text` for notes.xhtml additionally drops the injected
+    `<h1>Notes</h1>` chapter title — emit machinery, not PDF words,
+    so it can't count toward coverage either."""
+    return xhtml_text(re.sub(
+        rf"<h1[^>]*>\s*{re.escape(EN.notes_title)}\s*</h1>", " ", raw,
+        flags=re.IGNORECASE))
 
 
 def opf_metadata(opf: str) -> dict[str, str]:
@@ -597,6 +611,25 @@ def _legend_present(raw: str, num: str) -> bool:
     )
 
 
+def _legend_in_notes(notes: str, num: str | None = None) -> bool:
+    """A `Table N.` in notes.xhtml — legend-position anchored first,
+    then a raw substring fallback on stripped text: a legend fused
+    mid-`<p class="fn">` after a numbered note (emit's `num is None`
+    continuation merge) loses its block-start position but keeps the
+    trailing period, which rarely appears mid-sentence. With `num`
+    None it answers 'any table legend at all'."""
+    if num is not None and _legend_present(notes, num):
+        return True
+    if num is None and re.search(
+            rf"{_LEGEND_AT}Table\b\s*\.?\s*{CAP_NUM}{CAP_RANGE}\.",
+            notes, re.IGNORECASE):
+        return True
+    pat = _num_pat(num) if num else CAP_NUM
+    return bool(
+        re.search(rf"\bTable\b\s*\.?\s*{pat}{CAP_RANGE}\.",
+                  xhtml_text(notes), re.IGNORECASE))
+
+
 def _legend_near(chap: str, num: str, needle: str,
                  radius: int = 1500) -> float:
     """Distance to the nearest `needle` occurrence within `radius` chars
@@ -680,7 +713,7 @@ def table_dispositions(blocks_text: str, win_text: str,
     epub_tokens = []
     for c in chapters.values():
         epub_tokens += WORD_RE.findall(xhtml_text(c).lower())
-    epub_tokens += WORD_RE.findall(xhtml_text(notes).lower())
+    epub_tokens += WORD_RE.findall(notes_text(notes).lower())
     grams = {tuple(epub_tokens[i:i + 4]) for i in range(len(epub_tokens) - 3)}
     bounds = sorted(m.start() for m in TABLE_LEGEND_RE.finditer(win_text))
     out = []
@@ -702,7 +735,7 @@ def table_dispositions(blocks_text: str, win_text: str,
         in_markup = any(_legend_present(seg, num)
                         for c in chapters.values()
                         for seg in re.findall(r"<table\b.*?</table>", c, re.DOTALL))
-        in_notes = _legend_present(notes, num)
+        in_notes = _legend_in_notes(notes, num)
         in_chaps = any(_legend_present(c, num) for c in chapters.values())
         if in_markup:
             where = "table"
@@ -871,7 +904,7 @@ def main() -> int:
         for pi, p in enumerate(pdf) for bi, b in enumerate(p.get_text("blocks"))
         if b[6] == 0 and not _dropped(b, p.rect, boilerplate)
         and (pi, bi) not in raster_claimed)
-    epub_text = " ".join(xhtml_text(c) for c in chapters.values()) + " " + xhtml_text(notes)
+    epub_text = " ".join(xhtml_text(c) for c in chapters.values()) + " " + notes_text(notes)
     pw, ew = Counter(WORD_RE.findall(pdf_text.lower())), Counter(WORD_RE.findall(epub_text.lower()))
     if not pw:
         findings.append(("High", "C", ("no extractable text in PDF — scanned/"
@@ -1030,7 +1063,13 @@ def main() -> int:
         `Table N.` legend sits on it or digits dominate its text —
         grid cells still emit as flat text (so they belong in C's
         diff), while a real figure page emits nothing."""
-        t = pdf[i].get_text("text")
+        # Legend search on the same `_dropped`-filtered, block-flattened
+        # stream F collects from: raw page text would let a sentence
+        # that merely wraps at `Table 5.` misclassify a figure page as
+        # a ruled grid.
+        t = "\n".join(_flatten(b[4]) for b in pdf[i].get_text("blocks")
+                      if b[6] == 0 and not _dropped(b, pdf[i].rect,
+                                                  boilerplate))
         if TABLE_LEGEND_RE.search(t):
             return True
         toks = WORD_RE.findall(t)
@@ -1058,9 +1097,7 @@ def main() -> int:
                 findings.append(("Low", "G", f"{Path(name).name}: <img> missing caption alt text"))
 
     # ---- H. notes ----
-    if notes and re.search(
-            rf"{_LEGEND_AT}Table\b\s*\.?\s*{CAP_NUM}{CAP_RANGE}\.",
-            notes, re.IGNORECASE):
+    if notes and _legend_in_notes(notes):
         findings.append(("Med", "H", "notes.xhtml contains table legends — notes zone swallowing grid content"))
     # Unguarded: links pointing at #fnN with no notes.xhtml (or no
     # matching anchor) are dead by construction — that's the defect.
