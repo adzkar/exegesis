@@ -12,6 +12,7 @@ import fitz
 from furniture_fixtures import (
     NORMAL_MARGIN_TEXT,
     long_repeated_running_head,
+    repeated_bottom_foot,
     rotated_margin_stamp,
     rotated_page_upright_margin,
     rotated_table_margin_cells,
@@ -231,6 +232,19 @@ def test_eval_margin_cells_rasterize_excused(tmp_path):
     pdf = tmp_path / "cells.pdf"
     rotated_table_margin_cells(pdf)
     epub = tmp_path / "cells.epub"
+    convert(pdf, epub)
+    r = _run(pdf, epub)
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_eval_bottom_footer_is_excused(tmp_path):
+    """A repeated bottom running foot and a varying © line drop as
+    furniture — the signature arm's `y0 > 0.80` and the pattern arm's
+    `y0 > 0.93` bottom halves must excuse them, not grade them loss
+    (#45)."""
+    pdf = tmp_path / "foot.pdf"
+    repeated_bottom_foot(pdf)
+    epub = tmp_path / "foot.epub"
     convert(pdf, epub)
     r = _run(pdf, epub)
     assert r.returncode == 0, r.stdout + r.stderr

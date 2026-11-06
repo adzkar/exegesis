@@ -11,6 +11,9 @@ import pytest
 from builders import BODY, H, W
 from furniture_fixtures import (
     AXIS_LABEL,
+    BOTTOM_BODY,
+    BOTTOM_COPY_TAGS,
+    BOTTOM_FOOT,
     FUSED_HEAD_LINES,
     FUSED_TITLE,
     FUSED_TITLE_LINES,
@@ -41,6 +44,7 @@ from furniture_fixtures import (
     fused_running_head_title,
     long_repeated_running_head,
     over_bound_running_head,
+    repeated_bottom_foot,
     rotated_margin_stamp,
     rotated_page_upright_margin,
     rotated_table_margin_cells,
@@ -60,6 +64,7 @@ from exegesis.analyze import (
     _doc_column_edges,
     _is_furniture,
     _is_margin_strip,
+    _is_signature_furniture,
     _rotated_table_region,
     _signature,
     _table_regions,
@@ -207,6 +212,13 @@ def over_bound_pdf(tmp_path_factory):
 
 
 @pytest.fixture(scope="module")
+def bottom_foot_pdf(tmp_path_factory):
+    """Generate the repeated-bottom-foot source before any conversion runs."""
+    directory = tmp_path_factory.mktemp("repeated_bottom_foot")
+    return repeated_bottom_foot(directory / "input.pdf")
+
+
+@pytest.fixture(scope="module")
 def rotated_keep_case(rotated_pdf):
     """--keep-headers conversion of the stamp source: furniture stays inert."""
     case = _converted_case(rotated_pdf, drop_edges=False)
@@ -259,6 +271,17 @@ def over_bound_case(over_bound_pdf):
     assert_retained_once(case.text, *(
         part.format(number) for number in (1, 2)
         for part in OVER_BOUND_BODY
+    ))
+    return case
+
+
+@pytest.fixture(scope="module")
+def bottom_foot_case(bottom_foot_pdf):
+    """Convert the repeated-bottom-foot source once."""
+    case = _converted_case(bottom_foot_pdf)
+    assert_retained_once(case.text, "A Bottom Footer Study", *(
+        part.format(number) for number in (1, 2, 3)
+        for part in (BOTTOM_BODY[0], BOTTOM_BODY[3])
     ))
     return case
 
@@ -669,8 +692,6 @@ def test_rotated_table_margin_cells_keep_headers_rasterize(table_cells_keep_case
 def test_over_bound_running_head_extraction_contract(over_bound_pdf):
     """Both repeated heads overflow a bound arm — a >300-letter signature
     and a 7-line block — so recurrence can't excuse them (#34)."""
-    from exegesis.analyze import _is_signature_furniture
-
     with fitz.open(over_bound_pdf) as doc:
         pages = [(page, page.get_text("dict")) for page in doc]
         assert len(pages) == 2
@@ -781,3 +802,48 @@ def test_margin_strip_table_clip_exemption():
         block, page, "x", clip=fitz.Rect(15, 350, 560, 520))
     assert _is_furniture(
         block, page, "x", clip=fitz.Rect(10, 350, 50, 520))
+
+
+def test_repeated_bottom_foot_extraction_contract(bottom_foot_pdf):
+    """Pin the bottom running foot and the varying © line (#45): the
+    foot's signature recurs inside the bottom edge zone, while each
+    © line differs and qualifies only through furniture content in the
+    outer 7% — both must drop, through different arms."""
+    with fitz.open(bottom_foot_pdf) as doc:
+        pages = [(page, page.get_text("dict")) for page in doc]
+        assert len(pages) == 3
+        foot_sig = _signature(BOTTOM_FOOT)
+        boilerplate = _boilerplate_signatures(pages)
+        assert foot_sig in boilerplate
+        feet = [
+            _containing(_text_blocks(pdict), BOTTOM_FOOT)
+            for _page, pdict in pages
+        ]
+        copies = [
+            _containing(_text_blocks(pdict), f"page {tag}")
+            for (_page, pdict), tag in zip(pages, BOTTOM_COPY_TAGS)
+        ]
+        for (page, _pdict), foot, copy in zip(pages, feet, copies):
+            assert foot["bbox"][1] > H * 0.8
+            assert _is_signature_furniture(
+                foot, page.rect.height, boilerplate)
+            assert copy["bbox"][1] > H * 0.93
+            assert _signature(_block_text(copy)) not in boilerplate
+            assert _is_furniture(copy, page, _block_text(copy))
+        assert len({_signature(_block_text(c)) for c in copies}) == 3
+        edges = _doc_column_edges(pages, boilerplate)
+        assert edges == pytest.approx([72])
+        _assert_no_tables(pages, edges)
+
+
+def test_repeated_bottom_foot_is_dropped(bottom_foot_case):
+    """Both bottom furniture forms drop; the whole article body stays
+    (#45)."""
+    case = bottom_foot_case
+    _assert_conversion(case, 3)
+    require_absent(
+        case.text,
+        BOTTOM_FOOT,
+        *(f"page {tag}" for tag in BOTTOM_COPY_TAGS),
+        issue="#45: bottom-edge furniture leaked into the article body",
+    )

@@ -271,3 +271,41 @@ def front_matter_info_box(path):
             leading=14,
         )
     return _save(doc, path)
+
+
+BOTTOM_FOOT = "Preprint posted under license terms - Example Journal"
+BOTTOM_COPY_TAGS = ("Alpha", "Beta", "Gamma")
+BOTTOM_BODY = (
+    "Bottom-foot body page {} opens with ordinary scientific evidence.",
+    "The measurements describe a continuous argument in the article body.",
+    "All observations remain useful even when the repeated foot is removed.",
+    "Bottom-foot body page {} closes with an independently retained result.",
+    "The control paragraphs outweigh the small running foot in font voting.",
+    "Their positions also establish one stable document column above the edge.",
+)
+
+
+def repeated_bottom_foot(path):
+    """Three pages carrying a repeated bottom running foot plus a
+    per-page-varying © line — the footer's signature recurs inside the
+    bottom signature zone (signature arm) while each © line differs and
+    matches furniture content in the outer 7% edge (pattern arm), so
+    both bottom halves of the furniture mirror must excuse them."""
+    doc = fitz.open()
+    for number, tag in enumerate(BOTTOM_COPY_TAGS, 1):
+        page = _page(doc)
+        if number == 1:
+            text(page, 72, 100, "A Bottom Footer Study", size=18)
+        block(
+            page, 72, 200,
+            tuple(part.format(number) for part in BOTTOM_BODY[:3]),
+            leading=14,
+        )
+        block(
+            page, 72, 300,
+            tuple(part.format(number) for part in BOTTOM_BODY[3:]),
+            leading=14,
+        )
+        text(page, 72, 768, BOTTOM_FOOT, size=8)
+        text(page, 400, 782, f"© 2024 Example Journal page {tag}", size=8)
+    return _save(doc, path)

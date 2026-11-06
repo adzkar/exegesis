@@ -327,7 +327,7 @@ def _dropped(block, ctx, boilerplate: set[str],
     qualifying under several arms (a content-matching head that also
     recurs — the norm on journal corpora) is dropped, and counted,
     once."""
-    y0, _, _, y1, text = block[:5]
+    _, y0, _, y1, text = block[:5]
     h = ctx.rect.height
     joined = " ".join(text.split())
     # _is_furniture searches `_block_text` — `copy-`/`right` and
