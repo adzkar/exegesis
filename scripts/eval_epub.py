@@ -458,11 +458,13 @@ def missing_sections(pdf_text: str, entries: list[str],
     nav_numbered = Counter((n, t) for n, t in raw_pairs if n)
     nav_generic = Counter(t for n, t in raw_pairs if not n)
     # Subtract the synthesized entries: the notes-chapter link (one
-    # exists iff notes content did), a lone headingless-doc "Start"
-    # seed, and untitled-chapter "Section N" fallbacks — all unnumbered.
-    # Each subtracts one occurrence, so a real covered heading titled
-    # `Notes` — a second identical entry — still masks; an *uncovered*
-    # one doesn't.
+    # exists iff notes content did) and a lone headingless-doc "Start"
+    # seed — all unnumbered. Each subtracts one occurrence, so a real
+    # covered heading titled `Notes` — a second identical entry —
+    # still masks; an *uncovered* one doesn't. (Untitled-chapter
+    # `Section N` titles never reach book.toc — they live on the
+    # EpubHtml `<title>` — so no subtraction exists for them; masking
+    # a real entry titled that would fabricate a finding.)
     if notes.strip():
         nav_generic.subtract({"notes": 1})
     if len(entries) == 1 and not has_headings:
@@ -474,8 +476,6 @@ def missing_sections(pdf_text: str, entries: list[str],
             nav_numbered[(n0, t0)] -= 1
         else:
             nav_generic[t0] -= 1
-    nav_generic.subtract({t: 1 for n, t in raw_pairs
-                          if not n and re.fullmatch(r"section\s+\d+", t)})
     notes_paras = [" ".join(xhtml_text(p).split()).lower()
                    for p in re.findall(r"<p\b[^>]*>(.*?)</p>", notes,
                                        re.DOTALL)]
@@ -1008,12 +1008,19 @@ def main() -> int:
     # caption.
     for num in sorted({n.upper() for n in FIG_LEGEND_RE.findall(pdf_blocks_text)},
                       key=_num_key):
-        if not re.search(
-                rf"{_LEGEND_AT}(?:Fig(?:ure)?|Plate|Scheme|Chart)\b"
-                rf"\s*\.?\s*{_num_pat(num)}{CAP_RANGE}"
-                rf"(?:\s+[—–-]|\s*[.:)]|\s{{2,}}|\s*<[^>]+>|$)",
-                all_chap, re.IGNORECASE):
-            findings.append(("Med", "G", f"Fig. {num}: legend absent from EPUB"))
+        fig_re = (rf"{_LEGEND_AT}(?:Fig(?:ure)?|Plate|Scheme|Chart)\b"
+                  rf"\s*\.?\s*{_num_pat(num)}{CAP_RANGE}"
+                  rf"(?:\s+[—–-]|\s*[.:)]|\s{{2,}}|\s*<[^>]+>|$)")
+        if not re.search(fig_re, all_chap, re.IGNORECASE):
+            if re.search(fig_re, notes, re.IGNORECASE):
+                # present but mislocated — a bottom-zone caption block
+                # swept by `_footnote_tops`, the same displacement the
+                # table side reports as the 'notes' disposition
+                findings.append(("High", "G",
+                                 f"Fig. {num}: legend swept into notes.xhtml"))
+            else:
+                findings.append(("Med", "G",
+                                 f"Fig. {num}: legend absent from EPUB"))
     # >30 vector ops usually means a ruled table grid, not a figure — a
     # `Table N.` legend decides it, and a digit-heavy page is a table
     # continuation; the two have different remedies (grid cells still
