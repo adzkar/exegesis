@@ -63,12 +63,13 @@ def test_diagnostic_reports_fragment_locations(reports):
 
 
 def test_diagnostic_reports_rotated_direction_and_bounds(reports):
-    """The ~27pt stamp is vertical writing, not a page /Rotate effect or a thin strip."""
+    """The ~27pt stamp is vertical writing, not a page /Rotate effect;
+    #34 drops it from body flow via the direction-aware strip rule."""
     report = _report(reports, "rotated_stamp")
     assert "/Rotate=0" in report
     assert "rotated-lines=1" in report
     assert "dir=(0.0, -1.0) block_bbox=(11.4, 277.5, 38.4, 625.0)" in report
-    assert "body-flow=yes" in report
+    assert "body-flow=no" in report
 
 
 def test_diagnostic_reports_nonspanning_outdent_shares(reports):

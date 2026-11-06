@@ -9,6 +9,13 @@ import zipfile
 from pathlib import Path
 
 import fitz
+from furniture_fixtures import (
+    NORMAL_MARGIN_TEXT,
+    long_repeated_running_head,
+    rotated_margin_stamp,
+    rotated_page_upright_margin,
+    rotated_table_margin_cells,
+)
 
 from exegesis import convert
 
@@ -52,6 +59,19 @@ def _de_legend_pdf(path):
                      fontsize=BODY)
     doc.save(str(path))
     doc.close()
+
+
+def _delete_epub_text(epub: Path, phrase: str):
+    """Remove `phrase` from the chapter XHTML — simulates a conversion
+    that silently lost edge prose the evaluator should have expected."""
+    with zipfile.ZipFile(epub) as zin:
+        members = {name: zin.read(name) for name in zin.namelist()}
+    for name, data in members.items():
+        if name.rsplit("/", 1)[-1].startswith("chap_"):
+            members[name] = data.replace(phrase.encode(), b"")
+    with zipfile.ZipFile(epub, "w") as zout:
+        for name, data in members.items():
+            zout.writestr(name, data)
 
 
 def _set_language(epub: Path, code: str):
@@ -153,3 +173,64 @@ def test_eval_non_zip_epub_exits_2(tmp_path):
     epub.write_bytes(b"definitely not a zip archive")
     r = _run(pdf, epub)
     assert r.returncode == 2, r.stdout + r.stderr
+
+
+def test_eval_rotated_stamp_is_excused(tmp_path):
+    """The rotated margin stamp is furniture by design — the eval must
+    excuse it rather than report the paragraph's intactness as loss
+    (#34)."""
+    pdf = tmp_path / "stamp.pdf"
+    rotated_margin_stamp(pdf)
+    epub = tmp_path / "stamp.epub"
+    convert(pdf, epub)
+    r = _run(pdf, epub)
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_eval_long_repeated_head_is_excused(tmp_path):
+    """The five-line repeated head rides the widened signature excuse —
+    the converter and evaluator must agree it is furniture (#34)."""
+    pdf = tmp_path / "head.pdf"
+    long_repeated_running_head(pdf)
+    epub = tmp_path / "head.epub"
+    convert(pdf, epub)
+    r = _run(pdf, epub)
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_eval_upright_edge_text_counts_as_expected(tmp_path):
+    """Upright margin prose on /Rotate pages is kept content — the eval
+    mirrors the veto, so it lands on the expected side and still counts
+    toward coverage (#34)."""
+    pdf = tmp_path / "upright.pdf"
+    rotated_page_upright_margin(pdf)
+    epub = tmp_path / "upright.epub"
+    convert(pdf, epub)
+    r = _run(pdf, epub)
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_eval_omitted_edge_prose_still_reported(tmp_path):
+    """Edge prose the converter keeps is expected in the EPUB — deleting
+    it must surface as genuine loss, never ride the furniture excuse
+    (#34)."""
+    pdf = tmp_path / "edge.pdf"
+    rotated_margin_stamp(pdf)
+    epub = tmp_path / "edge.epub"
+    convert(pdf, epub)
+    _delete_epub_text(epub, NORMAL_MARGIN_TEXT)
+    r = _run(pdf, epub)
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "margin" in r.stdout
+
+
+def test_eval_margin_cells_rasterize_excused(tmp_path):
+    """Margin-adjacent rotated-table cells are excused only through the
+    raster evidence — the mirrored clip keeps them out of the strip arm
+    (#34)."""
+    pdf = tmp_path / "cells.pdf"
+    rotated_table_margin_cells(pdf)
+    epub = tmp_path / "cells.epub"
+    convert(pdf, epub)
+    r = _run(pdf, epub)
+    assert r.returncode == 0, r.stdout + r.stderr

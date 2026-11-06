@@ -103,7 +103,7 @@ def _eligible(page, pdict, boilerplate=frozenset()):
     """Count votes using the same furniture eligibility as document column analysis."""
     return [
         block for block in _texts(pdict)
-        if not _is_furniture(block, page.rect, _block_text(block))
+        if not _is_furniture(block, page, _block_text(block))
         and not _is_signature_furniture(block, page.rect.height, boilerplate)
     ]
 
@@ -150,7 +150,7 @@ def _contract_wrap(pages):
         for block in (near, far):
             assert len(block["lines"]) == 1
             _upright(block)
-            assert not _is_furniture(block, page.rect, _block_text(block))
+            assert not _is_furniture(block, page, _block_text(block))
     resumed = _find(pdict, "Resumed body")
     assert resumed["bbox"][1] > region.y1
     edges = _column_edges(_texts(pdict))
@@ -231,7 +231,7 @@ def _contract_outdent(pages):
         for block in heads:
             assert block["bbox"][0] == 42 and len(block["lines"]) == 1
             assert not _is_spanning(block, [36, 166])
-            assert not _is_furniture(block, page.rect, _block_text(block))
+            assert not _is_furniture(block, page, _block_text(block))
             assert not _is_signature_furniture(block, page.rect.height, _boilerplate_signatures(pages))
             _upright(block)
 
@@ -252,7 +252,7 @@ def _contract_two_spans(pages):
         assert all(_is_spanning(block, [36, 166]) for block in (first, last))
         assert not _is_spanning(head, [36, 166])
         assert head["bbox"][0] == 42 and body["bbox"][0] == 166
-        assert not _is_furniture(head, page.rect, _block_text(head))
+        assert not _is_furniture(head, page, _block_text(head))
         assert len(head["lines"]) == 1
 
 
@@ -269,7 +269,7 @@ def _contract_signature_margin(pages):
         running = _find(pdict, f"Author et al. Page {number + 1}")
         assert running["bbox"][0] == 78
         assert _is_signature_furniture(running, page.rect.height, boilerplate)
-        assert not _is_furniture(running, page.rect, _block_text(running))
+        assert not _is_furniture(running, page, _block_text(running))
         heads = [block for block in _texts(pdict)
                  if _block_text(block).startswith(("Aim ", "Data "))]
         assert len(heads) == (2 if number < 13 else 1 if number < 17 else 0)
@@ -277,7 +277,7 @@ def _contract_signature_margin(pages):
             assert head["bbox"][0] == 90 and len(head["lines"]) == 1
             assert not _is_spanning(head, [90, 150])
             assert head["bbox"][2] < 138
-            assert not _is_furniture(head, page.rect, _block_text(head))
+            assert not _is_furniture(head, page, _block_text(head))
             assert not _is_signature_furniture(head, page.rect.height, boilerplate)
 
 
@@ -294,7 +294,7 @@ def _contract_heads_only(pages):
             assert head["bbox"][0] == 90 and len(head["lines"]) == 1
             assert not _is_spanning(head, [90, 150])
             assert head["bbox"][2] < 138
-            assert not _is_furniture(head, page.rect, _block_text(head))
+            assert not _is_furniture(head, page, _block_text(head))
             _upright(head)
 
 
@@ -305,10 +305,10 @@ def _contract_retained(pages):
     margin = _find(pdict, "Normal margin prose")
     assert margin["bbox"][0] == 18 and len(margin["lines"]) == 2
     _upright(margin)
-    assert not _is_furniture(margin, page.rect, _block_text(margin))
+    assert not _is_furniture(margin, page, _block_text(margin))
     span = _find(pdict, "Full-width content")
     assert span["bbox"][0] == 36 and span["bbox"][2] > 500
-    assert not _is_furniture(span, page.rect, _block_text(span))
+    assert not _is_furniture(span, page, _block_text(span))
 
 
 CONTRACTS = {

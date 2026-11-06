@@ -61,6 +61,39 @@ INLINE_RECEIVED_PROSE = (
     "The Methods paragraph mentions Received: as ordinary prose rather than a field."
 )
 
+UPRIGHT_EDGE_LINE = "Edge prose kept"
+UPRIGHT_EDGE_LINES = ("EDGE MARGIN LINE ONE", "EDGE MARGIN LINE TWO")
+# per-page letter-word tags: signatures ignore digits, so a "90"/"270"
+# suffix would not differentiate the two pages' edge texts
+UPRIGHT_TAGS = {90: "ninety", 270: "twoseventy"}
+UPRIGHT_BODY = (
+    "Body prose reads upright on the rotated page.",
+    "Its lines report the mediabox direction a rotated",
+    "page needs for displayed horizontal text.",
+    "Nothing about the margin neighbors may remove them.",
+)
+
+TABLE_CELLS = tuple(f"CELLCOL{i} DATA WORDS" for i in range(4))
+AXIS_LABEL = "Y AXIS"
+TABLE_BODY = (
+    "Body prose below the rotated table keeps ordinary text.",
+    "The grid above it can only survive as a raster image.",
+)
+
+OVER_CHAR_HEAD = (
+    ("Specimen identifier collection site coordinates depth measured "
+     "values replicate counts treatment group dosage regimen"),
+    ("exposure window response score and adjusted confidence intervals "
+     "laboratory batch instrument serial calibration notes"),
+    ("reference and quality control outcomes for the continued table "
+     "with supplementary long column labels and provenance"),
+)
+OVER_LINE_HEAD = tuple(f"Column {i} label" for i in range(1, 8))
+OVER_BOUND_BODY = tuple(
+    f"Over-bound body page {{}} keeps ordinary body-size line {i} in flow."
+    for i in range(1, 14)
+)
+
 
 def rotated_margin_stamp(path):
     """Put a 27pt vertical stamp between the blocks of one hyphenated paragraph."""
@@ -129,6 +162,72 @@ def fused_running_head_title(path):
                 "The first page alone adds the title to the otherwise identical running head.",
                 "This final sentence supplies a separate anchor for the single body column.",
             ),
+            leading=14,
+        )
+    return _save(doc, path)
+
+
+def rotated_page_upright_margin(path):
+    """Two /Rotate pages whose margin blocks display upright text.
+
+    On a rotated page the stamp's own geometry still lands tall and
+    narrow in the mediabox margin, but lines inserted with the page's
+    own rotation report the mediabox dir that maps to *displayed*
+    upright — the upright veto must keep them in flow: a <25pt
+    strip-shaped block the legacy rule would drop, a >25pt multi-line
+    block, and ordinary body prose sharing the same reported dir.
+    """
+    doc = fitz.open()
+    for rotation in (90, 270):
+        page = _page(doc)
+        page.set_rotation(rotation)
+        # texts differ per page: identical blocks at the same edge on
+        # both pages would recur into the signature layer and leave
+        # through that arm instead of testing the margin-strip veto
+        tag = UPRIGHT_TAGS[rotation]
+        block(page, 150, 300,
+              tuple(f"{line} {rotation}" for line in UPRIGHT_BODY),
+              rotate=rotation)
+        text(page, 35, 620, f"{UPRIGHT_EDGE_LINE} {tag}",
+             size=10, rotate=rotation)
+        text(page, 580, 620,
+             "\n".join(f"{line} {tag}" for line in UPRIGHT_EDGE_LINES),
+             size=9, rotate=rotation)
+    return _save(doc, path)
+
+
+def rotated_table_margin_cells(path):
+    """A rotated table whose outer columns sit inside the outer margins.
+
+    Four tall rotated cells share a y-band; the outermost pair crosses
+    the 10% margin lines but the region reaches the body band, so the
+    cells must be claimed into the raster — never dropped as margin
+    strips. A rotated in-figure label sits inside the body band below
+    the region and stays plain text.
+    """
+    doc = fitz.open()
+    page = _page(doc)
+    for cell, x in zip(TABLE_CELLS, (30, 90, 150, 575)):
+        text(page, x, 500, cell, size=10, rotate=90)
+    # the label sits above the region in the body band — inside its x
+    # span it would be claimed into the raster like the cells
+    text(page, 320, 360, AXIS_LABEL, size=9, rotate=90)
+    block(page, 72, 610, TABLE_BODY, leading=14)
+    return _save(doc, path)
+
+
+def over_bound_running_head(path):
+    """Two-page doc whose repeated heads each overflow one bound arm —
+    a >300-letter signature and a 7-line block — so neither may enter
+    the boilerplate set and both stay in flow."""
+    doc = fitz.open()
+    for number in range(2):
+        page = _page(doc)
+        block(page, 72, 12, OVER_CHAR_HEAD, size=6, leading=6)
+        block(page, 72, 60, OVER_LINE_HEAD, size=6, leading=6)
+        block(
+            page, 72, 200,
+            tuple(part.format(number + 1) for part in OVER_BOUND_BODY),
             leading=14,
         )
     return _save(doc, path)

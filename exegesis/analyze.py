@@ -12,7 +12,12 @@ from statistics import median
 
 import fitz
 
-from .const import BOILERPLATE_COVERAGE, EDGE_ZONE
+from .const import (
+    BOILERPLATE_COVERAGE,
+    BOILERPLATE_MAX_CHARS,
+    BOILERPLATE_MAX_LINES,
+    EDGE_ZONE,
+)
 from .lang import EN, LangProfile
 from .text import (
     _block_lines,
@@ -55,7 +60,12 @@ def _boilerplate_signatures(pages):
 
     A short text block sitting in the top or bottom ``EDGE_ZONE`` of at least
     ``BOILERPLATE_COVERAGE`` of pages is treated as a running header/footer.
-    ``pages`` is a list of ``(fitz.Page, page.get_text("dict"))`` pairs.
+    The block must stay inside ``BOILERPLATE_MAX_LINES`` lines and
+    ``BOILERPLATE_MAX_CHARS`` normalized letters — bounds sized for real
+    running heads (a five-line license head runs ~265 letters), so a
+    page-spanning repeated block like a continued-table header can't
+    excuse itself. ``pages`` is a list of ``(fitz.Page,
+    page.get_text("dict"))`` pairs.
     """
     counts = Counter()
     for page, pdict in pages:
@@ -67,7 +77,10 @@ def _boilerplate_signatures(pages):
             _, y0, _, y1 = block["bbox"]
             if y1 < height * EDGE_ZONE or y0 > height * (1 - EDGE_ZONE):
                 sig = _signature(_block_text(block))
-                if 3 <= len(sig) <= 80:
+                if (
+                    3 <= len(sig) <= BOILERPLATE_MAX_CHARS
+                    and len(_block_lines(block)) <= BOILERPLATE_MAX_LINES
+                ):
                     seen.add(sig)
         counts.update(seen)
     threshold = max(2, int(len(pages) * BOILERPLATE_COVERAGE))
@@ -113,7 +126,7 @@ def _doc_column_edges(
             for b in pdict["blocks"]
             if b["type"] == 0
             and not _is_furniture(
-                b, page.rect, _block_text(b, lang), lang
+                b, page, _block_text(b, lang), lang
             )
             and not _is_signature_furniture(
                 b, page.rect.height, boilerplate
@@ -173,23 +186,85 @@ def _overlap_cols(bbox, edges, page_width, tol=12):
     return cols
 
 
-def _is_margin_strip(block, rect):
-    """Narrow+tall block in the outer 10% margins — rotated sidebar
-    furniture (journal titles running down the page edge)."""
+def _line_dir(line):
+    """Axis direction of a line's reported ``dir``, or None when unreliable.
+
+    ``dir`` is reported in unrotated mediabox space; only near-axis
+    vectors count — diagonal, absent, or zero data can neither prove a
+    line rotated nor veto the block as upright.
+    """
+    dx, dy = line.get("dir") or (0, 0)
+    if abs(dx) > 0.9 >= abs(dy):
+        return (1 if dx > 0 else -1, 0)
+    if abs(dy) > 0.9 >= abs(dx):
+        return (0, 1 if dy > 0 else -1)
+    return None
+
+
+def _upright_dir(page):
+    """The page's upright reading direction in mediabox coordinate space.
+
+    ``page.rotation_matrix`` carries a translation, so the pure rotation
+    comes from ``fitz.Matrix(page.rotation)``: displayed-upright (1,0)
+    mapped back through the inverse gives the mediabox ``dir`` a normal
+    text line reports — (0,-1) on a /Rotate 90 page, (0,1) on /Rotate 270.
+    """
+    d = fitz.Point(1, 0) * ~fitz.Matrix(page.rotation)
+    return (round(d.x), round(d.y))
+
+
+def _is_margin_strip(block, page, clip=None):
+    """Rotated-text strip in the outer 10% margins — rotated sidebar
+    furniture (journal titles and preprint stamps running down the page
+    edge, like ``arXiv:NNNN.NNNNN`` which overflows the legacy 25pt cap).
+
+    The block must still be tall (>4x height/width) and sit in the outer
+    margin; bbox and margin width compare in the same unrotated space
+    (``page.mediabox``), because displayed ``page.rect`` swaps dimensions
+    on /Rotate pages. A block qualifies when every line's ``dir`` is a
+    reliable axis direction differing from the page's upright reading
+    direction — any reliably upright line vetoes the classification for
+    the whole block, regardless of width, so text that reads upright on
+    screen (including on rotated pages) can never be dropped as a strip.
+    When direction data is missing or unusable on some line the legacy
+    <25pt shape applies as fallback — the veto still holds first.
+    ``clip`` exempts blocks inside a rotated-table region that reaches
+    the body band: a table's outer cells share the strip's geometry but
+    belong to the rasterized grid, while a region contained wholly in
+    the margin is itself a run of strips and exempts nothing."""
     x0, y0, x1, y1 = block["bbox"]
-    return (
-        x1 - x0 < 25
-        and y1 - y0 > 4 * (x1 - x0)
-        and (x0 > rect.width * 0.9 or x1 < rect.width * 0.1)
-    )
+    width = x1 - x0
+    margin = page.mediabox.width
+    if not (
+        y1 - y0 > 4 * width
+        and (x0 > margin * 0.9 or x1 < margin * 0.1)
+    ):
+        return False
+    if (
+        clip is not None
+        and clip.x0 <= margin * 0.9
+        and clip.x1 >= margin * 0.1
+        and fitz.Rect((x0, y0, x1, y1)).intersects(clip)
+    ):
+        return False
+    upright = _upright_dir(page)
+    dirs = [_line_dir(line) for line in _block_lines(block)]
+    if any(d == upright for d in dirs):
+        return False
+    if dirs and all(d is not None for d in dirs):
+        return True
+    return width < 25
 
 
-def _is_furniture(block, rect, text, lang: LangProfile = EN):
-    """Edge furniture by shape or content: narrow+tall margin strips in
-    the outer 10% margins, or pattern furniture/page numbers in the outer
-    7% edge. Content patterns come from the document's language profile."""
+def _is_furniture(block, page, text, lang: LangProfile = EN, clip=None):
+    """Edge furniture by shape or content: rotated margin strips in the
+    outer 10% margins, or pattern furniture/page numbers in the outer 7%
+    edge. Content patterns come from the document's language profile.
+    ``clip`` exempts the strip arm only (a rotated table's outer cells);
+    edge zones stay on displayed ``page.rect`` like the signature layer."""
     _, y0, _, y1 = block["bbox"]
-    return _is_margin_strip(block, rect) or (
+    rect = page.rect
+    return _is_margin_strip(block, page, clip) or (
         (y0 > rect.height * 0.93 or y1 < rect.height * 0.07)
         and (
             lang.furniture.search(text)

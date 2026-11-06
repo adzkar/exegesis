@@ -24,13 +24,15 @@ def text(page, x, y, content, *, size=BODY, font="helv", rotate=0):
     page.insert_text((x, y), content, fontsize=size, fontname=font, rotate=rotate)
 
 
-def block(page, x, y, lines, *, size=BODY, font="helv", leading=None):
+def block(page, x, y, lines, *, size=BODY, font="helv", leading=None,
+          rotate=0):
     """Keep adjacent lines in one text operation to reproduce fused PDF blocks."""
     if not isinstance(lines, str):
         lines = "\n".join(lines)
     page.insert_text(
         (x, y), lines, fontsize=size, fontname=font,
         lineheight=leading / size if leading is not None else 1.25,
+        rotate=rotate,
     )
 
 
