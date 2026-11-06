@@ -32,7 +32,10 @@ layout analysis over PyMuPDF blocks — no OCR, no ML dependencies.
   `--journals-dir DIR` for a corpus outside the checkout. Tests never import
   the script; `tests/test_diagnose_layouts.py` smoke-tests its CLI with
   generated PDFs. Its temporary profiling hook follows real render claims;
-  update the instrumentation contract when renderer locals change.
+  update the instrumentation contract when renderer locals change. The script
+  runs on `requirements.txt` alone — test helpers it borrows (e.g.
+  `tests/helpers.py`) keep test-only imports like `pytest` call-time, not
+  module-level.
 
 ## Architecture (`exegesis` package)
 
