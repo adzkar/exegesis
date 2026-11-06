@@ -18,6 +18,21 @@ layout analysis over PyMuPDF blocks — no OCR, no ML dependencies.
   else `dc:language`, else `en`
 - Release: `scripts/bump.sh X.Y.Z` then `scripts/release.sh X.Y.Z`
   (prep + tag/publish; see `RELEASE.md`)
+- Tests: `python3 -m pytest -q` (self-contained tests run without local PDFs;
+  corpus goldens skip when absent). Lint: `python3 -m ruff check .`.
+- Layout gates: `python3 -m pytest -q tests/test_layout_baselines.py tests/test_layout_furniture.py -rx`.
+  Extraction contracts and conversion/lint tests must pass independently;
+  only `SemanticMismatch` may satisfy a strict semantic xfail. Use
+  `helpers.chapter_body_text` for ordering checks: the older `chapter_text`
+  includes XHTML head/title text, which can duplicate a heading before
+  actual preceding body content. Required content loss/duplication raises
+  an ordinary assertion, never an expected ordering mismatch.
+- Layout survey: `python3 dev/diagnose_layouts.py [name-substring ...]`
+  reads the optional gitignored `journals/` corpus recursively; use
+  `--journals-dir DIR` for a corpus outside the checkout. Tests never import
+  the script; `tests/test_diagnose_layouts.py` smoke-tests its CLI with
+  generated PDFs. Its temporary profiling hook follows real render claims;
+  update the instrumentation contract when renderer locals change.
 
 ## Architecture (`exegesis` package)
 
@@ -202,6 +217,35 @@ chapters.
   footnote markers stripped from the author).
 - **Style** — a minimal `style.css` is embedded (italic bylines, small-caps
   labels, indented list items/quotes, centered figures).
+
+## Layout baseline integration audit (#33)
+
+Implementation base, checked 2026-11-06 after `git fetch origin master`:
+`651a2521ced50e3834cbfabaf34252ca672b74a8`. The starting checkout and
+`origin/master` were identical; this work does not assume branch divergence.
+The unmodified, corpus-free suite passed (143 passed, 8 skipped, 2 slow
+cases deselected). Converter heuristics and golden snapshots are unchanged.
+
+- **#34 furniture:** `scripts/eval_epub.py`'s `boilerplate_signatures`,
+  `_dropped`, and `furniture_words` match today's `analyze`/`order` paths,
+  including the 80-letter signature ceiling and 25pt margin-strip width.
+  Their literal thresholds and tuple-to-text normalization must move in
+  parity with future furniture changes. `tests/test_eval_epub.py` covers
+  clean/High/operational exits and language resolution, but does not yet
+  directly pin these furniture exclusions or the rasterized-table excuse.
+- **#41 preserved asides:** no aside path exists at this base. Evaluator
+  coverage currently reads chapter and notes documents; preserved aside
+  text must remain counted, never excused as stripped furniture. Audit
+  `_BLOCK_OPEN`/`_LEGEND_AT` if new aside/figure markup carries legends,
+  and the test helper's `TOP_TAGS` if fragment snapshots must include it.
+- **#35 figure claims:** `rasterized_blocks` mirrors only rotated-table
+  regions and `render`'s intersecting `tbl_ids`. Coverage/legend masking
+  and raster evidence must also mirror any new intentional figure claims;
+  `epub_imgs` currently recognizes only `images/img_*`, and vector reporting
+  uses page-level drawing counts rather than per-fragment locations.
+  Owners of #35/#41 must add evaluator subprocess regressions alongside
+  their production changes; this baseline records the integration points,
+  not speculative fixes to them.
 
 ## Conventions
 
