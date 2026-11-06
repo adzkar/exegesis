@@ -356,11 +356,17 @@ STAT_HDR_RE = re.compile(r"\b(?:(?i:df|CI|SD|SE)|Min|Max|Mean|Median)\b")
 # No optional trailing period: numbered list items (`1. Collect
 # samples.`, `2. Wash twice with PBS.`) share the `N. Title` shape and
 # never reach the TOC, but real numbered headings almost never end in a
-# sentence period — the line-end anchor discriminates for free. The
-# leading dot is mandatory: footnote-style numbering (`1 The authors
-# thank`, `2 Corresponding author`) carries none — a periodless `2
-# Methods` heading style goes unchecked (precision-first).
-SECTION_RE = re.compile(r"^\s*(\d{1,2}(?:\.\d)?)\.[ \t]+([A-Z][A-Za-z][A-Za-z &,\-]{2,60})\s*$", re.MULTILINE)
+# sentence period — the line-end anchor discriminates for free. A
+# leading dot is mandatory on single-level numbers only:
+# footnote-style numbering (`1 The authors thank`, `2 Corresponding
+# author`) carries none, so a periodless `2 Methods` style goes
+# unchecked — but `N.N` subsections drop it freely (`2.1
+# Participants`), the `\.?` tolerating both. The title's first word may
+# be a lone capital (`2. A Bayesian Model`). Captured group 1 keeps
+# the separator dot — callers rstrip it before arithmetic.
+SECTION_RE = re.compile(
+    r"^\s*(\d{1,2}\.\d\.?|\d{1,2}\.)[ \t]+"
+    r"([A-Z][A-Za-z &,\-]{2,60})\s*$", re.MULTILINE)
 # Vancouver-style numbered references survive the numbered-heading shape
 # (`14. Kessler RC, Berglund P, Demler`, `15. Wang PS,`): reject a title
 # carrying a surname + periodless-initials fragment, any title ending
@@ -453,11 +459,12 @@ def missing_sections(pdf_text: str, entries: list[str],
         if zone and m.start() > zone.end():
             continue
         title = m.group(2).strip()
+        num = m.group(1).rstrip(".")
         nxt = next((ln.strip() for ln in pdf_text[m.end():].split("\n")
                     if ln.strip()), "")
         # The note marker precedes its text — `<sup>2</sup>Results`
         # emits fused after tag-stripping, so separators are optional.
-        note_re = (rf"[*†‡§\s]*{re.escape(m.group(1))}[.\s)]*"
+        note_re = (rf"[*†‡§\s]*{re.escape(num)}[.\s)]*"
                    rf"{re.escape(title.lower())}")
         if (any(re.match(note_re, p) for p in notes_paras)
                 or (nxt and nxt[0].islower())):
@@ -466,7 +473,7 @@ def missing_sections(pdf_text: str, entries: list[str],
         # numbered-list run (`1. Collect`, `2. Wash`) — list items
         # never reach the TOC, so only an isolated numbered line can
         # be a demoted heading.
-        seq = m.group(1).split(".")
+        seq = num.split(".")
         nxt_n = ".".join(seq[:-1] + [str(int(seq[-1]) + 1)])
         prv_n = ".".join(seq[:-1] + [str(int(seq[-1]) - 1)])
         prv = next((ln.strip() for ln in reversed(
@@ -477,7 +484,7 @@ def missing_sections(pdf_text: str, entries: list[str],
         # Two distinct sections can share a title (`3. Methods` and
         # `7. Methods`) — dedupe on (number, title), not title alone.
         if (title.lower() not in nav_titles
-                and (m.group(1), title) not in out
+                and (num, title) not in out
                 and not REF_TAIL_RE.search(title)):
             # A numbered heading can wrap mid-title (`2. Materials
             # and\nMethods`) — covered when a nav title continues the
@@ -485,7 +492,7 @@ def missing_sections(pdf_text: str, entries: list[str],
             joined = f"{title} {nxt.split()[0]}".lower() if nxt else ""
             if joined and any(t.startswith(joined) for t in nav_titles):
                 continue
-            out.append((m.group(1), title))
+            out.append((num, title))
     return out
 
 
