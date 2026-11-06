@@ -612,22 +612,24 @@ def _legend_present(raw: str, num: str) -> bool:
 
 
 def _legend_in_notes(notes: str, num: str | None = None) -> bool:
-    """A `Table N.` in notes.xhtml — legend-position anchored first,
-    then a raw substring fallback on stripped text: a legend fused
-    mid-`<p class="fn">` after a numbered note (emit's `num is None`
-    continuation merge) loses its block-start position but keeps the
-    trailing period, which rarely appears mid-sentence. With `num`
-    None it answers 'any table legend at all'."""
-    if num is not None and _legend_present(notes, num):
+    """A `Table N.` in notes.xhtml — legend-position anchored first.
+    With `num` None it answers 'any table legend at all' and stays
+    anchored-only: a sentence-ending citation (`…appear in Table 5.`)
+    must not count as swept content. The per-num loose fallback exists
+    for a legend fused mid-`<p class="fn">` after a numbered note
+    (emit's `num is None` continuation merge) — it requires the match
+    be followed by non-terminal content in the same paragraph, since a
+    swept legend is followed by its cell/caption text while a citation
+    ends the sentence at `</p>`."""
+    if num is None:
+        return bool(
+            re.search(rf"{_LEGEND_AT}Table\b\s*\.?\s*{CAP_NUM}{CAP_RANGE}\.",
+                      notes, re.IGNORECASE))
+    if _legend_present(notes, num):
         return True
-    if num is None and re.search(
-            rf"{_LEGEND_AT}Table\b\s*\.?\s*{CAP_NUM}{CAP_RANGE}\.",
-            notes, re.IGNORECASE):
-        return True
-    pat = _num_pat(num) if num else CAP_NUM
     return bool(
-        re.search(rf"\bTable\b\s*\.?\s*{pat}{CAP_RANGE}\.",
-                  xhtml_text(notes), re.IGNORECASE))
+        re.search(rf"\bTable\b\s*\.?\s*{_num_pat(num)}{CAP_RANGE}\.\s*[^\s<]",
+                  notes, re.IGNORECASE))
 
 
 def _legend_near(chap: str, num: str, needle: str,
@@ -735,6 +737,12 @@ def table_dispositions(blocks_text: str, win_text: str,
         in_markup = any(_legend_present(seg, num)
                         for c in chapters.values()
                         for seg in re.findall(r"<table\b.*?</table>", c, re.DOTALL))
+        # Anchored notes presence beats the raster claim: if the legend
+        # really emitted to notes, the mirror's `raster_legends` intersect
+        # was wrong, not the pipeline. The loose fallback comes after —
+        # a rasterized legend whose number a footnote merely *cites*
+        # must not resolve 'notes'/High over 'rasterized'/Low.
+        notes_anchored = _legend_present(notes, num)
         in_notes = _legend_in_notes(notes, num)
         in_chaps = any(_legend_present(c, num) for c in chapters.values())
         if in_markup:
@@ -757,7 +765,7 @@ def table_dispositions(blocks_text: str, win_text: str,
                 # grid markup sits beside the legend but didn't absorb
                 # it as a caption — linkage failed, not flattening
                 where = "detached"
-            elif in_notes and not in_chaps:
+            elif notes_anchored and not in_chaps:
                 where = "notes"
             elif in_chaps:
                 where = "prose"
@@ -767,6 +775,8 @@ def table_dispositions(blocks_text: str, win_text: str,
                 # PNG carries it
                 where = "rasterized"
                 coverage = None
+            elif in_notes and not in_chaps:
+                where = "notes"
             else:
                 where = "missing"
         out.append((num, where, coverage))
