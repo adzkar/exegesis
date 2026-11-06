@@ -1089,6 +1089,6 @@ def test_staggered_cells_rasterize_whole(stag_cells_case):
     assert case.stats["raster_tables"] == 1
     assert case.stats["images"] == 1
     assert case.stats["chapters"] == 1
-    lint_epub(case.epub)
+    assert lint_epub(case.epub) == []
     for cell in STAG_CELLS:
         assert cell not in case.text
