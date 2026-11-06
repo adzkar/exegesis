@@ -88,9 +88,22 @@ chapters.
   single-line followers. A trailing drop-cap letter (one not in the
   profile's `single_letter_words`) moves into the body paragraph. The merged text feeds the author metadata fallback.
 - **Headers/footers** — two layers: signatures repeated on ≥40% of pages in
-  edge zones, and pattern furniture (`VOL`, `www.`, `ISSN`, `doi`, `©`,
-  dates) in the outer 7% edge (works on 1-page docs). Narrow+tall blocks in
-  outer 10% margins (rotated sidebars) are dropped. `--keep-headers` keeps
+  edge zones and bounded by `BOILERPLATE_MAX_LINES`/`BOILERPLATE_MAX_CHARS`
+  (6 lines / 300 normalized letters — medRxiv's five-line license head
+  ≈265 letters fits inside; long continued-table headers and multi-
+  paragraph blocks stay body text), and pattern furniture (`VOL`, `www.`,
+  `ISSN`, `doi`, `©`, dates) in the outer 7% edge (works on 1-page docs).
+  Rotated margin strips (tall+narrow blocks in the outer 10% margins,
+  measured in `page.mediabox` space so /Rotate pages compare correctly)
+  qualify by *line direction*, not width: every line with reliable
+  direction data must differ from the page's upright direction — derived
+  from `page.rotation` via the inverse rotation matrix — and one
+  reliably upright line vetoes the whole block. The legacy <25pt width
+  test survives only as a fallback when no line carries usable direction
+  data, and it never overrides an upright veto. A strip candidate that
+  intersects a detected rotated-table region which reaches the body band
+  is exempted — its text is rasterized with the table, not dropped.
+  `--keep-headers` keeps
   all of it flagged `is_furniture` — the signature set is built on any
   doc length so repeated running heads flag the same way: such blocks
   skip the spans/cut/column machinery entirely (emitted at the page's
@@ -250,6 +263,34 @@ cases deselected). Converter heuristics and golden snapshots are unchanged.
   their production changes; this baseline records the integration points,
   not speculative fixes to them.
 
+## Preprint-stamp thresholds audit (#34)
+
+- `_is_margin_strip` is direction-driven: `_line_dir` accepts only
+  near-axis dirs (one component `>0.9` dominating the other), `_upright_dir`
+  maps displayed +x through `~Matrix(page.rotation)` so comparisons stay
+  in mediabox space on /Rotate pages, and the outer-margin test uses
+  `page.mediabox.width` — never displayed `page.rect` (they swap W/H on
+  rotated pages). `_is_furniture` takes the `page` object (not a rect) so
+  both spaces are available; its `clip` argument is consulted only by the
+  strip arm — edge/content arms always apply regardless.
+- `order._ordered_blocks` computes `strip_clip =
+  _rotated_table_region(text blocks)` *before* flagging and passes it to
+  `_is_furniture` — the clip only exempts when the region reaches the
+  body band (`x0 <= 0.9W and x1 >= 0.1W`), so a cluster of margin strips
+  cannot self-exempt as a fake rotated table, while real outer cells are
+  rasterized instead of dropped.
+- `scripts/eval_epub.py` mirrors via a per-page `_page_ctx` (displayed
+  rect, mediabox width, upright dir, dict blocks keyed by bbox, region).
+  Block tuples carry no line dirs/counts, so the dict pass is required;
+  the shared helpers `_line_dir`/`_upright_dir`/`_rotated_table_region`
+  are imported lazily inside functions — pulling `exegesis.analyze`
+  pulls fitz, and module-top imports would escape the exit-2 net.
+- Corpus check: `journals/preprints/arxiv_revtex.pdf` converts with zero
+  `arXiv:`/`cs.LG` leakage in body text; `medrxiv_preprint.pdf` converts
+  with no license-head wording (remaining `license` hits are legitimate
+  disclosure prose). Eval's residual findings on arxiv_revtex (equation
+  fragments, TOC headings) are pre-existing issues unrelated to #34.
+
 ## Conventions
 
 - Every function carries a docstring explaining its heuristic (the *why*,
@@ -268,8 +309,11 @@ cases deselected). Converter heuristics and golden snapshots are unchanged.
   pipeline's constants and floors, not approximate them —
   `scripts/eval_epub.py`'s furniture vocabulary copies
   `analyze._boilerplate_signatures` (edge-zone restriction, letters-only
-  sig, `max(2, int(n * 0.4))` page floor) and `analyze._is_furniture`
-  (outer-7% content/digit gate, margin-strip shape). A looser
+  sig, `max(2, int(n * 0.4))` page floor, line/char bounds) and
+  `analyze._is_furniture` (outer-7% content/digit gate, direction-driven
+  margin strip with upright veto, <25pt fallback, table-clip exemption —
+  importing the pipeline's own direction/region helpers where lazily
+  possible). A looser
   re-implementation (page-wide signatures, no floor, unconditional edge
   zone) produces false "clean" verdicts on 1-page inputs, repeated body
   text, and real content near the edge — the same drift applies to any
