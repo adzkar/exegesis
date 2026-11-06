@@ -47,21 +47,32 @@ def _num_pat(num: str) -> str:
     return re.escape(num).replace("\\ ", r"\s*").replace(" ", r"\s*")
 
 
-# Collection uses the same `Table N.` shape the disposition search
-# requires — a bare citation `(see Table 5)` must not produce a
-# 0-coverage "legend+data absent" High and fail the gate — and the same
-# legend position: anchored at an extracted block start (blocks are
-# flattened one-per-line before matching) so a wrapped `…in\nTable 5.
-# The…` sentence or a cite-only `Table S3.` can't collect either.
-# Periodless caption styles (`Table 5 Descriptive`) go unchecked —
-# documented limit.
-TABLE_LEGEND_RE = re.compile(
-    rf"(?:^|\n)\s*Table\b\s*\.?\s*({CAP_NUM}){CAP_RANGE}\.",
-    re.IGNORECASE)
 # Caption terminators mirror `lang._CAP_TAIL` — dash/.:/)/2+-space/EOL —
 # so a sentence-initial 'Figure 3 shows…' (the results-section norm)
 # reads as prose, never as a legend, on either side.
 _CAP_TAIL_TXT = r"(?:\s+[—–-]|\s*[.:)]|\s{2,}|\n|$)"
+# Markup-side equivalent for raw xhtml: same arms, plus a tag that
+# encloses a terminator (`3<b>.</b>`), an element close — `Fig.
+# 3</p>` is the markup analog of line-end — and a capital word:
+# a bare-number caption fused at a paragraph start emits `Fig. 3
+# More text…`, while sentence callouts continue lowercase after the
+# number (`Figure 3 shows…`), so `\s+[A-Z]` separates them — `(?-i:)`
+# keeps it case-sensitive inside the IGNORECASE searches.
+_CAP_TAIL_XML = (r"(?:\s+[—–-]|\s*[.:)]|\s{2,}|\s+(?-i:[A-Z])|"
+                 r"\s*<[^>]+>\s*[—–.:)-]|\s*</|$)")
+# Collection uses the same `Table N` shape the disposition search
+# requires — a bare citation `(see Table 5)` must not produce a
+# 0-coverage "legend+data absent" High and fail the gate — and the same
+# legend position: anchored at an extracted block start (blocks are
+# flattened one-per-line before matching) so a wrapped `…in\nTable 5.
+# The…` sentence or a cite-only `Table S3.` can't collect either. The
+# full `_CAP_TAIL` set is accepted — `Table 5:`, `Table 5 —`, the
+# Springer `Table 5  Title` two-space style, and bare-EOL `Table 5`
+# labels all grade; only the single-space periodless style (`Table 5
+# Descriptive`) stays unchecked — documented limit.
+TABLE_LEGEND_RE = re.compile(
+    rf"(?:^|\n)\s*Table\b\s*\.?\s*({CAP_NUM}){CAP_RANGE}{_CAP_TAIL_TXT}",
+    re.IGNORECASE)
 FIG_LEGEND_RE = re.compile(
     rf"(?:^|\n)\s*(?:Fig(?:ure)?|Plate|Scheme|Chart)\b\s*\.?\s*"
     rf"({CAP_NUM}){CAP_RANGE}{_CAP_TAIL_TXT}",
@@ -261,9 +272,9 @@ def rasterized_blocks(pdf_pages, boilerplate: set[str]):
     union bbox of every tall block. Then `render._render_page`'s
     `tbl_ids`: every body block whose bbox intersects the region leaves
     the text flow and lives only in an `images/table_*.png`. Returns
-    the counted words of those blocks, the `Table N.` legends opening
-    any of them (a legend inside the region is rasterized with its
-    grid), the region count — at most one per page, as in the
+    the counted words of those blocks, the `Table N.`/`Fig. N` legends
+    opening any of them (a legend inside the region is rasterized with
+    its grid), the region count — at most one per page, as in the
     pipeline — and the claimed blocks' (page, index) positions so the
     F-check's coverage windows can mask cell text that can only ever
     survive as pixels (a word-multiset can't: `cell`/`0` are also
@@ -271,6 +282,7 @@ def rasterized_blocks(pdf_pages, boilerplate: set[str]):
     import fitz  # lazy like main(): an ImportError must reach the exit-2 net
     words: Counter = Counter()
     legends: set[str] = set()
+    fig_legends: set[str] = set()
     claimed: set[tuple[int, int]] = set()
     regions = 0
     for pi, page in enumerate(pdf_pages):
@@ -297,7 +309,9 @@ def rasterized_blocks(pdf_pages, boilerplate: set[str]):
                 words.update(WORD_RE.findall(b[4].lower()))
                 legends.update(n.upper() for n in TABLE_LEGEND_RE.findall(
                     _flatten(b[4])))
-    return words, frozenset(legends), regions, claimed
+                fig_legends.update(n.upper() for n in FIG_LEGEND_RE.findall(
+                    _flatten(b[4])))
+    return words, frozenset(legends), frozenset(fig_legends), regions, claimed
 
 
 def classify_missing(missing: Counter, extra: Counter, furniture: Counter,
@@ -610,7 +624,7 @@ def _legend_present(raw: str, num: str) -> bool:
     reporting 'prose' instead of 'notes'/'missing'."""
     return bool(
         re.search(rf"{_LEGEND_AT}Table\b\s*\.?\s*{_num_pat(num)}"
-                  rf"{CAP_RANGE}\.", raw, re.IGNORECASE)
+                  rf"{CAP_RANGE}{_CAP_TAIL_XML}", raw, re.IGNORECASE)
     )
 
 
@@ -631,12 +645,13 @@ def _legend_in_notes(notes: str, num: str | None = None) -> bool:
     (absent legend + same-number note citation), accepted for now."""
     if num is None:
         return bool(
-            re.search(rf"{_LEGEND_AT}Table\b\s*\.?\s*{CAP_NUM}{CAP_RANGE}\.",
-                      notes, re.IGNORECASE))
+            re.search(rf"{_LEGEND_AT}Table\b\s*\.?\s*{CAP_NUM}{CAP_RANGE}"
+                      rf"{_CAP_TAIL_XML}", notes, re.IGNORECASE))
     if _legend_present(notes, num):
         return True
     return bool(
-        re.search(rf"\bTable\b\s*\.?\s*{_num_pat(num)}{CAP_RANGE}\.\s*[^\s<]",
+        re.search(rf"\bTable\b\s*\.?\s*{_num_pat(num)}{CAP_RANGE}"
+                  rf"(?:\s*[.:—–-]|\s{{2,}})\s*[^\s<]",
                   notes, re.IGNORECASE))
 
 
@@ -658,7 +673,7 @@ def _legend_near(chap: str, num: str, needle: str,
     as 'detached'/'rasterized' (a Low) when the truth is 'prose'
     (a Med)."""
     m = re.search(rf"{_LEGEND_AT}Table\b\s*\.?\s*{_num_pat(num)}"
-                  rf"{CAP_RANGE}\.", chap, re.IGNORECASE)
+                  rf"{CAP_RANGE}{_CAP_TAIL_XML}", chap, re.IGNORECASE)
     if not m:
         return float("inf")
     lo, hi = max(0, m.start() - radius), m.end() + radius
@@ -670,15 +685,15 @@ def _legend_near(chap: str, num: str, needle: str,
         if needle == "<table":
             end = chap.find("</table>", p)
             seg = xhtml_text(chap[p:end if end != -1 else len(chap)])
-            if re.search(rf"Table\b\s*\.?\s*{CAP_NUM}{CAP_RANGE}\.",
-                         seg, re.IGNORECASE):
+            if re.search(rf"Table\b\s*\.?\s*{CAP_NUM}{CAP_RANGE}"
+                         rf"{_CAP_TAIL_TXT}", seg, re.IGNORECASE):
                 continue
         elif needle == "images/table_" and any(
                 lm.group(1).upper() != num.upper()
                 and abs(lm.start() - p) < abs(p - m.start())
                 for lm in re.finditer(
                     rf"{_LEGEND_AT}Table\b\s*\.?\s*({CAP_NUM})"
-                    rf"{CAP_RANGE}\.", chap, re.IGNORECASE)):
+                    rf"{CAP_RANGE}{_CAP_TAIL_XML}", chap, re.IGNORECASE)):
             continue
         best = min(best, abs(p - m.start()))
     return best
@@ -730,7 +745,7 @@ def table_dispositions(blocks_text: str, win_text: str,
     for num in sorted({n.upper() for n in TABLE_LEGEND_RE.findall(blocks_text)},
                       key=_num_key):
         legend_re = (rf"(?:^|\n)\s*Table\b\s*\.?\s*{_num_pat(num)}"
-                     rf"{CAP_RANGE}\.")
+                     rf"{CAP_RANGE}{_CAP_TAIL_TXT}")
         coverages = []
         for m in re.finditer(legend_re, win_text, re.IGNORECASE):
             nxt = next((b for b in bounds if b > m.start()), m.end() + 700)
@@ -891,8 +906,8 @@ def main() -> int:
     # anchors used for legend collection below.
     pdf_text = "\n".join(p.get_text("text") for p in pdf)
     boilerplate = boilerplate_signatures(pdf)
-    raster_vocab, raster_legends, n_regions, raster_claimed = \
-        rasterized_blocks(pdf, boilerplate)
+    raster_vocab, raster_legends, fig_raster_legends, n_regions, \
+        raster_claimed = rasterized_blocks(pdf, boilerplate)
     # Table and figure legends collect on block-joined text: each
     # extracted block flattens to one line, so `\n` anchors mean block
     # starts — a real caption opens its own block, while a sentence
@@ -912,7 +927,14 @@ def main() -> int:
     # block's heading line must keep its boundary — flattening would
     # glue the following sentence into the 'title' (`2. Methods We
     # recruited participants…`) and every discriminator would miss it.
-    pdf_lines_text = "\n".join(kept_text)
+    # Region-claimed blocks mask out like `win_text` — a numbered cell
+    # line inside a rotated region can only ever emit as pixels and
+    # mustn't fake a missing heading.
+    pdf_lines_text = "\n".join(
+        b[4]
+        for pi, p in enumerate(pdf) for bi, b in enumerate(p.get_text("blocks"))
+        if b[6] == 0 and not _dropped(b, p.rect, boilerplate)
+        and (pi, bi) not in raster_claimed)
     # Coverage windows additionally mask region-claimed cell blocks:
     # rasterized text can only survive as pixels, so its grams could
     # never match and would drag a neighboring upright table's window
@@ -948,6 +970,7 @@ def main() -> int:
                                       f"{n_table_refs} table rasters referenced in "
                                       "EPUB — rasterized-cell excuse withheld")))
         raster_vocab, raster_legends = Counter(), frozenset()
+        fig_raster_legends = frozenset()
     expected = pw - raster_vocab
     missing, extra = expected - ew, ew - expected
     rejoined, furn, supers, genuine = classify_missing(
@@ -1060,12 +1083,7 @@ def main() -> int:
     for num in sorted({n.upper() for n in FIG_LEGEND_RE.findall(pdf_blocks_text)},
                       key=_num_key):
         fig_re = (rf"{_LEGEND_AT}(?:Fig(?:ure)?|Plate|Scheme|Chart)\b"
-                  rf"\s*\.?\s*{_num_pat(num)}{CAP_RANGE}"
-                  # The tag arm must enclose a terminator (`3<b>.</b>`)
-                  # — a bare tag boundary lets `Figure 3 <b>shows</b>`
-                  # satisfy the check it exists to discriminate.
-                  rf"(?:\s+[—–-]|\s*[.:)]|\s{{2,}}|"
-                  rf"\s*<[^>]+>\s*[—–.:)-]|$)")
+                  rf"\s*\.?\s*{_num_pat(num)}{CAP_RANGE}{_CAP_TAIL_XML}")
         if not re.search(fig_re, all_chap, re.IGNORECASE):
             if re.search(fig_re, notes, re.IGNORECASE):
                 # present but mislocated — a bottom-zone caption block
@@ -1073,6 +1091,12 @@ def main() -> int:
                 # table side reports as the 'notes' disposition
                 findings.append(("High", "G",
                                  f"Fig. {num}: legend swept into notes.xhtml"))
+            elif num in fig_raster_legends:
+                # the caption block sat inside a rotated-table region —
+                # rasterized along with the cells, only the PNG carries
+                # it (same disposition the table side reports)
+                findings.append(("Low", "G", (f"Fig. {num}: legend rasterized "
+                                              "with rotated-table region")))
             else:
                 findings.append(("Med", "G",
                                  f"Fig. {num}: legend absent from EPUB"))
