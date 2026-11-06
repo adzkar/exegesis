@@ -63,6 +63,13 @@ class LangProfile:
     their sentence-initial singles (a/à/y, a/y/o — the 'e'/'u'
     pre-vocalic allomorphs only occur inside a phrase, never sentence-
     initial, so those letters stay drop-caps).
+    ``figure_labels``/``table_labels`` are the raw label alternations
+    the caption patterns are compiled from — tooling that needs the
+    same vocabulary inside its own anchor/capture/tail shapes
+    (``scripts/eval_epub.py``'s legend scanners) builds on these rather
+    than re-listing the labels; ``None`` on a hand-built profile means
+    the language's caption vocabulary was never declared, and such
+    tools must degrade rather than match against English labels.
     """
 
     code: str
@@ -81,6 +88,8 @@ class LangProfile:
     unknown_author: str
     start_title: str
     single_letter_words: str
+    figure_labels: str | None = None
+    table_labels: str | None = None
 
 
 def _profile(
@@ -125,6 +134,8 @@ def _profile(
         unknown_author=unknown_author,
         start_title=start_title,
         single_letter_words=letters,
+        figure_labels=fig_labels,
+        table_labels=table_label,
     )
 
 
