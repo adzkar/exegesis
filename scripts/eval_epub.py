@@ -678,13 +678,18 @@ def main() -> int:
         findings.append(("High", "A", f"missing required members: {sorted(absent)}"))
     xml_bad = []
     for m in members:
-        if m.endswith((".xhtml", ".opf", ".ncx")):
+        if m.endswith((".xhtml", ".opf", ".ncx", ".xml")):
             try:
                 ET.fromstring(read_member(args.epub, m))
             except ET.ParseError as e:
                 xml_bad.append(f"{Path(m).name}: {e}")
     if xml_bad:
         findings.append(("High", "A", f"XML parse failures: {xml_bad[:3]}"))
+    # The mimetype member is a magic string, not just a name — a
+    # truncated or wrong payload fails every reader the same way.
+    if "mimetype" in names and read_member(
+            args.epub, "mimetype").strip() != "application/epub+zip":
+        findings.append(("High", "A", "mimetype payload is not application/epub+zip"))
     manifest_ids = set(re.findall(r'<item[^>]*id="([^"]+)"', opf))
     spine_refs = set(re.findall(r'<itemref[^>]*idref="([^"]+)"', opf))
     if not spine_refs <= manifest_ids:

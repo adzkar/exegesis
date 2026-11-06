@@ -171,6 +171,10 @@ operational failures (unreadable inputs).
   also survived.
 - `coverage ~70–90%` on a table window usually means trailing prose
   after the grid, not loss — only <60% is flagged.
+- A fused drop cap leaves its lone letter in *genuine loss* (`T`+`he`
+  → `The`: the rejoin gate needs ≥2-char halves) — ~1 word per drop
+  cap, so a chaptered document can carry a small Low/Med count that
+  isn't real loss.
 - Always end with "verify against the PDF" recommendations for any High
   finding (e.g., vector figures, orphaned table cells).
 
