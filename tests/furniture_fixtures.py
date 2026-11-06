@@ -80,6 +80,19 @@ TABLE_BODY = (
     "The grid above it can only survive as a raster image.",
 )
 
+DUAL_STRIPS = (
+    "DualLeftA Journal Of Tests",
+    "DualLeftB More Margin Text",
+    "DualRightC Vol 12",
+)
+DUAL_STRIP_X = (30, 50, 575)
+DUAL_BODY = (
+    "Ordinary body prose sits inside the union of the margin strips",
+    "and must survive as text rather than rasterize into a table image.",
+    "Several sentences keep the block wide enough to intersect the span",
+    "the three rotated sidebars project across the page.",
+)
+
 OVER_CHAR_HEAD = (
     ("Specimen identifier collection site coordinates depth measured "
      "values replicate counts treatment group dosage regimen"),
@@ -213,6 +226,24 @@ def rotated_table_margin_cells(path):
     # span it would be claimed into the raster like the cells
     text(page, 320, 360, AXIS_LABEL, size=9, rotate=90)
     block(page, 72, 610, TABLE_BODY, leading=14)
+    return _save(doc, path)
+
+
+def dual_margin_strips(path):
+    """Two left + one right rotated sidebars sharing a y-band.
+
+    Their union trivially spans both outer margins, so a union-span
+    test lets the strips exempt themselves into a fake rotated table
+    that rasterizes intersecting body prose away. The band-member gate
+    must refuse the clip — every band member sits in a margin — and all
+    three strips drop as furniture while the body stays text.
+    """
+    doc = fitz.open()
+    page = _page(doc)
+    text(page, 72, 100, "A Dual Margin Study", size=18)
+    for x, cell in zip(DUAL_STRIP_X, DUAL_STRIPS):
+        text(page, x, 500, cell, size=10, rotate=90)
+    block(page, 72, 380, DUAL_BODY, leading=14)
     return _save(doc, path)
 
 

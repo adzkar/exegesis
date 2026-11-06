@@ -101,8 +101,9 @@ chapters.
   reliably upright line vetoes the whole block. The legacy <25pt width
   test survives only as a fallback when no line carries usable direction
   data, and it never overrides an upright veto. A strip candidate that
-  intersects a detected rotated-table region which reaches the body band
-  is exempted — its text is rasterized with the table, not dropped.
+  intersects the `_strip_clip` region — a rotated-table band with a
+  member reaching the body band — is exempted; its text is rasterized
+  with the table, not dropped.
   `--keep-headers` keeps
   all of it flagged `is_furniture` — the signature set is built on any
   doc length so repeated running heads flag the same way: such blocks
@@ -273,18 +274,29 @@ cases deselected). Converter heuristics and golden snapshots are unchanged.
   rotated pages). `_is_furniture` takes the `page` object (not a rect) so
   both spaces are available; its `clip` argument is consulted only by the
   strip arm — edge/content arms always apply regardless.
-- `order._ordered_blocks` computes `strip_clip =
-  _rotated_table_region(text blocks)` *before* flagging and passes it to
-  `_is_furniture` — the clip only exempts when the region reaches the
-  body band (`x0 <= 0.9W and x1 >= 0.1W`), so a cluster of margin strips
-  cannot self-exempt as a fake rotated table, while real outer cells are
-  rasterized instead of dropped.
+- `order._ordered_blocks` builds the clip via
+  `analyze._strip_clip(page, blocks, boilerplate, lang)` *before*
+  flagging and passes it to `_is_furniture`. The clip is the
+  `_rotated_table_region` over only the blocks that can still reach the
+  body flow — blocks the signature or pattern arm removes (and
+  empty-text blocks) can no more seed it than they can seed render's
+  region — and it forms only when a *band member* (a tall block
+  covering the shared ≥3-overlap y-point, `_rotated_table_seeds`)
+  reaches the body band (`x0 <= 0.9W and x1 >= 0.1W` on the member, not
+  the union). Testing the union rect's span instead let left+right
+  margin strips satisfy it jointly and self-exempt into a fake
+  rasterized table that swallowed intersecting body text.
 - `scripts/eval_epub.py` mirrors via a per-page `_page_ctx` (displayed
-  rect, mediabox width, upright dir, dict blocks keyed by bbox, region).
+  rect, mediabox width, upright dir, dict blocks keyed by bbox) plus the
+  same `_strip_clip`, seeded by the eval's own boilerplate set and
+  resolved profile so the signature/pattern exclusions match order's.
   Block tuples carry no line dirs/counts, so the dict pass is required;
-  the shared helpers `_line_dir`/`_upright_dir`/`_rotated_table_region`
-  are imported lazily inside functions — pulling `exegesis.analyze`
-  pulls fitz, and module-top imports would escape the exit-2 net.
+  the shared helpers `_line_dir`/`_upright_dir`/`_strip_clip` are
+  imported lazily inside functions — pulling `exegesis.analyze` pulls
+  fitz, and module-top imports would escape the exit-2 net. Tuple
+  unpacking in `_dropped` must respect the `(x0, y0, x1, y1, text, …)`
+  shape — `y0, _, _, y1` binds `y0` to x0 and silently disables every
+  bottom-edge test.
 - Corpus check: `journals/preprints/arxiv_revtex.pdf` converts with zero
   `arXiv:`/`cs.LG` leakage in body text; `medrxiv_preprint.pdf` converts
   with no license-head wording (remaining `license` hits are legitimate

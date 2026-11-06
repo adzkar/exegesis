@@ -259,20 +259,22 @@ def boilerplate_signatures(pdf_pages) -> set[str]:
             if n >= max(2, int(len(pdf_pages) * 0.4))}
 
 
-def _page_ctx(page):
+def _page_ctx(page, boilerplate: set[str], lang: LangProfile):
     """Per-page context `_dropped` needs to mirror
     `order._ordered_blocks` exactly: the displayed rect (edge zones),
     the mediabox width and upright reading direction the margin-strip
     arm compares in unrotated space, dict blocks keyed by bbox (block
-    tuples supply neither line dirs nor counts), and the rotated-table
-    region over all text blocks — the same exemption clip
-    `_ordered_blocks` passes, so a margin-adjacent cell isn't excused
-    here as a strip while the converter rightfully rasterizes it."""
+    tuples supply neither line dirs nor counts), and the same exemption
+    clip `_ordered_blocks` builds through `_strip_clip` — seeds reaching
+    the body band that still survive the signature/pattern arms — so a
+    margin-adjacent cell isn't excused here as a strip while the
+    converter rightfully rasterizes it, and a margin-strips-only band
+    can't self-exempt on either side."""
     from types import SimpleNamespace
 
     # lazy like main(): pulling analyze pulls fitz — an ImportError must
     # reach the exit-2 net, so it can't sit at module top
-    from exegesis.analyze import _rotated_table_region, _upright_dir
+    from exegesis.analyze import _strip_clip, _upright_dir
 
     pdict = page.get_text("dict")
     return SimpleNamespace(
@@ -281,7 +283,7 @@ def _page_ctx(page):
         mb_w=page.mediabox.width,
         upright=_upright_dir(page),
         dmap={tuple(b["bbox"]): b for b in pdict["blocks"]},
-        rtbl=_rotated_table_region(pdict["blocks"]),
+        rtbl=_strip_clip(page, pdict["blocks"], boilerplate, lang),
     )
 
 
@@ -301,8 +303,7 @@ def _strip(block, ctx) -> bool:
             and (x0 > ctx.mb_w * 0.9 or x1 < ctx.mb_w * 0.1)):
         return False
     clip = ctx.rtbl
-    if (clip is not None and clip.x0 <= ctx.mb_w * 0.9
-            and clip.x1 >= ctx.mb_w * 0.1
+    if (clip is not None
             and fitz.Rect((x0, y0, x1, y1)).intersects(clip)):
         return False
     dblock = ctx.dmap.get((x0, y0, x1, y1))
@@ -1037,7 +1038,7 @@ def main() -> int:
     # anchors used for legend collection below.
     pdf_text = "\n".join(p.get_text("text") for p in pdf)
     boilerplate = boilerplate_signatures(pdf)
-    ctxs = [_page_ctx(p) for p in pdf]
+    ctxs = [_page_ctx(p, boilerplate, lang) for p in pdf]
     raster_vocab, raster_legends, fig_raster_legends, n_regions, \
         raster_claimed = rasterized_blocks(ctxs, boilerplate, lang)
     # Table and figure legends collect on block-joined text: each

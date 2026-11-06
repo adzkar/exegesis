@@ -228,10 +228,12 @@ def _is_margin_strip(block, page, clip=None):
     screen (including on rotated pages) can never be dropped as a strip.
     When direction data is missing or unusable on some line the legacy
     <25pt shape applies as fallback — the veto still holds first.
-    ``clip`` exempts blocks inside a rotated-table region that reaches
-    the body band: a table's outer cells share the strip's geometry but
-    belong to the rasterized grid, while a region contained wholly in
-    the margin is itself a run of strips and exempts nothing."""
+    ``clip`` exempts blocks inside the rotated-table region ``order``
+    builds via ``_strip_clip``: a table's outer cells share the strip's
+    geometry but belong to the rasterized grid. The clip's legitimacy is
+    established there — only band members reaching the body band seed
+    it, so a run of margin strips forms no clip and cannot exempt its
+    own members."""
     x0, y0, x1, y1 = block["bbox"]
     width = x1 - x0
     margin = page.mediabox.width
@@ -240,12 +242,7 @@ def _is_margin_strip(block, page, clip=None):
         and (x0 > margin * 0.9 or x1 < margin * 0.1)
     ):
         return False
-    if (
-        clip is not None
-        and clip.x0 <= margin * 0.9
-        and clip.x1 >= margin * 0.1
-        and fitz.Rect((x0, y0, x1, y1)).intersects(clip)
-    ):
+    if clip is not None and fitz.Rect((x0, y0, x1, y1)).intersects(clip):
         return False
     upright = _upright_dir(page)
     dirs = [_line_dir(line) for line in _block_lines(block)]
@@ -256,20 +253,25 @@ def _is_margin_strip(block, page, clip=None):
     return width < 25
 
 
+def _is_pattern_furniture(block, page, text, lang: LangProfile = EN):
+    """Pattern furniture or a pure page number in the outer 7% edge —
+    content patterns come from the document's language profile, and the
+    zone compares displayed ``page.rect`` like the signature layer."""
+    _, y0, _, y1 = block["bbox"]
+    return (y0 > page.rect.height * 0.93 or y1 < page.rect.height * 0.07) and (
+        lang.furniture.search(text)
+        or re.fullmatch(r"\d{1,4}", text)
+    )
+
+
 def _is_furniture(block, page, text, lang: LangProfile = EN, clip=None):
     """Edge furniture by shape or content: rotated margin strips in the
     outer 10% margins, or pattern furniture/page numbers in the outer 7%
     edge. Content patterns come from the document's language profile.
     ``clip`` exempts the strip arm only (a rotated table's outer cells);
     edge zones stay on displayed ``page.rect`` like the signature layer."""
-    _, y0, _, y1 = block["bbox"]
-    rect = page.rect
-    return _is_margin_strip(block, page, clip) or (
-        (y0 > rect.height * 0.93 or y1 < rect.height * 0.07)
-        and (
-            lang.furniture.search(text)
-            or re.fullmatch(r"\d{1,4}", text)
-        )
+    return _is_margin_strip(block, page, clip) or _is_pattern_furniture(
+        block, page, text, lang
     )
 
 
@@ -281,29 +283,51 @@ def _is_signature_furniture(block, height, boilerplate):
     return near_edge and _signature(_block_text(block)) in boilerplate
 
 
-def _rotated_table_region(blocks):
-    """Bbox of a rotated (landscape) table: ≥3 tall-narrow text blocks sharing
-    a common y-point, i.e. rotated text columns standing side by side."""
-    tall = [
+def _tall_blocks(blocks):
+    """Tall-narrow text blocks — the rotated-table seed shape (>4x
+    height/width and >60pt tall), shared so the region, band, and clip
+    paths can't drift on the literal thresholds."""
+    return [
         b
         for b in blocks
         if b["type"] == 0
         and (b["bbox"][3] - b["bbox"][1]) > 4 * max(1, b["bbox"][2] - b["bbox"][0])
         and (b["bbox"][3] - b["bbox"][1]) > 60
     ]
+
+
+def _rotated_table_band_trigger(tall):
+    """First y-point where ≥3 ``tall`` blocks overlap, or None."""
     if len(tall) < 3:
         return None
     events = sorted(
         [(b["bbox"][1], 1) for b in tall] + [(b["bbox"][3], -1) for b in tall]
     )
     cov = 0
-    shared = False
-    for _, d in events:
+    for y, d in events:
         cov += d
         if cov >= 3:
-            shared = True
-            break
-    if not shared:
+            return y
+    return None
+
+
+def _rotated_table_seeds(blocks):
+    """The tall blocks establishing a rotated table's shared band, or [].
+
+    Seeds are the band members — the blocks covering the first ≥3-overlap
+    y-point — not every tall block the union bbox later absorbs."""
+    tall = _tall_blocks(blocks)
+    trigger = _rotated_table_band_trigger(tall)
+    if trigger is None:
+        return []
+    return [b for b in tall if b["bbox"][1] <= trigger < b["bbox"][3]]
+
+
+def _rotated_table_region(blocks):
+    """Bbox of a rotated (landscape) table: ≥3 tall-narrow text blocks sharing
+    a common y-point, i.e. rotated text columns standing side by side."""
+    tall = _tall_blocks(blocks)
+    if _rotated_table_band_trigger(tall) is None:
         return None
     return fitz.Rect(
         min(b["bbox"][0] for b in tall),
@@ -311,6 +335,38 @@ def _rotated_table_region(blocks):
         max(b["bbox"][2] for b in tall),
         max(b["bbox"][3] for b in tall),
     )
+
+
+def _strip_clip(page, blocks, boilerplate, lang: LangProfile = EN):
+    """Clip exempting strip-shaped blocks claimed by a rotated table.
+
+    The clip models what ``render`` will rasterize, so its seeds are the
+    blocks that can still reach the body flow: anything the signature or
+    pattern furniture arm removes is gone before render's region
+    detection and cannot seed a clip that exempts strips for it. The
+    region counts only when a band member reaches the body band — a
+    band contained wholly in the outer margins is a run of strips, not
+    a table, and must not exempt its own members."""
+    text_blocks = []
+    for block in blocks:
+        if block["type"] != 0:
+            continue
+        text = _block_text(block, lang)
+        if (
+            text
+            and not _is_signature_furniture(
+                block, page.rect.height, boilerplate
+            )
+            and not _is_pattern_furniture(block, page, text, lang)
+        ):
+            text_blocks.append(block)
+    margin = page.mediabox.width
+    if not any(
+        s["bbox"][0] <= margin * 0.9 and s["bbox"][2] >= margin * 0.1
+        for s in _rotated_table_seeds(text_blocks)
+    ):
+        return None
+    return _rotated_table_region(text_blocks)
 
 
 # first column made almost entirely of enumeration/bullet marks is a

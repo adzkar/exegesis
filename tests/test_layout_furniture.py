@@ -14,6 +14,9 @@ from furniture_fixtures import (
     BOTTOM_BODY,
     BOTTOM_COPY_TAGS,
     BOTTOM_FOOT,
+    DUAL_BODY,
+    DUAL_STRIP_X,
+    DUAL_STRIPS,
     FUSED_HEAD_LINES,
     FUSED_TITLE,
     FUSED_TITLE_LINES,
@@ -40,6 +43,7 @@ from furniture_fixtures import (
     UPRIGHT_EDGE_LINE,
     UPRIGHT_EDGE_LINES,
     UPRIGHT_TAGS,
+    dual_margin_strips,
     front_matter_info_box,
     fused_running_head_title,
     long_repeated_running_head,
@@ -66,7 +70,9 @@ from exegesis.analyze import (
     _is_margin_strip,
     _is_signature_furniture,
     _rotated_table_region,
+    _rotated_table_seeds,
     _signature,
+    _strip_clip,
     _table_regions,
 )
 from exegesis.order import _ordered_blocks
@@ -212,6 +218,13 @@ def over_bound_pdf(tmp_path_factory):
 
 
 @pytest.fixture(scope="module")
+def dual_strips_pdf(tmp_path_factory):
+    """Generate the dual-margin-strips source independently of conversion."""
+    directory = tmp_path_factory.mktemp("dual_margin_strips")
+    return dual_margin_strips(directory / "input.pdf")
+
+
+@pytest.fixture(scope="module")
 def bottom_foot_pdf(tmp_path_factory):
     """Generate the repeated-bottom-foot source before any conversion runs."""
     directory = tmp_path_factory.mktemp("repeated_bottom_foot")
@@ -272,6 +285,22 @@ def over_bound_case(over_bound_pdf):
         part.format(number) for number in (1, 2)
         for part in OVER_BOUND_BODY
     ))
+    return case
+
+
+@pytest.fixture(scope="module")
+def dual_strips_case(dual_strips_pdf):
+    """Convert the dual-margin-strips source once; strips drop as furniture."""
+    case = _converted_case(dual_strips_pdf)
+    assert_retained_once(case.text, "A Dual Margin Study", *DUAL_BODY)
+    return case
+
+
+@pytest.fixture(scope="module")
+def dual_strips_keep_case(dual_strips_pdf):
+    """--keep-headers conversion of the same dual-margin source."""
+    case = _converted_case(dual_strips_pdf, drop_edges=False)
+    assert_retained_once(case.text, "A Dual Margin Study", *DUAL_BODY)
     return case
 
 
@@ -787,21 +816,134 @@ def test_margin_strip_rotation_space():
 
 
 def test_margin_strip_table_clip_exemption():
-    """A strip-shaped block inside a body-reaching rotated-table region
-    is exempted; a region contained in the margin exempts nothing (#34)."""
+    """A strip-shaped block intersecting the exemption clip is spared;
+    the clip's own legitimacy is decided upstream by `_strip_clip`'s
+    band-member gate (#34)."""
     doc = fitz.open()
     page = doc.new_page(width=W, height=H)
     block = _strip_block([(0.0, -1.0)])
     assert not _is_margin_strip(
         block, page, fitz.Rect(15, 350, 560, 520))
     assert _is_margin_strip(
-        block, page, fitz.Rect(10, 350, 50, 520))
-    assert _is_margin_strip(
         block, page, fitz.Rect(100, 100, 200, 200))
+    # a clip contained in the margin still exempts at this layer — only
+    # the seed gate keeps a margin run from ever building one
+    assert not _is_margin_strip(
+        block, page, fitz.Rect(10, 350, 50, 520))
     assert not _is_furniture(
         block, page, "x", clip=fitz.Rect(15, 350, 560, 520))
-    assert _is_furniture(
+    assert not _is_furniture(
         block, page, "x", clip=fitz.Rect(10, 350, 50, 520))
+
+
+def test_strip_clip_requires_body_band_member():
+    """`_strip_clip` forms only when a band member reaches the body band
+    — a region whose members all sit in the outer margins is a run of
+    strips and exempts nothing (#45)."""
+    doc = fitz.open()
+    page = doc.new_page(width=W, height=H)
+    strips = [
+        _strip_block([(0.0, -1.0)], bbox=(x, 100, x + 20, 400))
+        for x in (10.0, 30.0, 570.0)
+    ]
+    assert _strip_clip(page, strips, frozenset()) is None
+    body = _strip_block(
+        [(0.0, -1.0), (0.0, -1.0)], bbox=(300.0, 100.0, 320.0, 400.0))
+    clip = _strip_clip(page, [*strips, body], frozenset())
+    assert clip is not None
+    assert all(
+        fitz.Rect(s["bbox"]).intersects(clip) for s in strips)
+
+
+def test_strip_clip_ignores_off_flow_and_non_member_seeds():
+    """Only surviving body-flow blocks seed the clip, and only band
+    members count: signature furniture is gone before render's region
+    detection, an empty-text block never reaches `ordered`, and a
+    body-band tall block disjoint from the band can't rescue an
+    all-margin run (#45)."""
+    doc = fitz.open()
+    page = doc.new_page(width=W, height=H)
+    # the band sits in the bottom signature zone so the recurring body
+    # member qualifies for the signature arm
+    strips = [
+        _strip_block([(0.0, -1.0)], bbox=(x, 650, x + 20, 750))
+        for x in (10.0, 30.0, 570.0)
+    ]
+    body = _strip_block(
+        [(0.0, -1.0), (0.0, -1.0)], bbox=(300.0, 650.0, 320.0, 750.0))
+    assert _strip_clip(page, [*strips, body], frozenset()) is not None
+    boilerplate = {_signature(_block_text(body))}
+    assert _strip_clip(page, [*strips, body], boilerplate) is None
+    empty = {"type": 0, "bbox": (300.0, 650.0, 320.0, 750.0), "lines": []}
+    assert _strip_clip(page, [*strips, empty], frozenset()) is None
+    # a disjoint body-band tall block is tall but never a band member
+    distant = _strip_block([(0.0, -1.0)], bbox=(300.0, 100.0, 320.0, 300.0))
+    assert _rotated_table_seeds([*strips, distant]) == strips
+    assert _strip_clip(page, [*strips, distant], frozenset()) is None
+    seeds = _rotated_table_seeds(
+        [*strips, _strip_block(
+            [(0.0, -1.0)], bbox=(300.0, 650.0, 320.0, 750.0))])
+    assert len(seeds) == 4
+
+
+def test_dual_margin_strips_extraction_contract(dual_strips_pdf):
+    """Pin the two-left/one-right sidebar run (#45): the raw region
+    detector sees the shared band, but every band member sits in an
+    outer margin so `_strip_clip` refuses it — the strips must be
+    flagged as furniture, not exempted into a fake rotated table."""
+    with fitz.open(dual_strips_pdf) as doc:
+        assert len(doc) == 1
+        page = doc[0]
+        pdict = page.get_text("dict")
+        blocks = _text_blocks(pdict)
+        strips = [_containing(blocks, cell) for cell in DUAL_STRIPS]
+        assert len({id(s) for s in strips}) == 3
+        for x, strip in zip(DUAL_STRIP_X, strips):
+            assert len(strip["lines"]) == 1
+            assert tuple(strip["lines"][0]["dir"]) == (0.0, -1.0)
+            x0, y0, x1, y1 = strip["bbox"]
+            assert y1 - y0 > 4 * (x1 - x0)
+            assert y1 - y0 > 60
+            assert (x0 > W * 0.9) == (x > W * 0.9)
+            assert (x1 < W * 0.1) == (x < W * 0.1)
+            assert _is_margin_strip(strip, page)
+        # the geometric detector still sees a >=3-block band — the
+        # refusal is a seed-membership property, not a shape one
+        assert _rotated_table_region(pdict["blocks"]) is not None
+        assert {id(s) for s in _rotated_table_seeds(pdict["blocks"])} >= {
+            id(s) for s in strips}
+        assert _strip_clip(page, pdict["blocks"], frozenset()) is None
+        # keep-mode ordering flags in place on the shared block dicts
+        _ordered_blocks(
+            page, pdict["blocks"], frozenset(), [0.0],
+            drop_furniture=False)
+        assert all(b.get("is_furniture") for b in strips)
+        body = _containing(blocks, DUAL_BODY[0])
+        assert fitz.Rect(body["bbox"]).intersects(
+            _rotated_table_region(pdict["blocks"]))
+        assert not _is_furniture(body, page, _block_text(body))
+
+
+def test_dual_margin_strips_drop_without_rasterizing(dual_strips_case):
+    """The all-margin band is a run of furniture: strips drop as text,
+    nothing rasterizes, and the intersecting body prose survives (#45)."""
+    case = dual_strips_case
+    _assert_conversion(case, 1)
+    require_absent(
+        case.text,
+        *DUAL_STRIPS,
+        issue="#45: margin-strips-only band self-exempted into a fake table",
+    )
+
+
+def test_dual_margin_strips_keep_headers_verbatim(dual_strips_keep_case):
+    """Under --keep-headers the strips emit verbatim at the page edge —
+    kept furniture never seeds a region, so still nothing rasterizes
+    (#45)."""
+    case = dual_strips_keep_case
+    _assert_conversion(case, 1)
+    for cell in DUAL_STRIPS:
+        assert cell in case.text
 
 
 def test_repeated_bottom_foot_extraction_contract(bottom_foot_pdf):
