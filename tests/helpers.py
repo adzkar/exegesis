@@ -203,6 +203,24 @@ def chapter_text(path):
         )
 
 
+def chapter_body_text(path):
+    """Read spine-ordered body text without repeated chapter titles from XHTML heads.
+
+    Ordering gates must inspect rendered content: a chapter's head/title can
+    otherwise appear to move its heading ahead of real preceding paragraphs.
+    """
+    texts = []
+    with zipfile.ZipFile(path) as zf:
+        for name in spine_files(zf):
+            if not name.rsplit("/", 1)[-1].startswith("chap_"):
+                continue
+            root = ET.fromstring(DOCTYPE_RE.sub("", zf.read(name).decode("utf8")))
+            body = root.find("{http://www.w3.org/1999/xhtml}body")
+            assert body is not None, f"chapter has no XHTML body: {name}"
+            texts.append(" ".join(" ".join(body.itertext()).split()))
+    return "\n".join(texts)
+
+
 def lint_epub(path):
     """Structural lint of a finished EPUB; returns a list of problems.
 

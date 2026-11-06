@@ -4,21 +4,10 @@ import zipfile
 
 import fitz
 import pytest
+from builders import BODY, _page, _save
 from helpers import chapter_text, doc_html, doc_texts, lint_epub, snapshot_epub
 
 from exegesis import convert
-
-W, H = 612, 792
-BODY = 10
-
-
-def _save(doc, path):
-    doc.save(str(path))
-    doc.close()
-
-
-def _page(doc):
-    return doc.new_page(width=W, height=H)
 
 
 def test_two_column_reading_order(tmp_path):
