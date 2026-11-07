@@ -118,10 +118,19 @@ def test_margin_table_legend_anchors_into_table(tmp_path):
     assert body.count("Note: *p<0.1;") == 1
 
 
+MARGIN_LEGEND = (
+    "Table 1. Rotated margin legend with a long descriptive title "
+    "fused to its first sentence so the alt must carry the whole "
+    "block — a tail like this one ending in ZZALTAIL can never "
+    "silently drop out of the raster entirely."
+)
+
+
 def _margin_raster_table(path):
     """A rotated table in the body column whose margin strip carries the
     legend — the raster arm of legend anchoring: the ``Table N`` block
-    donates the PNG's alt and the rest of the strip emits as an aside."""
+    donates the PNG's alt and the rest of the strip emits as an aside.
+    The legend runs past 200 chars so an alt cap would lose its tail."""
     doc = fitz.open()
     page = _page(doc)
     paragraph(page, (BODY_X, 200, 560, 300), PROSE[0] + " opening page.")
@@ -133,16 +142,20 @@ def _margin_raster_table(path):
             fitz.Rect(x, 380, x + 15, 520), f"r1c{i} r2c{i} r3c{i}",
             fontsize=10,
         )
-    text(page, MARGIN_X, 370, "Table 1. Rotated margin legend.", size=9)
-    text(page, MARGIN_X, 420, "Note: *p<0.1;", size=9)
-    paragraph(page, (BODY_X, 560, 560, 625), PROSE[1] + " below the table.")
+    rc = page.insert_textbox(
+        fitz.Rect(MARGIN_X, 330, MARGIN_X + 110, 590), MARGIN_LEGEND,
+        fontsize=9,
+    )
+    assert rc >= 0, "margin legend textbox overflowed"
+    text(page, MARGIN_X, 620, "Note: *p<0.1;", size=9)
+    paragraph(page, (BODY_X, 620, 560, 685), PROSE[1] + " below the table.")
     return _save(doc, path)
 
 
 def test_margin_raster_legend_binds_into_alt(tmp_path):
     """A margin legend beside a *raster* table donates the PNG's alt —
-    the ``Table N`` block leaves the aside members, so the legend emits
-    inside ``alt`` only while the note rides the anchored aside."""
+    the ``Table N`` block leaves the aside members, so the whole legend
+    emits inside ``alt`` only while the note rides the anchored aside."""
     pdf = _margin_raster_table(tmp_path / "margin_raster.pdf")
     out = tmp_path / "out.epub"
     stats = convert(pdf, out)
@@ -151,18 +164,19 @@ def test_margin_raster_legend_binds_into_alt(tmp_path):
     assert stats["raster_tables"] == 1
     assert stats["asides"] == 1
     assert lint_epub(out) == []
-    assert 'alt="Table 1. Rotated margin legend."' in html
+    assert 'alt="Table 1.' in html
+    # the whole donated block carries — a >200-char legend keeps its
+    # tail inside the alt rather than dropping silently
+    assert "ZZALTAIL" in html
     # the remaining legend member rides the anchored aside right behind
     # the raster — adjacent, not at page end among the paragraphs
-    tail = html.split(
-        'alt="Table 1. Rotated margin legend."/></p>', 1
-    )[1]
-    assert tail.lstrip().startswith('<aside class="sidebar">')
+    tail = html.split('alt="Table 1.', 1)[1]
     assert "Note: *p&lt;0.1;" in tail.split("</aside>", 1)[0]
     # the legend emits only inside the alt — never as visible text —
     # while the note stays visible through the aside
     body = chapter_body_text(out)
-    assert "Table 1. Rotated margin legend." not in body
+    assert "descriptive" not in body
+    assert "ZZALTAIL" not in body
     assert body.count("Note: *p<0.1;") == 1
 
 

@@ -402,8 +402,8 @@ def _raster_frag(
     inside an aside). ``region.kind`` picks the caption label set and
     asset-name prefix — ``table_`` rasters take ``Table N`` legends,
     tried above the region first; a margin legend ``_bind_legend``
-    bound into ``region.caption`` donates the alt directly, since it
-    left the flow with its aside.
+    bound into ``region.caption`` donates the alt directly — the whole
+    block, since it left the flow with its aside.
     """
     if region.kind == "table":
         if (
@@ -412,10 +412,13 @@ def _raster_frag(
         ):
             # a margin legend bound by _bind_legend donates the alt —
             # it left the flow with the aside, so the caption scan
-            # below can never see it
+            # below can never see it. The whole block carries: unlike
+            # the figure arm's visible caption, nothing else emits, so
+            # a 200-char trim would drop the tail silently — matching
+            # the grid arm, which takes every caption line
             claimed.add(id(region.caption))
             alt = html.escape(
-                _block_text(region.caption, state.lang)[:200], quote=True
+                _block_text(region.caption, state.lang), quote=True
             )
         else:
             alt = _figure_alt(
