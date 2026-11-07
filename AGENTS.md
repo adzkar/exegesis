@@ -31,8 +31,9 @@ layout analysis over PyMuPDF blocks — no OCR, no ML dependencies.
   reads the optional gitignored `journals/` corpus recursively; use
   `--journals-dir DIR` for a corpus outside the checkout. Tests never import
   the script; `tests/test_diagnose_layouts.py` smoke-tests its CLI with
-  generated PDFs. Its temporary profiling hook follows real render claims;
-  update the instrumentation contract when renderer locals change. The script
+  generated PDFs. Its temporary profiling hook follows real render claims
+  and `_reading_columns`'s evidence locals; update the instrumentation
+  contract when those locals change. The script
   runs on `requirements.txt` alone — test helpers it borrows (e.g.
   `tests/helpers.py`) keep test-only imports like `pytest` call-time, not
   module-level.
@@ -68,9 +69,10 @@ chapters.
   footnote-zone membership, the heading follower scan, caption column
   matching, and blockquote same-column checks all compare the mapped
   reading identity — geometric distances/indents still read
-  `edges[physical col]`. `stats["columns"]` counts distinct reading
-  columns; `dev/diagnose_layouts.py` prints each physical edge's mapped
-  column (`edge=… -> rcolN (outdent)`) plus the deciding share.
+  `edges[physical col]`. `stats["columns"]`
+  counts distinct reading columns; `dev/diagnose_layouts.py` prints
+  each physical edge's mapped column (`edge=… -> rcolN (outdent)`)
+  plus the deciding share.
 - **Paragraphs** — blocks merge into the open paragraph unless the first line
   is indented (>4pt) or the previous line ends with terminal punctuation.
   Open paragraphs carry across columns and page breaks; a lone drop-cap
