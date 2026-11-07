@@ -893,6 +893,24 @@ class _TableRegion:
     cap_above: bool = False
 
 
+@dataclass
+class _RasterRegion:
+    """A page region emitted as one rasterized image.
+
+    ``rect`` is the claim region in mediabox space — the caption-alt
+    scan reads it as the figure's true extent. ``ids`` holds the
+    ``id()`` of every block the raster swallows (a rotated table's
+    cells by intersection; a figure's members by the figure pass's
+    whole-block claim). ``kind`` selects the caption label set and
+    asset-name prefix — ``"table"`` takes ``Table N`` legends;
+    ``"figure"`` joins with the figure-region pass.
+    """
+
+    rect: fitz.Rect
+    ids: frozenset = field(default_factory=frozenset)
+    kind: str = "table"
+
+
 def _upright_lines(blocks):
     """All ``(line, block_id)`` pairs of text blocks, minus rotated text.
 
