@@ -366,7 +366,10 @@ def _detect_asides(pages, line_h, boilerplate, lang: LangProfile = EN):
                     or 0 <= cy0 - b["bbox"][3] <= INFO_ADJ_GAP * line_h
                 )
             ]
-            for b in media[: INFO_ATTACH_MAX - len(attached)]:
+            # inside admits can already exceed the cap on a dense
+            # core — the remaining budget clamps at zero; a negative
+            # slice bound would invert it and attach all but the tail
+            for b in media[: max(0, INFO_ATTACH_MAX - len(attached))]:
                 attached.append(b)
                 attached_ids.add(id(b))
             for b in texts:

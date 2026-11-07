@@ -356,6 +356,37 @@ def test_signature_furniture_is_not_absorbed(tmp_path):
     assert "RUNNING" not in chapter_body_text(out)
 
 
+def test_attach_budget_saturation_closes_the_window(tmp_path):
+    """Inside admits past ``INFO_ATTACH_MAX`` leave no outside budget.
+    Five inside-core badges saturate the group; the remaining slice
+    budget is negative and must clamp to zero — an unclamped negative
+    bound would invert the cap and attach all but the last outside
+    candidate. The two media blocks a hop below the core stay body."""
+    doc = fitz.open()
+    page = _page(doc)
+    text(page, 180, 110, "A saturated-admit information study", size=18)
+    text(page, 400, 240, "Received: 3 March 2024", size=9)
+    text(page, 400, 264, "Accepted: 9 April 2024", size=9)
+    # five small badges inside the frozen core — five admits over the
+    # four-member attach budget, so no outside media may join at all
+    for i in range(5):
+        image(page, (404 + i * 20, 245, 419 + i * 20, 255))
+    image(page, (420, 280, 445, 295))
+    image(page, (455, 280, 480, 295))
+    block(page, 180, 400, BODY_BLOCK, leading=14)
+    pdf = _save(doc, tmp_path / "input.pdf")
+    out = tmp_path / "out.epub"
+
+    stats, html = _convert(pdf, out)
+    assert stats["asides"] == 1
+    aside = _asides(html)[0]
+    # the fields and the five inside admits lift; nothing else
+    assert "Received: 3 March 2024" in aside
+    assert aside.count("<img") == 5
+    # both outside candidates render in the ordinary body flow
+    assert _ASIDE_RE.sub("", html).count("<img") == 2
+
+
 def test_citation_run_cap_bounds_growth(tmp_path):
     """At the run cap the wraps all join the box; one line over the
     cap leaves a leftover that barriers the next field — no box.
