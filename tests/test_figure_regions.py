@@ -261,6 +261,46 @@ def test_artwork_alone_untouched(tmp_path):
     assert "Figure 1. Bare artwork." in body
 
 
+def test_short_caption_in_pad_ring_anchors(tmp_path):
+    """A terse caption grazing only the pad ring anchors its own claim —
+    it must not convict itself as a caption/label mix (#52 review)."""
+    doc = fitz.open()
+    page = _page(doc)
+    image(page, (180, 290, 440, 470))
+    text(page, 210, 350, "RINGA")
+    text(page, 210, 400, "RINGB")
+    # ≤FIGURE_LABEL_CHARS, ~3pt below the artwork bottom — inside the
+    # 14pt ring without touching the union
+    text(page, 200, 484, "Fig. 1")
+    pdf = _save(doc, tmp_path / "ringcap.pdf")
+    out = tmp_path / "ringcap.epub"
+    stats = convert(pdf, out)
+    assert stats["raster_figures"] == 1
+    body = chapter_body_text(out)
+    assert "Fig. 1" in body  # the anchor still renders in flow
+    xhtml = "\n".join(doc_html(out).values())
+    assert 'alt="Fig. 1"' in xhtml
+
+
+def test_caption_fused_in_artwork_rejects(tmp_path):
+    """A caption-shaped block inside the artwork stays the ambiguous
+    mix the straddler rule exists for (#52 review)."""
+    doc = fitz.open()
+    page = _page(doc)
+    image(page, (180, 290, 440, 470))
+    text(page, 210, 350, "FUSEA")
+    text(page, 210, 400, "FUSEB")
+    text(page, 210, 460, "Fig. 1")  # fused inside the artwork
+    text(page, 72, 520, "Figure 1. Outer caption.")
+    pdf = _save(doc, tmp_path / "fusedcap.pdf")
+    out = tmp_path / "fusedcap.epub"
+    stats = convert(pdf, out)
+    assert stats["raster_figures"] == 0
+    body = chapter_body_text(out)
+    for kept in ("FUSEA", "FUSEB", "Fig. 1", "Figure 1. Outer caption."):
+        assert kept in body
+
+
 def test_rotated_table_wins_precedence(tmp_path):
     """A rotated-table region inside the candidate keeps its claim."""
     doc = fitz.open()

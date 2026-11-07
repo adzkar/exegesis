@@ -1893,8 +1893,15 @@ def _figure_candidates(page, blocks, edges, page_width, line_h,
             ]
             if mline and all(mline):
                 if lang.caption.match(text):
-                    straddler = True  # caption/label mix — ambiguous
-                    break
+                    # a caption fused into the artwork is the ambiguous
+                    # mix the straddler rule rejects; one reaching only
+                    # the pad ring is the claim's own anchor or a crop
+                    # barrier — never a label member — so leave it to
+                    # those gates instead of vetoing itself
+                    if area.intersects(br):
+                        straddler = True
+                        break
+                    continue
                 # fully enclosed by the artwork → figure text outright
                 # (stacked legends, abbreviations); at the edge or in
                 # the pad ring, only label-like text joins — sentence-
