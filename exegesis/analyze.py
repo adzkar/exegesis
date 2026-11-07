@@ -17,12 +17,15 @@ from .const import (
     BOILERPLATE_MAX_CHARS,
     BOILERPLATE_MAX_LINES,
     EDGE_ZONE,
+    SIGNATURE_PREFIX_MAX_LINES,
 )
 from .lang import EN, LangProfile
 from .text import (
     _block_lines,
     _block_median_size,
     _block_text,
+    _join_lines,
+    _line_text,
     _span_is_bold,
 )
 
@@ -281,6 +284,90 @@ def _is_signature_furniture(block, height, boilerplate):
     _, y0, _, y1 = block["bbox"]
     near_edge = y1 < height * EDGE_ZONE or y0 > height * (1 - EDGE_ZONE)
     return near_edge and _signature(_block_text(block)) in boilerplate
+
+
+def _lines_bbox(lines):
+    """Union bbox of a line list — the recomputed bounds of a split block."""
+    return (
+        min(l["bbox"][0] for l in lines),
+        min(l["bbox"][1] for l in lines),
+        max(l["bbox"][2] for l in lines),
+        max(l["bbox"][3] for l in lines),
+    )
+
+
+def _signature_prefix_len(block, height, boilerplate, lang: LangProfile = EN):
+    """Leading lines whose joined signature is boilerplate, else 0.
+
+    A running head fused to the block below it (a title, an abstract
+    opener) escapes ``_is_signature_furniture`` twice over: the whole
+    block's signature never matches and its bbox straddles the edge
+    zone. The prefix test fires only when the block's *first* line lies
+    in an edge zone — the line-level version of the signature arm's zone
+    test — then joins leading lines incrementally, bounded by
+    ``SIGNATURE_PREFIX_MAX_LINES`` (a match needing more lines is a
+    title that merely resembles the head) and never consuming the whole
+    block (a full match is the arm's own case — no remainder exists to
+    rescue). The matched prefix's union bbox must stay inside the zone:
+    the split head classifies as signature furniture organically
+    downstream, while a prefix straddling the zone boundary would leak
+    into body flow as a paragraph — the same leak the split exists to
+    fix. The union only grows with each added line, so leaving the zone
+    is monotone and ends the scan.
+    """
+    lines = _block_lines(block)
+    if len(lines) < 2 or not boilerplate:
+        return 0
+    first = lines[0]["bbox"]
+    if not (
+        first[3] < height * EDGE_ZONE
+        or first[1] > height * (1 - EDGE_ZONE)
+    ):
+        return 0
+    texts = [_line_text(line).strip() for line in lines]
+    for k in range(
+        1, min(SIGNATURE_PREFIX_MAX_LINES, len(lines) - 1) + 1
+    ):
+        _, py0, _, py1 = _lines_bbox(lines[:k])
+        if not (
+            py1 < height * EDGE_ZONE or py0 > height * (1 - EDGE_ZONE)
+        ):
+            break
+        if _signature(_join_lines(texts[:k], lang)) in boilerplate:
+            return k
+    return 0
+
+
+def _split_signature_prefixes(blocks, height, boilerplate, lang: LangProfile = EN):
+    """Split fused signature prefixes off ``blocks``, returning a new list.
+
+    Each block whose leading lines join into a boilerplate signature
+    (see ``_signature_prefix_len``) becomes two blocks: the matched
+    prefix — signature furniture everywhere downstream, dropped by
+    default and kept verbatim at the page edge under ``--keep-headers``
+    — and the remainder, an ordinary block with a recomputed bbox. Runs
+    once per page after the boilerplate set is built and before
+    ordering, so column-edge voting, the strip clip, and render all see
+    the split blocks — a recurring fused head can no longer vote a
+    phantom column edge either.
+    """
+    out = []
+    for block in blocks:
+        k = (
+            block["type"] == 0
+            and _signature_prefix_len(block, height, boilerplate, lang)
+        )
+        if not k:
+            out.append(block)
+            continue
+        lines = _block_lines(block)
+        out.append(
+            dict(block, lines=lines[:k], bbox=_lines_bbox(lines[:k]))
+        )
+        out.append(
+            dict(block, lines=lines[k:], bbox=_lines_bbox(lines[k:]))
+        )
+    return out
 
 
 def _tall_blocks(blocks):

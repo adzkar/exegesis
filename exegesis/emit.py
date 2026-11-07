@@ -15,6 +15,7 @@ from .analyze import (
     _body_font_size,
     _boilerplate_signatures,
     _doc_column_edges,
+    _split_signature_prefixes,
 )
 from .const import PAGES_PER_FALLBACK_CHAPTER
 from .lang import LangProfile, get_lang
@@ -63,6 +64,13 @@ def convert(
 
     body_size, line_h = _body_font_size(pages)
     boilerplate = _boilerplate_signatures(pages)
+    # pre-pass: a running head fused to the block below it escapes the
+    # whole-block signature test — split the matched leading lines off
+    # so ordering and every later consumer sees them as furniture
+    for page, pdict in pages:
+        pdict["blocks"] = _split_signature_prefixes(
+            pdict["blocks"], page.rect.height, boilerplate, profile
+        )
     state = PipelineState(
         body_size=body_size,
         line_h=line_h,
