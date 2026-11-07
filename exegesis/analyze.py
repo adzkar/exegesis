@@ -40,6 +40,13 @@ from .const import (
     OUTDENT_MIN_BLOCKS,
     PAGE_FRAME_RATIO,
     SIGNATURE_PREFIX_MAX_LINES,
+    ZONE_COL_MIN_BLOCKS,
+    ZONE_COL_MIN_COVER,
+    ZONE_COL_MIN_SPREAD,
+    ZONE_COL_MIN_WIDTH,
+    ZONE_EDGE_TOL,
+    ZONE_GUTTER_GRAZE,
+    ZONE_GUTTER_TOL,
 )
 from .lang import EN, LangProfile
 from .text import (
@@ -672,10 +679,11 @@ def _margin_voted_edge(pages, edges, boilerplate, lead_re,
     return marked
 
 
-def _detect_margins(pages, edges, boilerplate, lang: LangProfile = EN):
+def _detect_margins(pages, edges, boilerplate, lang: LangProfile = EN,
+                    page_edges=None):
     """Lift marginalia off the body grid into ``block["aside"]`` regions.
 
-    Each page's body bands derive from the doc grid's occupied x-ranges
+    Each page's body bands derive from the grid's occupied x-ranges
     and gutters (``_margin_bands``); text or media wholly outside those
     bands is only a candidate — a margin strip earns its aside with
     spatial coherence (a shared x-strip on the page, split at
@@ -692,13 +700,32 @@ def _detect_margins(pages, edges, boilerplate, lang: LangProfile = EN):
     arm; the caller re-votes the grid once when it fires. Region keys
     are ``("margin", page, group)`` / ``("margin-edge", page, edge)``;
     emission rides the shared ``<aside>`` path.
+
+    With ``page_edges`` (#37's per-page grids) the bands read each
+    page's own active grid instead of the doc grid — a margin strip
+    that was in-band under the committed grid can surface as a
+    candidate once the page's true columns bound the bands. The arm
+    only ever adds marks (already-claimed blocks stay claimed), the
+    group counter continues from the earlier pass's same-page marks
+    so a new region never collides with an existing ``("margin", pi,
+    gi)`` key, and the doc-level ``_margin_voted_edge`` re-vote is
+    reserved for the first pass, which runs before page grids exist.
     """
     lead_re = _info_lead_re(lang)
-    voted = _margin_voted_edge(pages, edges, boilerplate, lead_re, lang)
+    voted = (
+        page_edges is None
+        and _margin_voted_edge(pages, edges, boilerplate, lead_re, lang)
+    )
     sig_pages: dict[str, set[int]] = {}
     per_page = []
     for pi, (page, pdict) in enumerate(pages):
-        bands = _margin_bands(page, pdict, edges, boilerplate, lang)
+        bands = _margin_bands(
+            page,
+            pdict,
+            edges if page_edges is None else page_edges[pi],
+            boilerplate,
+            lang,
+        )
         cands = _margin_candidates(page, pdict, bands, boilerplate, lang)
         per_page.append((bands, cands))
         for b in cands:
@@ -710,7 +737,19 @@ def _detect_margins(pages, edges, boilerplate, lang: LangProfile = EN):
         zones = {}
         for b in cands:
             zones.setdefault(_margin_zone(b, bands), []).append(b)
+        # a second pass ("page_edges" given) can lift groups the first
+        # missed under the doc bands — continue the page's numbering
+        # rather than re-issuing ("margin", pi, 0), which would merge
+        # the new region with the earlier one in ``_aside_groups``
         gi = 0
+        for b in pages[pi][1]["blocks"]:
+            a = b.get("aside")
+            if (
+                isinstance(a, tuple)
+                and len(a) == 3
+                and a[:2] == ("margin", pi)
+            ):
+                gi = max(gi, a[2] + 1)
         for zone in sorted(zones, key=str):
             ms = sorted(
                 zones[zone], key=lambda b: (b["bbox"][1], b["bbox"][0])
@@ -814,6 +853,7 @@ def _reading_columns(
     edges,
     boilerplate: Container[str] = frozenset(),
     lang: LangProfile = EN,
+    pi_list=None,
 ):
     """Edge index → reading-column index, collapsing outdent edges.
 
@@ -836,8 +876,12 @@ def _reading_columns(
     Evidence comes only from pages ≥1: page 0's front matter (title,
     bylines, disclaimers) clusters at wide left edges and cannot be told
     from outdented heads until #41's aside path exists to claim it.
-    Eligibility mirrors ``_doc_column_edges`` — furniture-shaped blocks
-    contribute no evidence, just as they cast no votes.
+    ``pi_list``, when given, restricts evidence to those original page
+    indices — #37's zone pass calls this once per active grid, so a
+    zone's outdent read pools only its own pages' evidence (the caller
+    may include page 0; it is still excluded here). Eligibility mirrors
+    ``_doc_column_edges`` — furniture-shaped blocks contribute no
+    evidence, just as they cast no votes.
 
     Non-outdent edges keep their own reading column, renumbered left to
     right; an outdent edge maps to the first non-outdent edge on its
@@ -850,9 +894,10 @@ def _reading_columns(
     if len(edges) < 2:
         return list(range(len(edges)))
     evidence = [[] for _ in edges]
-    for pi, (page, pdict) in enumerate(pages):
+    for pi in range(len(pages)) if pi_list is None else pi_list:
         if pi == 0:
             continue
+        page, pdict = pages[pi]
         for b in pdict["blocks"]:
             if (
                 b["type"] != 0
@@ -894,6 +939,197 @@ def _reading_columns(
         else own[next(j for j in range(i + 1, len(edges)) if not outdent[j])]
         for i in range(len(edges))
     ]
+
+
+def _grids_agree(a, b, tol=ZONE_EDGE_TOL):
+    """Same grid: equal edge count and pairwise positions within ``tol``."""
+    return len(a) == len(b) and all(
+        abs(x - y) < tol for x, y in zip(a, b)
+    )
+
+
+def _union_length(ivs):
+    """Total length of the union of ``(lo, hi)`` intervals."""
+    total = 0.0
+    lo = hi = None
+    for a, b in sorted(ivs):
+        if hi is None:
+            lo, hi = a, b
+        elif a <= hi:
+            hi = max(hi, b)
+        else:
+            total += hi - lo
+            lo, hi = a, b
+    return total if hi is None else total + hi - lo
+
+
+def _strong_grid(cand, items, line_h, body_size):
+    """Whether a page's own candidate grid carries real column evidence.
+
+    The strength gate behind ``_page_grids`` (#37): a local grid must
+    earn the right to override the document-wide prior. Every proposed
+    column needs — all clauses, not most —
+
+    * support: ≥``ZONE_COL_MIN_BLOCKS`` non-spanning text blocks
+      assigned to it (an isolated x0 cluster is insufficient);
+    * spread: those blocks span >``ZONE_COL_MIN_SPREAD``×line_h in y —
+      a lone heading/byline cluster shares a y-band and fails;
+    * coverage: the union of its support blocks' y-intervals covers
+      ≥``ZONE_COL_MIN_COVER`` of the page's text extent — a real column
+      flows through most of the page, while an author grid, formula
+      fragment, or caption strip occupies a few bands of it;
+    * width: median block x-extent ≥``ZONE_COL_MIN_WIDTH``×body_size —
+      a column holds ~8em of prose; table cells and margin strips run
+      narrower;
+    * gutter: at most ``ZONE_GUTTER_GRAZE`` of the blocks it claims
+      reach within ``ZONE_GUTTER_TOL`` of the next edge — a real
+      column's text stops at its own right bound, while indent
+      clusters and hanging reference starts ride right through the
+      proposed boundary.
+
+    Spanning blocks stay out of the support set on the first four
+    clauses — they legitimately cover the gutter — but count in the
+    graze share's claims: the 12pt span window already strips every
+    edge-reacher out of support, so measuring ``sup`` alone leaves the
+    clause dead for any realistic edge gap. One weak column demotes
+    the whole candidate: partial grids reorder nothing safely.
+    """
+    if len(cand) < 2 or not items:
+        return False
+    cols: list[list[dict]] = [[] for _ in cand]
+    for b in items:
+        cols[_assign_column(b, cand)].append(b)
+    text_extent = (
+        max(b["bbox"][3] for b in items)
+        - min(b["bbox"][1] for b in items)
+    )
+    for i, col in enumerate(cols):
+        sup = [b for b in col if not _is_spanning(b, cand)]
+        if len(sup) < ZONE_COL_MIN_BLOCKS:
+            return False
+        if (
+            max(b["bbox"][1] for b in sup) - min(b["bbox"][1] for b in sup)
+            < ZONE_COL_MIN_SPREAD * line_h
+        ):
+            return False
+        covered = _union_length(
+            (b["bbox"][1], b["bbox"][3]) for b in sup
+        )
+        if covered < ZONE_COL_MIN_COVER * text_extent:
+            return False
+        if (
+            median(b["bbox"][2] - b["bbox"][0] for b in sup)
+            < ZONE_COL_MIN_WIDTH * body_size
+        ):
+            return False
+        if i + 1 < len(cand):
+            grazers = sum(
+                b["bbox"][2] > cand[i + 1] - ZONE_GUTTER_TOL for b in col
+            )
+            if grazers > ZONE_GUTTER_GRAZE * len(col):
+                return False
+    return True
+
+
+def _page_grids(pages, doc_edges, boilerplate, line_h, body_size,
+                lang: LangProfile = EN):
+    """Each page's active column grid: strong local candidates, else the
+    document-wide grid as prior.
+
+    ``_doc_column_edges`` commits one grid for the whole document — a
+    section whose columns don't recur on ≥half of all pages loses its
+    edges and every block collapses onto one column, the class-3
+    zipper (#37). This pass recomputes each page's own cluster
+    evidence under the same eligibility filter the doc vote uses
+    (non-furniture, non-aside, non-signature text blocks) and lets a
+    *strong* local grid override the prior — the mirrored-margin case
+    (four real edge positions each appearing on <50% of pages) and the
+    minority-extra-columns case are both admitted, while heading,
+    byline, indent, and table-cell clusters cannot masquerade as
+    columns (``_strong_grid``). A single-edge candidate always wins:
+    one column can never interleave, and its measured position feeds
+    the indent/margin geometry better than the prior's; a page with no
+    cluster quorum keeps the prior.
+
+    Returns ``(page_edges, sources, zones)``: ``page_edges[pi]`` is the
+    page's active grid; ``sources[pi]`` records *why* — ``"page"`` for
+    a strong local candidate, ``"doc"`` when the local cluster already
+    agreed with the prior, ``"doc-weak"`` when a differing candidate
+    failed the strength gate, ``"doc-none"`` when local clustering
+    found no quorum at all; ``zones`` maps each distinct active grid
+    (``tuple``) to its member page indices — adjacency not required,
+    since mirrored margins alternate parity.
+    """
+    page_edges: list[list[float]] = []
+    sources: list[str] = []
+    for page, pdict in pages:
+        items = [
+            b
+            for b in pdict["blocks"]
+            if b["type"] == 0
+            and b.get("aside") is None
+            and not _is_furniture(b, page, _block_text(b, lang), lang)
+            and not _is_signature_furniture(
+                b, page.rect.height, boilerplate
+            )
+        ]
+        cand = _column_edges(items)
+        adopt = cand != [0.0] and (
+            len(cand) == 1
+            or _strong_grid(cand, items, line_h, body_size)
+        )
+        if _grids_agree(cand, doc_edges):
+            page_edges.append(doc_edges)
+            sources.append("doc")
+        elif adopt:
+            page_edges.append(cand)
+            sources.append("page")
+        else:
+            page_edges.append(doc_edges)
+            # "doc-none" (no cluster quorum at all) reads differently in
+            # the survey than "doc-weak" (a differing candidate failed
+            # the strength gate) — only the latter means the page had
+            # real but insufficient local evidence
+            sources.append("doc-weak" if cand != [0.0] else "doc-none")
+    zones: dict[tuple, list[int]] = {}
+    for pi, edges in enumerate(page_edges):
+        for key, members in zones.items():
+            if _grids_agree(list(key), edges):
+                members.append(pi)
+                break
+        else:
+            zones[tuple(edges)] = [pi]
+    return page_edges, sources, zones
+
+
+def _zone_reading_maps(pages, page_edges, zones, boilerplate,
+                       lang: LangProfile = EN):
+    """Per-page reading-column maps — one ``_reading_columns`` call per
+    active grid.
+
+    Outdent evidence pools across the pages sharing each zone's grid
+    (``pi_list``), not the whole document: a mirrored-margin layout's
+    parity zones each classify their own edges. ``page_edges`` only
+    locates each page's zone; every member renders against the zone
+    key's grid and map.
+    """
+    zone_of = [None] * len(page_edges)
+    for key, members in zones.items():
+        for pi in members:
+            zone_of[pi] = key
+    zone_maps: dict[tuple, list[int]] = {}
+    page_col_map: list[list[int]] = []
+    for key in zone_of:
+        if key not in zone_maps:
+            zone_maps[key] = _reading_columns(
+                pages,
+                list(key),
+                boilerplate,
+                lang,
+                pi_list=zones[key],
+            )
+        page_col_map.append(zone_maps[key])
+    return page_col_map
 
 
 def _line_dir(line):

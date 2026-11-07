@@ -46,6 +46,28 @@ INFO_MEMBER_MAX_LINES = 3
 INFO_ATTACH_MAX = 4
 INFO_ATTACH_GAP = 1.5
 
+# per-page/zone column grids (#37): the doc-wide edge vote is a prior,
+# not a prison — a page whose own cluster evidence is *strong* gets its
+# own grid, and pages sharing an equal grid form a zone (adjacency not
+# required: mirrored-margin layouts alternate parity). A candidate is
+# strong only when every proposed column carries multiple non-spanning
+# text blocks spread over more than one y-band (a lone heading/byline
+# cluster is not a column), with a median block width wide enough to
+# hold prose (table cells and margin strips run narrower), and x-ranges
+# that respect the gutter to the next column (indent clusters and
+# hanging-reference starts cross it). Every clause binds every proposed
+# column; one weak column demotes the whole candidate to the doc grid.
+ZONE_EDGE_TOL = 15
+ZONE_COL_MIN_BLOCKS = 2
+ZONE_COL_MIN_SPREAD = 2.5  # x line_h
+ZONE_COL_MIN_WIDTH = 8.0  # x body_size — a prose column holds ~8em
+# a real column's support flows down the page — an author grid,
+# formula fragment, or caption strip covers under a tenth of the
+# text extent and reads as a column-shaped cluster without being one
+ZONE_COL_MIN_COVER = 0.15
+ZONE_GUTTER_TOL = 4.0
+ZONE_GUTTER_GRAZE = 0.2
+
 # marginalia detection (#36): a block fully outside the doc grid's body
 # bands is only a *candidate* — lifting it to an aside needs spatial
 # coherence plus sidebar evidence (a table legend, a ``Label:`` opener,

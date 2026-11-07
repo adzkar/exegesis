@@ -20,8 +20,10 @@ from exegesis.analyze import (
     _body_font_size,
     _boilerplate_signatures,
     _doc_column_edges,
-    _reading_columns,
+    _grids_agree,
+    _page_grids,
     _split_signature_prefixes,
+    _zone_reading_maps,
 )
 from exegesis.render import _flush_paragraph, _render_page
 from exegesis.state import PipelineState
@@ -61,12 +63,28 @@ def _render_doc(pdf_path, mark=None, drop_edges=True, flush=True):
         if mark is not None:
             mark(pages)
         edges = _doc_column_edges(pages, boilerplate)
+        page_edges, grid_sources, zones = _page_grids(
+            pages, edges, boilerplate, line_h, body_size
+        )
+        page_col_map = _zone_reading_maps(
+            pages, page_edges, zones, boilerplate
+        )
         state = PipelineState(
             body_size=body_size,
             line_h=line_h,
             page_items=[pdict["blocks"] for _p, pdict in pages],
             edges=edges,
-            col_map=_reading_columns(pages, edges, boilerplate),
+            col_map=next(
+                (
+                    page_col_map[pi]
+                    for pi, pedges in enumerate(page_edges)
+                    if _grids_agree(pedges, edges)
+                ),
+                list(range(len(edges))),
+            ),
+            page_edges=page_edges,
+            page_col_map=page_col_map,
+            grid_sources=grid_sources,
             drop_edges=drop_edges,
             boilerplate=boilerplate,
             page_frags=[[] for _ in pages],

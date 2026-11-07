@@ -23,11 +23,21 @@ class PipelineState:
     body_size: float
     line_h: float
     page_items: list[list[dict[str, Any]]]
+    # the document-wide edge grid (#37's prior/fallback); the grid a
+    # page actually orders with is ``page_edges[pi]``
     edges: list[float]
     # physical edge index -> reading-column index (``_reading_columns``):
     # outdent edges fold into the reading column on their right while
     # ``edges`` keeps the physical lookup for geometry
     col_map: list[int]
+    # per-page active grids from ``_page_grids`` — the doc grid unless a
+    # page's own strong candidate overrode it — plus their per-zone
+    # ``_reading_columns`` maps and each page's grid provenance
+    # ("page" / "doc" / "doc-weak" / "doc-none"), for the layout
+    # survey's reporting
+    page_edges: list[list[float]]
+    page_col_map: list[list[int]]
+    grid_sources: list[str]
     drop_edges: bool
     boilerplate: set[str]
     page_frags: list[list[str]]

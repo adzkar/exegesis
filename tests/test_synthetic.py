@@ -2234,3 +2234,21 @@ def test_stats_columns_and_table_counts(tmp_path):
     stats = convert(pdf, tmp_path / "stats2.epub")
     assert stats["columns"] == 2
     assert stats["grid_tables"] == 0
+
+
+def test_empty_document_converts(tmp_path):
+    """A zero-page PDF still converts to an empty-but-valid EPUB — the
+    stats dict's column maximum must not raise on the empty
+    ``page_col_map``."""
+    # PyMuPDF refuses doc.save() with zero pages, so hand-write the
+    # minimal Count-0 container a broken upstream could still deliver
+    pdf = tmp_path / "empty.pdf"
+    pdf.write_bytes(
+        b"%PDF-1.4\n"
+        b"1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
+        b"2 0 obj<</Type/Pages/Count 0/Kids[]>>endobj\n"
+        b"trailer<</Root 1 0 R>>\n"
+    )
+    stats = convert(pdf, tmp_path / "empty.epub")
+    assert stats["pages"] == 0
+    assert stats["columns"] == 0

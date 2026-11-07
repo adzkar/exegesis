@@ -17,8 +17,10 @@ from .analyze import (
     _detect_asides,
     _detect_margins,
     _doc_column_edges,
-    _reading_columns,
+    _grids_agree,
+    _page_grids,
     _split_signature_prefixes,
+    _zone_reading_maps,
 )
 from .const import PAGES_PER_FALLBACK_CHAPTER
 from .lang import LangProfile, get_lang
@@ -86,12 +88,40 @@ def convert(
     # its lifted members surrender the edge before columns map
     if _detect_margins(pages, edges, boilerplate, lang=profile):
         edges = _doc_column_edges(pages, boilerplate, profile)
+    # per-page grids (#37): a page whose own cluster evidence is strong
+    # orders on its own columns instead of the committed doc grid; the
+    # doc grid stays the prior for weak/agreeing pages. A second margin
+    # pass reads each page's active bands — a strip in-band under the
+    # committed grid can qualify outside the page's true columns
+    page_edges, grid_sources, grid_zones = _page_grids(
+        pages, edges, boilerplate, line_h, body_size, profile
+    )
+    _detect_margins(
+        pages, edges, boilerplate, lang=profile, page_edges=page_edges
+    )
+    # reading columns map per zone: outdent evidence pools across the
+    # pages sharing each active grid, not the whole document
+    page_col_map = _zone_reading_maps(
+        pages, page_edges, grid_zones, boilerplate, profile
+    )
     state = PipelineState(
         body_size=body_size,
         line_h=line_h,
         page_items=[pdict["blocks"] for _p, pdict in pages],
         edges=edges,
-        col_map=_reading_columns(pages, edges, boilerplate, profile),
+        # the doc grid's own reading map — shared by every doc-grid
+        # page's zone; identity when no page kept the prior
+        col_map=next(
+            (
+                page_col_map[pi]
+                for pi, pedges in enumerate(page_edges)
+                if _grids_agree(pedges, edges)
+            ),
+            list(range(len(edges))),
+        ),
+        page_edges=page_edges,
+        page_col_map=page_col_map,
+        grid_sources=grid_sources,
         drop_edges=drop_edges,
         boilerplate=boilerplate,
         page_frags=[[] for _ in range(doc.page_count)],
@@ -303,8 +333,13 @@ def convert(
         "footnotes": len(state.footnotes),
         "images": len(state.images),
         # reading columns, not physical edges: an outdent edge that folds
-        # into its body column does not count (MDPI reports 1, not 2)
-        "columns": len(set(state.col_map)),
+        # into its body column does not count (MDPI reports 1, not 2).
+        # Once grids vary per page (#37) the stat reports the widest
+        # reading grid any page commits — the doc's columnar maximum; a
+        # zero-page document has no page maps at all and reports 0
+        "columns": max(
+            (len(set(m)) for m in state.page_col_map), default=0
+        ),
         "grid_tables": state.grid_tables,
         "raster_tables": state.raster_tables,
         "raster_figures": state.raster_figures,
