@@ -9,6 +9,7 @@ import zipfile
 from pathlib import Path
 
 import fitz
+from builders import image, text
 from furniture_fixtures import (
     NORMAL_MARGIN_TEXT,
     dual_margin_strips,
@@ -93,6 +94,40 @@ def _set_language(epub: Path, code: str):
     with zipfile.ZipFile(epub, "w") as z:
         for n, data in members.items():
             z.writestr(n, data)
+
+
+def _fig_pdf(path):
+    """An embedded raster with two panel labels and a caption — the
+    figure claim rasterizes the labels to pixels and absorbs the
+    source image inside `images/fig_*`."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(fitz.Rect(72, 90, 540, 130),
+                     "A Figure Region Study", fontsize=18)
+    p.insert_textbox(fitz.Rect(72, 560, 540, 620),
+                     "Body prose follows the captioned figure region "
+                     "with enough words for coverage.", fontsize=BODY)
+    image(p, (180, 290, 440, 470))
+    text(p, 210, 350, "ZZPANELA")
+    text(p, 210, 400, "ZZPANELB")
+    text(p, 72, 520, "Figure 1. Paired panels.")
+    doc.save(str(path))
+    doc.close()
+
+
+def _delete_epub_fig_refs(epub: Path):
+    """Remove every `images/fig_*` <img> reference from chapter XHTML —
+    the PNG stays packaged but unreferenced, so the eval replays a
+    committed region whose raster evidence is missing."""
+    with zipfile.ZipFile(epub) as zin:
+        members = {name: zin.read(name) for name in zin.namelist()}
+    for name, data in members.items():
+        if name.rsplit("/", 1)[-1].startswith("chap_"):
+            members[name] = re.sub(
+                rb'<img[^>]*src="images/fig_[^"]*"[^>]*/?>', b"", data)
+    with zipfile.ZipFile(epub, "w") as zout:
+        for name, data in members.items():
+            zout.writestr(name, data)
 
 
 def _run(pdf, epub, *args):
@@ -353,3 +388,63 @@ def test_eval_staggered_cells_rasterize_excused(tmp_path):
     convert(pdf, epub)
     r = _run(pdf, epub)
     assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_eval_figure_region_labels_are_excused(tmp_path):
+    """Committed figure members emit only inside the `images/fig_`
+    raster — the replayed `_page_claims` must excuse their words and
+    the absorbed source image's digest, or a correct conversion flags
+    genuine loss and a dropped raster (#35)."""
+    pdf = tmp_path / "fig.pdf"
+    _fig_pdf(pdf)
+    epub = tmp_path / "fig.epub"
+    convert(pdf, epub)
+    r = _run(pdf, epub)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "raster images" not in r.stdout
+
+
+def test_eval_figure_region_missing_raster_withholds_excuse(tmp_path):
+    """With the emitted fig reference deleted the replay still sees the
+    region, so the excuse is withheld — the evidence-row Med and the
+    label words' genuine loss must both surface (#35)."""
+    pdf = tmp_path / "figgone.pdf"
+    _fig_pdf(pdf)
+    epub = tmp_path / "figgone.epub"
+    convert(pdf, epub)
+    _delete_epub_fig_refs(epub)
+    r = _run(pdf, epub)
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "figure regions" in r.stdout
+    assert "zzpanel" in r.stdout.lower()
+
+
+def test_eval_committed_figure_page_is_capturable(tmp_path):
+    """A >30-drawing page whose vectors commit to a figure region
+    leaves the 'not capturable' list — the drawings emit inside the
+    `images/fig_` raster (#35)."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(fitz.Rect(72, 90, 540, 130),
+                     "A Vector Figure Study", fontsize=18)
+    # a crossing grid — >30 connected vector ops in one region
+    for i in range(20):
+        y = 290 + i * 9
+        p.draw_line((180, y), (440, y), color=(0.7, 0.7, 0.7))
+    for i in range(20):
+        x = 180 + i * 13
+        p.draw_line((x, 290), (x, 470), color=(0.7, 0.7, 0.7))
+    text(p, 210, 350, "ZZVECA")
+    text(p, 210, 400, "ZZVECB")
+    text(p, 72, 520, "Figure 1. Dense grid.")
+    p.insert_textbox(fitz.Rect(72, 560, 540, 620),
+                     "Body prose follows the vector figure region.",
+                     fontsize=BODY)
+    pdf = tmp_path / "vecfig.pdf"
+    doc.save(str(pdf))
+    doc.close()
+    epub = tmp_path / "vecfig.epub"
+    convert(pdf, epub)
+    r = _run(pdf, epub)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "not capturable" not in r.stdout
