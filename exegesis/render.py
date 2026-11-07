@@ -427,8 +427,10 @@ def _aside_frag(members, page, state):
     helpers get edges ``[aside_x0]`` and the absolute right boundary as
     their ``page_width`` (``_table_regions`` takes it with a +8 pad
     since it insets its own right band by 8pt — a tight content bbox
-    must not exclude the rightmost cell). With a single edge the doc
-    grid's multi-column guard can't reinterpret the strip as body
+    must not exclude the rightmost cell). The grid pass sees every
+    member, not only texts, so its image-overlap guard still vetoes a
+    false grid claimed around an aside figure. With a single edge the
+    doc grid's multi-column guard can't reinterpret the strip as body
     columns. Whatever the local pass can't structure degrades to
     paragraphs — nothing is dropped. Superscripts never link into
     notes.xhtml (``link_fns=False`` reaches cells and captions through
@@ -450,8 +452,11 @@ def _aside_frag(members, page, state):
         if tbl is not None
         else set()
     )
+    # the grid pass gets the whole region, not just texts — its
+    # image-overlap guard must still veto a false table claimed around
+    # an aside figure (non-text members never seed lines or claims)
     grids = _table_regions(
-        [b for b in texts if id(b) not in tbl_ids],
+        [b for b in members if id(b) not in tbl_ids],
         state.line_h,
         a_edges,
         a_right + 8,

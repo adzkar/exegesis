@@ -354,6 +354,44 @@ def test_aside_local_grid_and_caption(tmp_path):
     assert "<p>Figure 1. An aside caption.</p>" in aside
 
 
+def test_aside_image_overlap_vetoes_grid(tmp_path):
+    """An image intersecting the would-be grid rejects the <table> —
+    the aside grid pass keeps the body pass's image-overlap guard."""
+    doc = fitz.open()
+    page = _page(doc)
+    text(page, 72, 110, "Overlap guard control", size=18)
+    rows = (
+        ("Alpha", "350 msec long value"),
+        ("Bravo a longer one", "412"),
+        ("Charlie", "298"),
+    )
+    for ri, (left, right) in enumerate(rows):
+        text(page, 360, 200 + ri * 20, left, size=8)
+        text(page, 470, 200 + ri * 20, right, size=8)
+    # a figure mixed into the cell rows: a claimed region holding both
+    # degrades the labels to paragraphs rather than emitting a spurious
+    # table beside the image
+    image(page, (400, 195, 470, 250))
+    block(page, 72, 500, BODY_BLOCK, leading=14)
+    pdf = _save(doc, tmp_path / "input.pdf")
+
+    def mark(pages):
+        for b in pages[0][1]["blocks"]:
+            if b["type"] == 1 or _block_text(b).startswith(
+                ("Alpha", "Bravo", "Charlie", "350", "412", "298")
+            ):
+                b["aside"] = 0
+
+    state, _edges = _render_doc(pdf, mark)
+    aside = _aside_frags(state, 0)[0]
+    assert "<table>" not in aside
+    assert '<img src="images/img_0.png"' in aside
+    # the row blocks degrade to paragraphs — each row's two cells are
+    # one extracted block, so its lines join with a space
+    assert "<p>Alpha 350 msec long value</p>" in aside
+    assert "<p>Charlie 298</p>" in aside
+
+
 def test_body_figure_never_adopts_aside_caption(tmp_path):
     """A body image beside a lifted 'Figure N.' keeps the empty alt."""
     doc = fitz.open()
