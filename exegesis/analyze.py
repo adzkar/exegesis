@@ -1737,9 +1737,11 @@ def _figure_caption_near(area, blocks, member_ids, edges, page_width,
     The legend below wins (journals set it under the figure), then the
     one above, inside the alt scan's 120pt window and sharing a column
     band via ``_overlap_cols`` — the same geometry ``_figure_alt``
-    adopts under. A caption member is never eligible (a caption/label
-    mix already rejected the candidate), and ``Table N`` can't anchor:
-    ``figure_caption`` excludes table labels by construction.
+    adopts under. A caption block is never a member — a fused-in
+    caption/label mix convicts as a straddler while a ring-only
+    caption is skipped outright — so it always reaches this scan, and
+    ``Table N`` can't anchor: ``figure_caption`` excludes table labels
+    by construction.
     """
     area_cols = _overlap_cols(area, edges, page_width)
     best = None
