@@ -684,8 +684,14 @@ def _render_page(page, page_index: int, state: PipelineState):
     ``state.pending_asides`` for the paragraph-close drain.
     """
     body_size = state.body_size
-    edges = state.edges
-    col_map = state.col_map
+    # the page's active grid (#37): its own strong candidate when one
+    # overrode the doc-wide prior, else the doc grid — every
+    # column-sensitive consumer below (ordering, note zones, table and
+    # figure claims, caption bands, follower scans, blockquote
+    # isolation) reads these locals, so the whole page renders on one
+    # committed grid
+    edges = state.page_edges[page_index]
+    col_map = state.page_col_map[page_index]
     ordered = _ordered_blocks(
         page,
         state.page_items[page_index],

@@ -23,6 +23,52 @@ def mixed_1col_plus_2col(path):
     return _save(doc, path)
 
 
+def mixed_parity_2col(path):
+    """Mirrored-margin 2-col parities alternate, so no real edge reaches
+    the ≥50% doc vote — the sibling shape of #37's real-PDF trigger."""
+    doc = fitz.open()
+    for number in range(6):
+        page = _page(doc)
+        left, right = ((50, 300) if number % 2 == 0 else (90, 340))
+        tag = "A" if number % 2 == 0 else "B"
+        for x, side in ((left, "left"), (right, "right")):
+            for y, part in ((190, "upper"), (410, "lower")):
+                paragraph(page, (x, y, x + 210, y + 100),
+                          f"Parity {tag}{number} {side} {part} keeps wrapped prose "
+                          "inside its own mirrored-margin column. The paragraph "
+                          "continues long enough to hold several lines of text "
+                          "like a real journal column rather than a caption band.")
+    for number in range(5):
+        page = _page(doc)
+        for y, part in ((190, "upper"), (410, "lower")):
+            paragraph(page, (200, y, 560, y + 100),
+                      f"Tail prose {number} {part} sits in a single wide section "
+                      "whose lone edge outvotes both mirrored parities.")
+    return _save(doc, path)
+
+
+def mixed_2col_plus_3col(path):
+    """A minority three-column section inside a committed two-column grid (#37)."""
+    doc = fitz.open()
+    for number in range(6):
+        page = _page(doc)
+        for x, side in ((72, "left"), (310, "right")):
+            for y, part in ((190, "upper"), (410, "lower")):
+                paragraph(page, (x, y, x + 200, y + 100),
+                          f"Doc {number} {side} {part} flows inside the majority "
+                          "two-column section with enough wrapped prose to fill "
+                          "several lines the way a real journal column does.")
+    for number in range(2):
+        page = _page(doc)
+        for x, side in ((72, "one"), (240, "two"), (410, "three")):
+            for y, part in ((190, "upper"), (410, "lower")):
+                paragraph(page, (x, y, x + 150, y + 100),
+                          f"Supplement {number} col{side} {part} wraps narrowly "
+                          "in the minority three-column layout, still covering "
+                          "several lines of prose per block.")
+    return _save(doc, path)
+
+
 def magazine_wrap(path):
     """Far-side wrap text currently follows resumed full-width prose (#38)."""
     doc = fitz.open()
@@ -307,6 +353,8 @@ def retained_content(path):
 
 GENERATORS = {
     "mixed_1col_plus_2col": mixed_1col_plus_2col,
+    "mixed_parity_2col": mixed_parity_2col,
+    "mixed_2col_plus_3col": mixed_2col_plus_3col,
     "magazine_wrap": magazine_wrap,
     "scan_2up": scan_2up,
     "vector_figure": vector_figure,

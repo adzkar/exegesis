@@ -470,7 +470,8 @@ def _claim_pages(ctxs, boilerplate: set[str], lang: LangProfile):
 
     Both raster mirrors share this prep — the pipeline's own
     ``_split_signature_prefixes``, ``_detect_asides``, margin lifts
-    (``_detect_margins`` plus the voted-edge grid re-vote) — then
+    (``_detect_margins`` plus the voted-edge grid re-vote), #37's
+    per-page grids with the active-band second margin pass — then
     ``_page_claims`` over the same ``_is_body_block`` partition
     render's ``body_blocks`` uses, so an aside-marked margin member can
     neither seed a region nor be claimed into one, and the committed
@@ -484,6 +485,7 @@ def _claim_pages(ctxs, boilerplate: set[str], lang: LangProfile):
         _doc_column_edges,
         _is_body_block,
         _page_claims,
+        _page_grids,
         _split_signature_prefixes,
         _strip_clip,
     )
@@ -498,7 +500,11 @@ def _claim_pages(ctxs, boilerplate: set[str], lang: LangProfile):
     edges = _doc_column_edges(pages, boilerplate, lang)
     if _detect_margins(pages, edges, boilerplate, lang=lang):
         edges = _doc_column_edges(pages, boilerplate, lang)
-    for ctx, (page, pdict) in zip(ctxs, pages):
+    page_edges, _sources, _zones = _page_grids(
+        pages, edges, boilerplate, line_h, body_size, lang)
+    _detect_margins(
+        pages, edges, boilerplate, lang=lang, page_edges=page_edges)
+    for pi, (ctx, (page, pdict)) in enumerate(zip(ctxs, pages)):
         blocks = pdict["blocks"]
         clip = _strip_clip(
             page, [b for b in blocks if b.get("aside") is None],
@@ -506,7 +512,7 @@ def _claim_pages(ctxs, boilerplate: set[str], lang: LangProfile):
         body = [b for b in blocks
                 if _is_body_block(b, page, boilerplate, lang, clip)]
         yield ctx, page, blocks, _page_claims(
-            page, body, blocks, edges, page.rect.width, line_h,
+            page, body, blocks, page_edges[pi], page.rect.width, line_h,
             body_size, lang)
 
 

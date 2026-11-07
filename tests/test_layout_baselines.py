@@ -34,6 +34,19 @@ REQUIRED_CONTENT = {
         *(f"Single page {number} {part}" for number in range(4) for part in ("opening", "closing")),
         *(f"{side} {part} minority" for side in ("Left", "Right") for part in ("upper", "lower")),
     ],
+    "mixed_parity_2col": [
+        *(f"Parity {'A' if number % 2 == 0 else 'B'}{number} {side} {part}"
+          for number in range(6) for side in ("left", "right")
+          for part in ("upper", "lower")),
+        *(f"Tail prose {number} {part}" for number in range(5)
+          for part in ("upper", "lower")),
+    ],
+    "mixed_2col_plus_3col": [
+        *(f"Doc {number} {side} {part}" for number in range(6)
+          for side in ("left", "right") for part in ("upper", "lower")),
+        *(f"Supplement {number} col{side} {part}" for number in range(2)
+          for side in ("one", "two", "three") for part in ("upper", "lower")),
+    ],
     "magazine_wrap": ["Wrap opening", "Near upper", "Near lower", "Far upper", "Far lower", "Resumed body"],
     "scan_2up": [f"{side} spread {part}" for side in ("Left", "Right")
                  for part in ("opening", "middle", "closing")],
@@ -173,6 +186,37 @@ def _contract_mixed(pages):
         assert block["bbox"][0] in (72, 340)
     assert max(block["bbox"][2] for block in blocks[:2]) < 330
     assert _votes(pages)[340] == 1 < len(pages) // 2
+
+
+def _contract_parity(pages):
+    """Alternating mirrored parities split the vote; only the wide tail reaches quorum."""
+    assert len(pages) == 11
+    votes = _votes(pages)
+    for edge in (50, 90, 300, 340):
+        assert votes[edge] == 3 < len(pages) // 2
+    assert votes[200] == 5 == len(pages) // 2
+    assert _doc_column_edges(pages, _boilerplate_signatures(pages)) == [200]
+    for pi, (_, pdict) in enumerate(pages[:6]):
+        assert _column_edges(_texts(pdict)) == (
+            [50, 300] if pi % 2 == 0 else [90, 340]
+        )
+        for block in _texts(pdict):
+            _upright(block)
+            assert len(block["lines"]) >= 2
+    for _, pdict in pages[6:]:
+        assert _column_edges(_texts(pdict)) == [200]
+
+
+def _contract_three_col(pages):
+    """The majority two-column vote commits edges the minority supplement splits."""
+    assert len(pages) == 8
+    votes = _votes(pages)
+    assert votes[72] == len(pages)
+    assert votes[310] == 6 >= len(pages) // 2
+    assert votes[240] == votes[410] == 2 < len(pages) // 2
+    assert _doc_column_edges(pages, _boilerplate_signatures(pages)) == [72, 310]
+    for _, pdict in pages[6:]:
+        assert _column_edges(_texts(pdict)) == [72, 240, 410]
 
 
 def _contract_wrap(pages):
@@ -474,6 +518,8 @@ def _contract_retained(pages):
 
 CONTRACTS = {
     "mixed_1col_plus_2col": _contract_mixed,
+    "mixed_parity_2col": _contract_parity,
+    "mixed_2col_plus_3col": _contract_three_col,
     "magazine_wrap": _contract_wrap,
     "scan_2up": _contract_twoup,
     "vector_figure": _contract_vector,
@@ -534,9 +580,40 @@ def test_figure_surrounding_prose_and_caption_retained(converted):
 
 
 def _semantic_mixed(result):
-    """#37: right-upper currently interrupts the minority page's left column."""
+    """#37: the minority page's own grid orders its two columns left then right."""
     require_order(result[3], "Left upper minority", "Left lower minority",
                   "Right upper minority", "Right lower minority", issue="#37 mixed grid")
+
+
+def _semantic_parity(result):
+    """#37: each parity page orders its own mirrored columns; stats report the wider grid."""
+    for number in range(6):
+        tag = "A" if number % 2 == 0 else "B"
+        require_order(result[3], f"Parity {tag}{number} left upper",
+                      f"Parity {tag}{number} left lower",
+                      f"Parity {tag}{number} right upper",
+                      f"Parity {tag}{number} right lower",
+                      issue="#37 mirrored-margin parity")
+    for number in range(5):
+        require_order(result[3], f"Tail prose {number} upper",
+                      f"Tail prose {number} lower", issue="#37 tail section")
+    require(result[2]["columns"] == 2,
+            "#37: columns stat should report the parity pages' real two columns")
+
+
+def _semantic_three_col(result):
+    """#37: the minority supplement orders three columns left to right."""
+    for number in range(2):
+        require_order(result[3],
+                      f"Supplement {number} colone upper",
+                      f"Supplement {number} colone lower",
+                      f"Supplement {number} coltwo upper",
+                      f"Supplement {number} coltwo lower",
+                      f"Supplement {number} colthree upper",
+                      f"Supplement {number} colthree lower",
+                      issue="#37 three-column supplement")
+    require(result[2]["columns"] == 3,
+            "#37: columns stat should report the supplement's wider grid")
 
 
 def _semantic_wrap(result):
@@ -728,6 +805,8 @@ def _semantic_retained(result):
 
 SEMANTICS = {
     "mixed_1col_plus_2col": _semantic_mixed,
+    "mixed_parity_2col": _semantic_parity,
+    "mixed_2col_plus_3col": _semantic_three_col,
     "magazine_wrap": _semantic_wrap,
     "scan_2up": _semantic_twoup,
     "vector_figure": _semantic_vector,
@@ -745,7 +824,6 @@ SEMANTICS = {
     "retained_content": _semantic_retained,
 }
 SYMPTOMS = {
-    "mixed_1col_plus_2col": "#37 right-upper minority text interrupts the left column",
     "magazine_wrap": "#38 far-side wrap lines follow resumed full-width body",
 }
 SEMANTIC_CASES = [

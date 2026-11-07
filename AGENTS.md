@@ -55,6 +55,35 @@ chapters.
   shaped blocks don't vote). Blocks crossing a gutter are spans; each
   column emits its own sequence of non-spans + covering spans in y order,
   columns left to right. Works for 1/2/3-column layouts.
+  The committed doc grid is only the *prior*: `analyze._page_grids`
+  reruns the same clustering per page on the same eligible items and
+  a page orders on its own grid when the candidate clears the
+  `_strong_grid` gate — every proposed column needs ≥2 non-spanning
+  text blocks whose y-spread exceeds `ZONE_COL_MIN_SPREAD`×line_h,
+  whose support's y-union covers ≥`ZONE_COL_MIN_COVER` of the page's
+  text extent (a real column flows down the page; an author grid or
+  formula fragment covers a few bands), median x-extent
+  ≥`ZONE_COL_MIN_WIDTH`×body_size, and ≤`ZONE_GUTTER_GRAZE` of support
+  grazing within `ZONE_GUTTER_TOL` of the next edge (table cells and
+  indent clusters ride through the proposed gutter). A single-edge
+  candidate always wins its page — one column cannot zipper, and its
+  edge still beats the prior for geometry — while a weak candidate
+  falls back to the doc grid (`grid_sources`: `page` / `doc` /
+  `doc-weak`; mirrored-margin journals like ebiomedicine_lancet split
+  real edges by parity so no single grid reaches the doc quorum, and
+  per-page grids recover them). Pages sharing an agreeing grid
+  (`_grids_agree`, `ZONE_EDGE_TOL` on sorted edges) group into zones —
+  non-contiguous, since parities alternate — and `_zone_reading_maps`
+  runs `_reading_columns` once per zone so an outdent edge's evidence
+  pools only over pages sharing that geometry. The page's active
+  `page_edges[pi]`/`page_col_map[pi]` pair drives `_render_page`
+  entirely — ordering, claims, notes, captions, heading followers,
+  blockquote isolation — while `state.edges`/`state.col_map` keep the
+  doc prior's identity (diagnostics report both, plus the page's
+  source). A second `_detect_margins` pass reads each page's active
+  bands after grids settle (bands derived from the committed grid can
+  hide a strip the page's own columns expose); the margin-detector's
+  doc-grid re-vote stays reserved for the first pass.
   Physical edges stay the geometry grid; reading identity flows through
   `state.col_map` (`_reading_columns`): an edge whose non-spanning
   evidence on pages ≥1 is ≥80% (`OUTDENT_HEADING_SHARE`) outdented-strip
@@ -73,10 +102,12 @@ chapters.
   note-shaped strip block widen the swept region and misfile body text
   as notes (a strip's own top still files its notes; it just can't
   claim the body column's blocks). Geometric distances/indents still
-  read `edges[physical col]`. `stats["columns"]`
-  counts distinct reading columns; `dev/diagnose_layouts.py` prints
+  read `edges[physical col]`. `stats["columns"]` reports the widest
+  page's distinct reading columns (the doc prior's map alone would
+  under-report a mixed-grid document); `dev/diagnose_layouts.py` prints
   each physical edge's mapped column (`edge=… -> rcolN (outdent)`)
-  plus the deciding share.
+  plus the deciding share, and each page line carries its active
+  `grid=`/`src=` alongside the committed `doc_edges`.
 - **Paragraphs** — blocks merge into the open paragraph unless the first line
   is indented (>4pt) or the previous line ends with terminal punctuation.
   Open paragraphs carry across columns and page breaks; a lone drop-cap

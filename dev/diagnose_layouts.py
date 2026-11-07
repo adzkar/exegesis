@@ -40,9 +40,13 @@ page /Rotate is reported separately.
 
 Preparation and rendering run through ``convert`` itself. A temporary profiling
 hook reads private renderer locals at return (``page``/``page_index``/``state``
-/``ordered``/``nonbody_ids``/``aside_blocks``/``rasters``), before convert
-releases each page, and ``_reading_columns``'s ``evidence`` locals at its
-return. Keep that
+/``ordered``/``nonbody_ids``/``aside_blocks``/``rasters`` plus the page's
+*active* ``edges``/``col_map`` — #37's per-page grid, so every probe reports
+against the grid the page actually ordered on; ``state.edges`` stays the
+committed document grid), before convert
+releases each page, and each ``_reading_columns`` call's (``edges``,
+``evidence``) locals at its return — one call per zone grid now, so the
+doc zone's evidence is selected by matching edges. Keep that
 small instrumentation contract in sync if those locals change. This
 manual corpus tool is not a test helper and must never be imported by tests.
 It runs on ``requirements.txt`` alone, so the test helpers it borrows must not
@@ -73,6 +77,7 @@ from exegesis import convert, render
 from exegesis.analyze import (
     _assign_column,
     _column_edges,
+    _grids_agree,
     _heading_like,
     _is_spanning,
     _outdent_like,
@@ -105,13 +110,24 @@ class _Fragment:
     spanning: bool
     location: str
     survives: bool
+    # the same block's shape under the committed document grid (#37) —
+    # the doc-edge profile/FOLD rows profile this counterfactual while
+    # ``column``/``spanning``/``outdent_like`` report the page's own
+    # active grid the converter actually ordered on
+    doc_column: int
+    doc_outdent_like: bool
+    doc_spanning: bool
 
 
 def _column_profiles(fragments, edges):
-    """Profile nearest-edge text assignments, keeping spans out of the share.
+    """Profile doc-grid text assignments, keeping spans out of the share.
 
     The share denominator is all nonempty non-spanning text blocks at this
     edge; the numerator additionally requires the documented strip shape.
+    Profiles index the doc-grid counterfactual columns (#37: a fragment's
+    ``column`` is its page's own active grid, which can be wider than the
+    doc grid and means a different geometry); the doc fields keep the
+    edge/FOLD rows comparable to the pre-zone report.
     """
     prof = [
         {"lens": [], "nonspan": 0, "heading_single": 0, "heading_total": 0,
@@ -119,13 +135,13 @@ def _column_profiles(fragments, edges):
         for _ in edges
     ]
     for f in fragments:
-        p = prof[f.column]
+        p = prof[f.doc_column]
         p["lens"].append(f.chars)
         p["heading_total"] += f.heading_like
-        if not f.spanning:
+        if not f.doc_spanning:
             p["nonspan"] += 1
             p["heading_single"] += f.heading_like
-            p["strip_nonspan"] += f.outdent_like
+            p["strip_nonspan"] += f.doc_outdent_like
     for p in prof:
         p["median_len"] = median(p["lens"]) if p["lens"] else 0
     return prof
@@ -329,28 +345,41 @@ def _page_report(local):
     """Snapshot actual render decisions before convert clears input page dicts."""
     page, pi, state = local["page"], local["page_index"], local["state"]
     blocks, ordered = state.page_items[pi], local["ordered"]
+    # the render frame's edges/col_map locals are the page's *active*
+    # grid (#37) — its own strong candidate or the doc-grid prior;
+    # every fragment/span/assignment probe below reports against the
+    # grid the converter actually ordered on, while ``doc_edges``
+    # keeps the committed document grid for the header line
+    edges, col_map = local["edges"], local["col_map"]
     surviving_ids = {
         id(b) for b in ordered if b["type"] == 0 and id(b) not in local["nonbody_ids"]
     }
     n_asides = len(local["aside_blocks"])
     vectors = _vector_regions(page)
     rasters = [fitz.Rect(b["bbox"]) for b in blocks if b["type"] == 1]
+    doc_edges = state.edges
     fragments = [
         _Fragment(
             column=col,
             chars=len(text),
             heading_like=_heading_like(b, text),
             outdent_like=_outdent_like(
-                b, text, _band_end(col, state.edges, page.rect.width),
+                b, text, _band_end(col, edges, page.rect.width),
             ),
-            spanning=_is_spanning(b, state.edges),
+            spanning=_is_spanning(b, edges),
             location=_fragment_location(b["bbox"], vectors, rasters),
             survives=id(b) in surviving_ids,
+            doc_column=dcol,
+            doc_outdent_like=_outdent_like(
+                b, text, _band_end(dcol, doc_edges, page.rect.width),
+            ),
+            doc_spanning=_is_spanning(b, doc_edges),
         )
         for b in blocks
         if b["type"] == 0
         and (text := _block_text(b, state.lang))
-        and (col := _assign_column(b, state.edges)) is not None
+        and (col := _assign_column(b, edges)) is not None
+        and (dcol := _assign_column(b, doc_edges)) is not None
     ]
     clusters = _column_edges([b for b in blocks if b["type"] == 0])
     directions, rotated = _line_directions(blocks, surviving_ids)
@@ -359,22 +388,25 @@ def _page_report(local):
         "width": page.rect.width,
         "height": page.rect.height,
         "rotation": page.rotation,
-        "edges": list(state.edges),
+        "edges": list(edges),
+        "doc_edges": list(state.edges),
+        "doc_col_map": list(state.col_map),
+        "grid_source": state.grid_sources[pi],
         "body": state.body_size,
         "line_h": state.line_h,
         "fragments": fragments,
         "image_cols": Counter(
-            _assign_column(b, state.edges) for b in blocks if b["type"] == 1
+            _assign_column(b, edges) for b in blocks if b["type"] == 1
         ),
         "clusters": clusters,
         "off_grid": [
-            c for c in clusters if all(abs(c - e) >= EDGE_TOL for e in state.edges)
+            c for c in clusters if all(abs(c - e) >= EDGE_TOL for e in edges)
         ],
-        "wrap": _wrap_flags(blocks, state.edges),
+        "wrap": _wrap_flags(blocks, edges),
         "twoup": _twoup_flag(page, blocks),
         "directions": directions,
         "rotated": rotated,
-        "col_map": list(state.col_map),
+        "col_map": list(col_map),
         "asides": n_asides,
         "fig_regions": sum(
             1 for r in local["rasters"] if r.kind == "figure"
@@ -382,7 +414,7 @@ def _page_report(local):
         "fig_members": sum(
             len(r.ids) for r in local["rasters"] if r.kind == "figure"
         ),
-        "order": _reading_order(ordered, state.edges, state.col_map, state.lang),
+        "order": _reading_order(ordered, edges, col_map, state.lang),
     }
 
 
@@ -398,7 +430,7 @@ def _convert_with_reports(pdf, out, lang, drop_edges):
     reports = []
     render_code = render._render_page.__code__
     reading_code = _reading_columns.__code__
-    fold = {"evidence": []}
+    fold = {"calls": []}
 
     def capture(frame, event, arg):
         """Read completed render frames, leaving all converter data untouched."""
@@ -407,7 +439,10 @@ def _convert_with_reports(pdf, out, lang, drop_edges):
         if frame.f_code is render_code and "nonbody_ids" in frame.f_locals:
             reports.append(_page_report(frame.f_locals))
         elif frame.f_code is reading_code and "evidence" in frame.f_locals:
-            fold["evidence"] = frame.f_locals["evidence"]
+            loc = frame.f_locals
+            # one call per zone grid (#37) — retain each call's own
+            # edges so the doc zone's evidence can be selected below
+            fold["calls"].append((list(loc["edges"]), loc["evidence"]))
 
     previous = sys.getprofile()
     sys.setprofile(capture)
@@ -419,23 +454,45 @@ def _convert_with_reports(pdf, out, lang, drop_edges):
         raise RuntimeError(
             "incomplete render trace; check renderer instrumentation contract"
         )
-    return stats, reports, fold["evidence"]
+    return stats, reports, fold["calls"]
 
 
-def _print_report(stats, pages, fold_evidence):
+def _print_report(stats, pages, fold_calls):
     """Separate raw input geometry from renderer-surviving source-block metrics."""
-    first, edges = pages[0], pages[0]["edges"]
-    col_map = pages[0]["col_map"]
+    first, edges = pages[0], pages[0]["doc_edges"]
+    col_map = pages[0]["doc_col_map"]
     fragments = [f for p in pages for f in p["fragments"]]
     surviving = [f for f in fragments if f.survives]
     raw_prof = _column_profiles(fragments, edges)
     body_prof = _column_profiles(surviving, edges)
     image_cols = sum((p["image_cols"] for p in pages), Counter())
     widths = sorted({round(p["width"], 1) for p in pages})
+    # the doc zone's deciding evidence: ``_reading_columns`` now runs
+    # once per zone grid, so pick the call whose edges match the doc
+    # grid — its FOLD shares are the ones that decided the doc edges
+    fold_evidence = next(
+        (
+            ev
+            for call_edges, ev in fold_calls
+            if _grids_agree(call_edges, edges)
+        ),
+        [],
+    )
+    # active grids merge into zones on the same agreement rule the
+    # converter groups by — parity-shifted edges inside the tolerance
+    # are one zone, not two
+    zone_grids = []
+    for p in pages:
+        for zone in zone_grids:
+            if _grids_agree(zone, p["edges"]):
+                break
+        else:
+            zone_grids.append(p["edges"])
     print(
         f"  {stats['pages']}p  widths={widths}  body={first['body']:.1f}  "
         f"line_h={first['line_h']:.1f}  doc_edges={_bbox(edges)} "
-        f"reading_cols={len(set(col_map))}"
+        f"zones={len(zone_grids)} "
+        f"reading_cols={max(len(set(p['col_map'])) for p in pages)}"
     )
     for i, edge in enumerate(edges):
         # an edge folds rightward only when its mapped id is shared with a
@@ -470,9 +527,16 @@ def _print_report(stats, pages, fold_evidence):
     for p in pages:
         raw = p["fragments"]
         body = [f for f in raw if f.survives]
+        # the page's committed grid vs the doc prior (#37): "page"
+        # adopted its own strong candidate, "doc-weak" tried and
+        # failed the strength gate, "doc" already agreed
+        grid_tag = (
+            "doc" if _grids_agree(p["edges"], edges) else _bbox(p["edges"])
+        )
         print(
             f"  page {p['index']} (0-based): {p['width']:.0f}x{p['height']:.0f} "
-            f"/Rotate={p['rotation']} raw_x0_clusters={_bbox(p['clusters'])} "
+            f"/Rotate={p['rotation']} grid={grid_tag} src={p['grid_source']} "
+            f"raw_x0_clusters={_bbox(p['clusters'])} "
             f"off-grid={_bbox(p['off_grid'])}"
         )
         print(f"    INPUT short <={SHORT_CHARS}: {_short_counts(raw)}")
