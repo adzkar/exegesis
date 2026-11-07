@@ -96,6 +96,40 @@ def _set_language(epub: Path, code: str):
             z.writestr(n, data)
 
 
+def _raster_margin_legend_pdf(path):
+    """A rotated raster table beside a margin `Table 1.` strip — the
+    legend binds into the raster's `alt`, so the eval's bound-legend
+    arm must grade it 'rasterized' and excuse its words, not flag a
+    'missing' legend or genuine loss on correct output."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(200, 200, 540, 300),
+        "Body prose fills the column and keeps ordinary reading order "
+        "through the page so the margin strip beside it stays "
+        "secondary.", fontsize=BODY)
+    p.insert_textbox(
+        fitz.Rect(200, 400, 540, 500),
+        "More body prose keeps the column reading so the margin "
+        "strip beside it stays secondary matter.", fontsize=BODY)
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(200, 120, 540, 185),
+        "Body prose fills the column and keeps ordinary reading order "
+        "above the table.", fontsize=BODY)
+    for i, x in enumerate((200, 260, 320)):
+        p.insert_textbox(fitz.Rect(x, 380, x + 15, 520),
+                         f"r1c{i} r2c{i} r3c{i}", fontsize=10)
+    text(p, 36, 370, "Table 1. Rotated margin legend.", size=9)
+    text(p, 36, 420, "Note: *p<0.1;", size=9)
+    p.insert_textbox(
+        fitz.Rect(200, 560, 540, 625),
+        "Body prose fills the column and keeps ordinary reading order "
+        "below the table.", fontsize=BODY)
+    doc.save(str(path))
+    doc.close()
+
+
 def _fig_pdf(path):
     """An embedded raster with two panel labels and a caption — the
     figure claim rasterizes the labels to pixels and absorbs the
@@ -388,6 +422,22 @@ def test_eval_staggered_cells_rasterize_excused(tmp_path):
     convert(pdf, epub)
     r = _run(pdf, epub)
     assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_eval_raster_margin_legend_grades_rasterized(tmp_path):
+    """A margin legend bound into the raster's `alt` emits no visible
+    text — the replayed `_bind_legend` arm must excuse its words and
+    grade the `Table 1.` disposition 'rasterized', not 'missing'
+    (#54)."""
+    pdf = tmp_path / "ralt.pdf"
+    _raster_margin_legend_pdf(pdf)
+    epub = tmp_path / "ralt.epub"
+    convert(pdf, epub)
+    r = _run(pdf, epub)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "Table 1: rasterized" in r.stdout
+    assert "legend absent" not in r.stdout
+    assert "genuine loss 0" in r.stdout
 
 
 def test_eval_figure_region_labels_are_excused(tmp_path):
