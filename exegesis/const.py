@@ -9,6 +9,13 @@ BOILERPLATE_COVERAGE = 0.4
 # paragraph license footer) from excusing itself.
 BOILERPLATE_MAX_LINES = 6
 BOILERPLATE_MAX_CHARS = 300
+# A running head fused to the block below it escapes the whole-block
+# signature test. The prefix split tries leading-line joins up to the
+# boilerplate set's own line bound — a matched join is already a
+# verified recurring signature, so a longer cap can't promote a title
+# that merely resembles the head, and real running heads reach 4-6
+# lines (the medRxiv license head above).
+SIGNATURE_PREFIX_MAX_LINES = BOILERPLATE_MAX_LINES
 MIN_IMAGE_BYTES = 2048
 MIN_HEADING_CHARS = 4
 MAX_HEADING_CHARS = 120

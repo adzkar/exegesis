@@ -269,22 +269,91 @@ def _page_ctx(page, boilerplate: set[str], lang: LangProfile):
     the body band that still survive the signature/pattern arms — so a
     margin-adjacent cell isn't excused here as a strip while the
     converter rightfully rasterizes it, and a margin-strips-only band
-    can't self-exempt on either side."""
+    can't self-exempt on either side. `splits` mirrors the
+    `_split_signature_prefixes` pre-pass `convert` runs before ordering —
+    iterated like the pre-pass itself (each remainder re-enters on its
+    recomputed bbox) so stacked heads split one at a time: for each
+    fused-head block, the split-off head lines' words (the furniture
+    side) and the remainder's text/bbox (the kept side). The strip clip
+    reads the canonical helper's post-split stream — the same
+    `_ordered_blocks` sees — so a fused block's head lines can't
+    inflate the clip's tall-seed shape or stretch its region union."""
     from types import SimpleNamespace
 
     # lazy like main(): pulling analyze pulls fitz — an ImportError must
     # reach the exit-2 net, so it can't sit at module top
-    from exegesis.analyze import _strip_clip, _upright_dir
+    from exegesis.analyze import (
+        _lines_bbox,
+        _signature_prefix_len,
+        _split_signature_prefixes,
+        _strip_clip,
+        _upright_dir,
+    )
+    from exegesis.text import _line_text
 
     pdict = page.get_text("dict")
+    dmap = {tuple(b["bbox"]): b for b in pdict["blocks"]}
+    # the post-split stream ordering sees — the pipeline's own pre-pass,
+    # not a re-implementation, so the clip input can never drift
+    post = _split_signature_prefixes(
+        pdict["blocks"], page.rect.height, boilerplate, lang)
+    splits = {}
+    for b in pdict["blocks"]:
+        if b["type"] != 0:
+            continue
+        heads, rest = [], b
+        while True:
+            k = _signature_prefix_len(
+                rest, page.rect.height, boilerplate, lang)
+            if not k:
+                break
+            lines = _block_lines(rest)
+            heads.append(lines[:k])
+            rest = dict(
+                rest, lines=lines[k:], bbox=_lines_bbox(lines[k:]))
+        if not heads:
+            continue
+        splits[tuple(b["bbox"])] = SimpleNamespace(
+            head_words=WORD_RE.findall(
+                " ".join(
+                    _line_text(l) for group in heads for l in group
+                ).lower()),
+            kept_text="".join(
+                _line_text(l) + "\n" for l in rest["lines"]),
+            kept_bbox=rest["bbox"],
+        )
+        # the remainder is a synthetic block — give `_strip` its real
+        # line dirs like a dict hit, not a miss that falls back to <25pt
+        dmap[rest["bbox"]] = {"lines": rest["lines"]}
     return SimpleNamespace(
         page=page,
         rect=page.rect,
         mb_w=page.mediabox.width,
         upright=_upright_dir(page),
-        dmap={tuple(b["bbox"]): b for b in pdict["blocks"]},
-        rtbl=_strip_clip(page, pdict["blocks"], boilerplate, lang),
+        dmap=dmap,
+        splits=splits,
+        rtbl=_strip_clip(page, post, boilerplate, lang),
     )
+
+
+def _kept(block, ctx, boilerplate: set[str], lang: LangProfile):
+    """The block's emitted `(bbox, text)`, or None when convert drops it.
+
+    The emitted view is the post-split remainder when `convert`'s
+    pre-pass detaches leading signature lines, else the tuple itself;
+    the drop arms then apply to *that* view, not the pre-split tuple —
+    a fused head's remainder can itself be signature furniture (stacked
+    heads fused on one page split off one at a time, so each kept view
+    re-enters the same checks), and expecting its text would report
+    genuine loss on a correct conversion. `_dropped` consumers read
+    text through this so a head's words can't seed legends, headings, or
+    coverage windows the converter never emitted them to."""
+    s = ctx.splits.get(tuple(block[:4]))
+    bb, text = ((s.kept_bbox, s.kept_text) if s
+                else (block[:4], block[4]))
+    if _dropped((*bb, text), ctx, boilerplate, lang):
+        return None
+    return bb, text
 
 
 def _strip(block, ctx) -> bool:
@@ -359,11 +428,21 @@ def furniture_words(ctxs, boilerplate: set[str],
     stripped occurrences, so `of`/`vol`/page digits can't
     blanket-excuse genuine body loss. Raw tokens are collected, not
     the dehyphenated gate text — the missing-side words are the
-    unjoined fragments."""
+    unjoined fragments. A fused-head block contributes its split-off
+    head's words, plus the remainder's when the drop arms hold for the
+    remainder too (stacked heads whose own signatures recur — convert
+    strips both halves, so both excuse)."""
     furn: Counter = Counter()
     for ctx in ctxs:
         for b in ctx.page.get_text("blocks"):
-            if b[6] == 0 and _dropped(b, ctx, boilerplate, lang):
+            if b[6] != 0:
+                continue
+            if s := ctx.splits.get(tuple(b[:4])):
+                furn.update(s.head_words)
+                if _dropped((*s.kept_bbox, s.kept_text),
+                            ctx, boilerplate, lang):
+                    furn.update(WORD_RE.findall(s.kept_text.lower()))
+            elif _dropped(b, ctx, boilerplate, lang):
                 furn.update(WORD_RE.findall(b[4].lower()))
     return furn
 
@@ -372,7 +451,9 @@ def rasterized_blocks(ctxs, boilerplate: set[str],
                       lang: LangProfile):
     """Words the rotated-table path carries only as pixels. Mirrors
     `analyze._rotated_table_region` over the page's body blocks
-    (non-empty text blocks `_dropped` keeps): >=3 tall-narrow blocks
+    (non-empty text blocks `_dropped` keeps, each read through its
+    post-split `_kept` view so a fused head's lines can't seed or
+    supply a cell): >=3 tall-narrow blocks
     (height > 4x width and > 60pt) sharing a y-point, region = the
     union bbox of every tall block. Then `render._render_page`'s
     `tbl_ids`: every body block whose bbox intersects the region leaves
@@ -392,32 +473,36 @@ def rasterized_blocks(ctxs, boilerplate: set[str],
     regions = 0
     for pi, ctx in enumerate(ctxs):
         raw = ctx.page.get_text("blocks")
-        body = [(bi, b) for bi, b in enumerate(raw)
+        body = [(bi, *v) for bi, b in enumerate(raw)
                 if b[6] == 0 and b[4].strip()
-                and not _dropped(b, ctx, boilerplate, lang)]
-        tall = [b for _, b in body
-                if b[3] - b[1] > 4 * max(1, b[2] - b[0]) and b[3] - b[1] > 60]
+                and (v := _kept(b, ctx, boilerplate, lang))]
+        tall = [bb for _, bb, _t in body
+                if bb[3] - bb[1] > 4 * max(1, bb[2] - bb[0])
+                and bb[3] - bb[1] > 60]
         cov, shared = 0, False
-        for _, d in sorted([(b[1], 1) for b in tall] + [(b[3], -1) for b in tall]):
+        for _, d in sorted([(bb[1], 1) for bb in tall]
+                           + [(bb[3], -1) for bb in tall]):
             cov += d
             if cov >= 3:
                 shared = True
                 break
         if not shared:
             continue
-        region = fitz.Rect(min(b[0] for b in tall), min(b[1] for b in tall),
-                           max(b[2] for b in tall), max(b[3] for b in tall))
+        region = fitz.Rect(min(bb[0] for bb in tall),
+                           min(bb[1] for bb in tall),
+                           max(bb[2] for bb in tall),
+                           max(bb[3] for bb in tall))
         regions += 1
-        for bi, b in body:
-            if fitz.Rect(b[:4]).intersects(region):
+        for bi, bb, bt in body:
+            if fitz.Rect(bb).intersects(region):
                 claimed.add((pi, bi))
-                words.update(WORD_RE.findall(b[4].lower()))
+                words.update(WORD_RE.findall(bt.lower()))
                 legends.update(
                     n.upper() for n in _table_legend_re(lang).findall(
-                        _flatten(b[4])))
+                        _flatten(bt)))
                 fig_legends.update(
                     n.upper() for n in _fig_legend_re(lang).findall(
-                        _flatten(b[4])))
+                        _flatten(bt)))
     return words, frozenset(legends), frozenset(fig_legends), regions, claimed
 
 
@@ -1049,10 +1134,10 @@ def main() -> int:
     # `_dropped` blocks are excluded: furniture and margin-strip text
     # was never expected in the EPUB — a rotated caption beside a
     # landscape table mustn't open a disposition row.
-    kept_text = [b[4]
+    kept_text = [v[1]
                  for p, ctx in zip(pdf, ctxs)
                  for b in p.get_text("blocks")
-                 if b[6] == 0 and not _dropped(b, ctx, boilerplate, lang)]
+                 if b[6] == 0 and (v := _kept(b, ctx, boilerplate, lang))]
     pdf_blocks_text = "\n".join(
         _flatten(t)
         for t in kept_text)
@@ -1065,18 +1150,18 @@ def main() -> int:
     # line inside a rotated region can only ever emit as pixels and
     # mustn't fake a missing heading.
     pdf_lines_text = "\n".join(
-        b[4]
+        v[1]
         for pi, p in enumerate(pdf) for bi, b in enumerate(p.get_text("blocks"))
-        if b[6] == 0 and not _dropped(b, ctxs[pi], boilerplate, lang)
+        if b[6] == 0 and (v := _kept(b, ctxs[pi], boilerplate, lang))
         and (pi, bi) not in raster_claimed)
     # Coverage windows additionally mask region-claimed cell blocks:
     # rasterized text can only survive as pixels, so its grams could
     # never match and would drag a neighboring upright table's window
     # under the 0.6 flag on a correct conversion.
     win_text = "\n".join(
-        _flatten(b[4])
+        _flatten(v[1])
         for pi, p in enumerate(pdf) for bi, b in enumerate(p.get_text("blocks"))
-        if b[6] == 0 and not _dropped(b, ctxs[pi], boilerplate, lang)
+        if b[6] == 0 and (v := _kept(b, ctxs[pi], boilerplate, lang))
         and (pi, bi) not in raster_claimed)
     epub_text = (" ".join(xhtml_text(c) for c in chapters.values())
                  + " " + notes_text(notes, lang))
@@ -1251,9 +1336,10 @@ def main() -> int:
         # stream F collects from: raw page text would let a sentence
         # that merely wraps at `Table 5.` misclassify a figure page as
         # a ruled grid.
-        t = "\n".join(_flatten(b[4]) for b in pdf[i].get_text("blocks")
-                      if b[6] == 0 and not _dropped(b, ctxs[i],
-                                                  boilerplate, lang))
+        t = "\n".join(_flatten(v[1])
+                      for b in pdf[i].get_text("blocks")
+                      if b[6] == 0 and (v := _kept(b, ctxs[i],
+                                                 boilerplate, lang)))
         if _table_legend_re(lang).search(t):
             return True
         toks = WORD_RE.findall(t)

@@ -42,6 +42,22 @@ FUSED_TITLE_LINES = (
 )
 FUSED_TITLE = " ".join(FUSED_TITLE_LINES)
 
+STACKED_HEAD_LINES = (
+    "Stacked Journal Testing",
+    "Volume Twelve Issue Three",
+)
+STACKED_TITLE_LINES = (
+    "A study of stacked running heads",
+    "with a fused block on page one",
+)
+STACKED_TITLE = " ".join(STACKED_TITLE_LINES)
+STACKED_BODY = (
+    "Stacked-head body page {} retains ordinary evidence below the title.",
+    "The sentences keep the article's argument in the normal body flow.",
+    "Stacked-head body page {} closes with a separate retained result.",
+    "Its prose outweighs the small running heads in every font vote.",
+)
+
 INFO_TITLE = "Evidence across connected measurements"
 INFO_FIELDS = ("Received: 3 March 2024", "Accepted: 9 April 2024")
 INFO_PREFIX = (
@@ -189,6 +205,35 @@ def fused_running_head_title(path):
                 "The first page alone adds the title to the otherwise identical running head.",
                 "This final sentence supplies a separate anchor for the single body column.",
             ),
+            leading=14,
+        )
+    return _save(doc, path)
+
+
+def stacked_fused_heads(path):
+    """Two independently-recurring heads — separate edge-zone blocks on
+    later pages, fused ahead of the title in one block on page 1 — leave
+    a post-split remainder that is itself signature furniture (#46)."""
+    doc = fitz.open()
+    for number in range(1, 4):
+        page = _page(doc)
+        if number == 1:
+            # adjacent inserts fuse into one block — heads at head size,
+            # title at title size, like the real journal fusion
+            text(page, 72, 100, STACKED_HEAD_LINES[0], size=9)
+            text(page, 72, 112, STACKED_HEAD_LINES[1], size=9)
+            block(page, 72, 131, STACKED_TITLE_LINES, size=18, leading=21)
+        else:
+            text(page, 72, 100, STACKED_HEAD_LINES[0], size=9)
+            text(page, 72, 140, STACKED_HEAD_LINES[1], size=9)
+        block(
+            page, 72, 240,
+            tuple(part.format(number) for part in STACKED_BODY[:2]),
+            leading=14,
+        )
+        block(
+            page, 72, 340,
+            tuple(part.format(number) for part in STACKED_BODY[2:]),
             leading=14,
         )
     return _save(doc, path)

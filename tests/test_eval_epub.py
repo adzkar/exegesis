@@ -12,12 +12,14 @@ import fitz
 from furniture_fixtures import (
     NORMAL_MARGIN_TEXT,
     dual_margin_strips,
+    fused_running_head_title,
     long_repeated_running_head,
     repeated_bottom_foot,
     rotated_margin_stamp,
     rotated_page_upright_margin,
     rotated_table_margin_cells,
     rotated_table_staggered_cells,
+    stacked_fused_heads,
 )
 
 from exegesis import convert
@@ -237,6 +239,81 @@ def test_eval_margin_cells_rasterize_excused(tmp_path):
     convert(pdf, epub)
     r = _run(pdf, epub)
     assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_eval_fused_head_is_excused(tmp_path):
+    """The split-off running head is furniture by design — the eval
+    mirrors the prefix split so its words excuse while the freed title
+    and body still count toward coverage (#40)."""
+    pdf = tmp_path / "fused.pdf"
+    fused_running_head_title(pdf)
+    epub = tmp_path / "fused.epub"
+    convert(pdf, epub)
+    r = _run(pdf, epub)
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_eval_stacked_fused_heads_are_excused(tmp_path):
+    """Two independently-recurring heads fused ahead of the title split
+    one at a time — the second head's remainder is itself signature
+    furniture, so convert drops it and the eval must excuse its words
+    rather than report genuine loss on a correct conversion (#46)."""
+    pdf = tmp_path / "stacked.pdf"
+    stacked_fused_heads(pdf)
+    epub = tmp_path / "stacked.epub"
+    convert(pdf, epub)
+    r = _run(pdf, epub)
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+def _stub_page(blocks):
+    """A stand-in `page` for `_page_ctx`: dict extraction plus the
+    rect/mediabox/rotation attributes the clip and strip arms read."""
+    class _Page:
+        rect = fitz.Rect(0, 0, W, H)
+        mediabox = fitz.Rect(0, 0, W, H)
+        rotation = 0
+
+        def get_text(self, _kind):
+            return {"blocks": blocks}
+
+    return _Page()
+
+
+def test_page_ctx_strip_clip_reads_post_split_blocks():
+    """`_strip_clip` must see the post-split block stream
+    `order._ordered_blocks` does — a fused block's head lines can't
+    inflate the clip's region union eval-side (#46)."""
+    import importlib.util
+
+    from exegesis.analyze import _signature
+    from exegesis.lang import EN
+
+    spec = importlib.util.spec_from_file_location("eval_epub", EVAL)
+    eval_epub = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(eval_epub)
+
+    # a fused head line rides atop a tall rotated column: pre-split the
+    # whole block is a tall seed reaching up to y=95; post-split the
+    # head detaches as furniture and the remainder's region starts at
+    # the rotated cells' y=300
+    head = {"spans": [{"text": "Strip Journal", "size": 9}],
+            "bbox": (300, 95, 380, 104), "dir": (1, 0)}
+    cells = [{"spans": [{"text": f"cell {i}", "size": 8}],
+              "bbox": (300, 300 + i * 20, 320, 318 + i * 20),
+              "dir": (0, -1)} for i in range(10)]
+    fused = {"type": 0, "bbox": (300, 95, 380, 520),
+             "lines": [head, *cells]}
+
+    def tall(x0, x1):
+        lines = [{"spans": [{"text": "cell", "size": 8}],
+                  "bbox": (x0, 320 + i * 20, x1, 338 + i * 20),
+                  "dir": (0, -1)} for i in range(10)]
+        return {"type": 0, "bbox": (x0, 320, x1, 520), "lines": lines}
+
+    page = _stub_page([fused, tall(20, 40), tall(560, 580)])
+    ctx = eval_epub._page_ctx(page, {_signature("Strip Journal")}, EN)
+    assert ctx.rtbl == fitz.Rect(20, 300, 580, 520)
 
 
 def test_eval_bottom_footer_is_excused(tmp_path):
