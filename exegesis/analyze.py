@@ -1767,7 +1767,7 @@ def _figure_caption_near(area, blocks, member_ids, edges, page_width,
     return best[1] if best else None
 
 
-def _figure_candidates(page, blocks, edges, page_width, line_h,
+def _figure_candidates(page, blocks, edges, page_width,
                        lang: LangProfile = EN):
     """Geometric figure candidates on a page.
 
@@ -2052,7 +2052,7 @@ def _page_claims(page, body_blocks, all_blocks, edges, page_width, line_h,
     """
     page_height = page.rect.height
     candidates = _figure_candidates(
-        page, body_blocks, edges, page_width, line_h, lang
+        page, body_blocks, edges, page_width, lang
     )
     seeds_full: dict = {}
     tops_full = _footnote_tops(
