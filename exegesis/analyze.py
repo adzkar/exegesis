@@ -29,6 +29,10 @@ from .const import (
     INFO_CONT_X_TOL,
     INFO_MEMBER_MAX_LINES,
     INFO_RUN_MAX_LINES,
+    MARGIN_BAND_TOL,
+    MARGIN_EDGE_MAX_FILL,
+    MARGIN_EDGE_SHARE,
+    MARGIN_RIGHT_START,
     MAX_HEADING_CHARS,
     MIN_IMAGE_BYTES,
     OUTDENT_BAND_FILL,
@@ -408,6 +412,318 @@ def _detect_asides(pages, line_h, boilerplate, lang: LangProfile = EN):
             for b in members + attached:
                 b["aside"] = region
             region += 1
+
+
+# a margin fragment reads as a sidebar label when it opens
+# ``Label:`` — an uppercase-led head (markers allowed) ending in a
+# colon inside 60 chars; URLs can't match ('https' opens lowercase,
+# and '/' is refused before the colon anyway)
+_MARGIN_LABEL_RE = re.compile(r"^\s*[*†‡§]?\s*[A-ZÀ-Þ][^\n:/]{1,60}:")
+# manuscript line numbering — digits and punctuation, never words —
+# is margin furniture, not a sidebar: it can never be sidebar evidence
+_MARGIN_NUMBERS_RE = re.compile(r"^[\s\d.,;:*()±\-–—/°%]+$")
+# a label stem plus a serial number ('Aim 01', 'Data 12', '3') is
+# numbering, not a sidebar item — the strip veto's block-level arm
+_MARGIN_SERIAL_RE = re.compile(
+    r"^\s*[A-Za-zÀ-Þ]{0,10}\s*[-–—]?\s*\d{1,4}[a-zA-Z]?\s*[.,;:!?]?\s*$"
+)
+
+
+def _margin_sig(text):
+    """Repeat-detection skeleton for margin fragments: digits collapse
+    so a DOI family's numbering (``…journal.pone.NNNNN.tNNN``) or a
+    ``Notes.`` stub recurring on later pages shares one signature."""
+    return re.sub(r"\d+", "#", " ".join(text.lower().split()))
+
+
+def _margin_recurring(text, sig_pages, group_sigs):
+    """A fragment recurs *as sidebar evidence* only when its skeleton is
+    punctuation-structured — URLs, ``Notes.``, DOI stems, ``NEGPOS > NEU``
+    comparisons. Word-only heading stems (``Section N alpha``) normalize
+    to the same skeleton too but are outdent material, not marginalia."""
+    sig = _margin_sig(text)
+    if not re.search(r"[^\w\s#]", sig):
+        return False
+    return len(sig_pages.get(sig, ())) >= 2 or group_sigs[sig] >= 2
+
+
+def _margin_block_evidence(b, text, recurring, lead_re, multi, lang):
+    """Sidebar evidence one text block carries: a table-legend or
+    ``Label:`` opener, an ``info_labels`` field (grouped only — a lone
+    field is a front-matter box fragment, #41's own contract), or a
+    recurring fragment. Serial-numbered and digits-only fragments —
+    manuscript line numbering — never carry evidence."""
+    if (
+        _MARGIN_NUMBERS_RE.fullmatch(text.strip())
+        or _MARGIN_SERIAL_RE.fullmatch(text)
+    ):
+        return False
+    lines = _block_lines(b)
+    if lead_re is not None and lines and _field_label(
+        _line_text(lines[0]), lead_re
+    ):
+        # field labels are #41's box vocabulary — evidence only when
+        # they arrive grouped; a lone ``Received:`` stays body flow
+        return multi
+    if lang.table_caption.match(text) or _MARGIN_LABEL_RE.match(text):
+        return True
+    return recurring
+
+
+def _margin_group_evidence(members, sig_pages, lead_re, lang):
+    """Sidebar evidence across the group: any text member carrying a
+    table-legend or ``Label:`` opener, an ``info_labels`` field, or a
+    fragment that recurs — across doc pages, or inside the group itself
+    (two sibling DOI links). Margin images ride an evidenced group but
+    never justify one — a figure fragment spilling past the band is not
+    marginalia on its own."""
+    texts = {
+        id(b): _block_text(b, lang) for b in members if b["type"] == 0
+    }
+    group_sigs = Counter(_margin_sig(t) for t in texts.values())
+    multi = len(members) >= 2
+    for b in members:
+        if b["type"] != 0:
+            continue
+        text = texts[id(b)]
+        recurring = _margin_recurring(text, sig_pages, group_sigs)
+        if _margin_block_evidence(
+            b, text, recurring, lead_re, multi, lang
+        ):
+            return True
+    return False
+
+
+def _margin_bands(page, pdict, edges, boilerplate, lang: LangProfile = EN):
+    """The page's occupied body bands: ``[edge, right)`` per column,
+    where ``right`` is the next edge or — for the last column and every
+    gutter — the measured occupied extent. Occupancy counts text blocks
+    starting inside the band's own left stretch (``MARGIN_RIGHT_START``
+    of its nominal width), so a stray margin block can't stretch the
+    band that would exclude it — and a right-margin strip starts too far
+    out to measure the column's reach. Widths compare in the bboxes' own
+    unrotated space (``page.mediabox``, the ``_is_margin_strip`` rule)
+    — displayed ``page.rect`` swaps axes on /Rotate pages."""
+    bands = []
+    for i, e in enumerate(edges):
+        nominal = (
+            edges[i + 1] if i + 1 < len(edges) else page.mediabox.width
+        )
+        cap = e + MARGIN_RIGHT_START * (nominal - e)
+        reach = [
+            b["bbox"][2]
+            for b in pdict["blocks"]
+            if b["type"] == 0
+            and e - 15 <= b["bbox"][0] <= cap
+            and b.get("aside") is None
+            and not _is_signature_furniture(
+                b, page.rect.height, boilerplate
+            )
+            and not _is_furniture(b, page, _block_text(b, lang), lang)
+        ]
+        hi = min(nominal, max(reach)) if reach else nominal
+        bands.append((e, hi))
+    return bands
+
+
+def _margin_candidates(page, pdict, bands, boilerplate,
+                       lang: LangProfile = EN):
+    """Blocks fully outside every body band — only candidates; position
+    is never sufficient by itself. Already-claimed asides (#41),
+    furniture-shaped blocks (running heads, page numbers, rotated
+    margin strips), ``Figure N`` legends (a figure's caption stays with
+    the figure machinery), and all-rotated label bands stay out — the
+    rotated ones are figure-region material (#35), not marginalia."""
+    upright = _upright_dir(page)
+    cands = []
+    for b in pdict["blocks"]:
+        if b["type"] not in (0, 1) or b.get("aside") is not None:
+            continue
+        x0, _y0, x1, _y1 = b["bbox"]
+        if any(
+            x1 > lo - MARGIN_BAND_TOL and x0 < hi + MARGIN_BAND_TOL
+            for lo, hi in bands
+        ):
+            continue
+        if b["type"] == 1:
+            if len(b.get("image") or b"") >= MIN_IMAGE_BYTES:
+                cands.append(b)
+            continue
+        text = _block_text(b, lang)
+        if (
+            not text
+            or lang.figure_caption.match(text)
+            or _is_furniture(b, page, text, lang)
+            or _is_signature_furniture(b, page.rect.height, boilerplate)
+        ):
+            continue
+        seen = [
+            d for d in (_line_dir(l) for l in _block_lines(b))
+            if d is not None
+        ]
+        if seen and all(d != upright for d in seen):
+            continue
+        cands.append(b)
+    return cands
+
+
+def _margin_zone(b, bands):
+    """Which margin the candidate sits in: left of the first band, right
+    of the last occupied edge, or inside an inter-column gutter."""
+    x0, _, x1, _ = b["bbox"]
+    if x1 <= bands[0][0] - MARGIN_BAND_TOL:
+        return "L"
+    if x0 >= bands[-1][1] + MARGIN_BAND_TOL:
+        return "R"
+    for j in range(len(bands) - 1):
+        if (
+            x0 >= bands[j][1] + MARGIN_BAND_TOL
+            and x1 <= bands[j + 1][0] - MARGIN_BAND_TOL
+        ):
+            return ("G", j)
+    return None
+
+
+def _margin_groups(ms, lang: LangProfile = EN):
+    """Split one page-strip into groups at table-legend openers: each
+    ``Table N`` block seeds a group absorbing the strip members below
+    it; members ahead of the first opener keep their own group."""
+    groups, cur = [], []
+    for b in ms:
+        if (
+            b["type"] == 0
+            and lang.table_caption.match(_block_text(b, lang))
+            and cur
+        ):
+            groups.append(cur)
+            cur = []
+        cur.append(b)
+    if cur:
+        groups.append(cur)
+    return groups
+
+
+def _margin_voted_edge(pages, edges, boilerplate, lead_re,
+                       lang: LangProfile = EN):
+    """Mark members of an outermost *voted* margin column, if one exists.
+
+    A margin strip recurring densely enough can reach the column-edge
+    quorum — an edge is that column only when outermost, narrow against
+    the widest band, and ≥``MARGIN_EDGE_SHARE`` of its non-spanning,
+    non-furniture members carry sidebar evidence. Evidence counts on
+    pages ≥1 like the outdent read (page 0's front matter can't be told
+    from outdented heads), then every page's members mark — a margin
+    column's page-0 content is marginalia too. Returns True when any
+    edge classified — the caller re-votes the grid once so the lifted
+    column surrenders its edge.
+    """
+    if len(edges) < 2:
+        return False
+    widths = [edges[i + 1] - edges[i] for i in range(len(edges) - 1)]
+    widths.append(median(p.mediabox.width for p, _d in pages) - edges[-1])
+    widest = max(widths) or 1.0
+    marked = False
+    for i in (0, len(edges) - 1):
+        if widths[i] >= MARGIN_EDGE_MAX_FILL * widest:
+            continue
+        members = []
+        for pi, (page, pdict) in enumerate(pages):
+            for b in pdict["blocks"]:
+                if (
+                    b["type"] != 0
+                    or b.get("aside") is not None
+                    or _is_spanning(b, edges)
+                    or _assign_column(b, edges) != i
+                ):
+                    continue
+                text = _block_text(b, lang)
+                if (
+                    not text
+                    or _is_furniture(b, page, text, lang)
+                    or _is_signature_furniture(
+                        b, page.rect.height, boilerplate
+                    )
+                ):
+                    continue
+                members.append((pi, b, text))
+        evidence = [(pi, b, t) for pi, b, t in members if pi]
+        if len(evidence) < 2:
+            continue
+        sigs: dict[str, set[int]] = {}
+        for pi, _b, t in evidence:
+            sigs.setdefault(_margin_sig(t), set()).add(pi)
+        hit = sum(
+            _margin_block_evidence(
+                b,
+                t,
+                len(sigs[_margin_sig(t)]) >= 2
+                and re.search(r"[^\w\s#]", _margin_sig(t)) is not None,
+                lead_re,
+                True,
+                lang,
+            )
+            for _pi, b, t in evidence
+        )
+        if hit < MARGIN_EDGE_SHARE * len(evidence):
+            continue
+        for pi, b, _t in members:
+            b["aside"] = ("margin-edge", pi, i)
+        marked = True
+    return marked
+
+
+def _detect_margins(pages, edges, boilerplate, lang: LangProfile = EN):
+    """Lift marginalia off the body grid into ``block["aside"]`` regions.
+
+    Each page's body bands derive from the doc grid's occupied x-ranges
+    and gutters (``_margin_bands``); text or media wholly outside those
+    bands is only a candidate — a margin strip earns its aside with
+    spatial coherence (a shared x-strip on the page, split at
+    table-legend openers into legend-bound groups) plus sidebar evidence
+    (``_margin_group_evidence``: table caption, ``Label:``, grouped
+    ``info_labels`` field, or a punctuation-structured fragment
+    recurring across pages — margin images ride an evidenced group but
+    never justify one), while serial-numbered strips —
+    manuscript line numbering — carry no evidence at all. Blocks
+    already claimed by ``_detect_asides`` stay claimed — one aside
+    region per block — and ``Figure N`` legends never become
+    candidates, since a figure's caption belongs to the figure
+    machinery. ``_margin_voted_edge`` handles the conditional re-vote
+    arm; the caller re-votes the grid once when it fires. Region keys
+    are ``("margin", page, group)`` / ``("margin-edge", page, edge)``;
+    emission rides the shared ``<aside>`` path.
+    """
+    lead_re = _info_lead_re(lang)
+    voted = _margin_voted_edge(pages, edges, boilerplate, lead_re, lang)
+    sig_pages: dict[str, set[int]] = {}
+    per_page = []
+    for pi, (page, pdict) in enumerate(pages):
+        bands = _margin_bands(page, pdict, edges, boilerplate, lang)
+        cands = _margin_candidates(page, pdict, bands, boilerplate, lang)
+        per_page.append((bands, cands))
+        for b in cands:
+            if b["type"] == 0:
+                sig_pages.setdefault(
+                    _margin_sig(_block_text(b, lang)), set()
+                ).add(pi)
+    for pi, (bands, cands) in enumerate(per_page):
+        zones = {}
+        for b in cands:
+            zones.setdefault(_margin_zone(b, bands), []).append(b)
+        gi = 0
+        for zone in sorted(zones, key=str):
+            ms = sorted(
+                zones[zone], key=lambda b: (b["bbox"][1], b["bbox"][0])
+            )
+            for group in _margin_groups(ms, lang):
+                if not _margin_group_evidence(
+                    group, sig_pages, lead_re, lang
+                ):
+                    continue
+                for b in group:
+                    b["aside"] = ("margin", pi, gi)
+                gi += 1
+    return voted
 
 
 def _assign_column(block, edges):
@@ -920,7 +1236,9 @@ class _RasterRegion:
     # the validated raster crop when it differs from ``rect`` (figure
     # claims rasterize an exact clip; tables pad inside _rasterize)
     clip: fitz.Rect | None = None
-    # a figure's anchor caption block — stays in body flow, donates alt
+    # the raster's alt-donor caption block — a figure's anchor caption
+    # stays in body flow; a margin legend bound by ``_bind_legend`` is
+    # consumed by the alt and never re-emits as text
     caption: dict | None = None
 
 

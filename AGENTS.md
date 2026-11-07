@@ -336,6 +336,49 @@ chapters.
   text-only paragraph never can. Every member gets a shared
   `block["aside"]` region key; `lang` profiles without
   `info_labels` (hand-built profiles) detect nothing.
+- **Margin marginalia** — the machinery's second detector
+  (`analyze._detect_margins`, called in `convert()` right after the
+  `_doc_column_edges` vote, before the reading-column map; a marked
+  *voted* margin edge triggers exactly one grid re-vote). Each page's
+  body bands (`_margin_bands`) derive from the grid's occupied
+  x-ranges: per column edge, the right bound is the deepest x-extent
+  among blocks starting in the left 75% (`MARGIN_RIGHT_START`) of the
+  nominal band — a margin strip can't stretch the band that would
+  exclude it — capped by the next edge, widened by `MARGIN_BAND_TOL`
+  for slight bleed. Text or media wholly outside every band is a
+  *candidate* (`_margin_candidates`): furniture, signatures,
+  already-claimed asides, rotated strips, and `Figure N` legends are
+  excluded up front (figure-domain content belongs to the figure
+  machinery). Candidates group by margin zone (left of the first
+  band, right of the last, inside a gutter) and split at
+  `table_caption` openers (`_margin_groups`) so a legend binds its
+  own trailing notes. A group lifts only with sidebar evidence
+  (`_margin_group_evidence`): a `Table N`/`Label:` opener member, an
+  `info_labels` field inside a multi-member group, or a
+  punctuation-structured fragment recurring across doc pages or
+  within the group; serial-numbered fragments (`Aim 01`, digit
+  strips) carry no evidence, and margin images ride an evidenced
+  group but never justify one — figure artwork spilling past the
+  band is not marginalia. A margin strip dense enough to vote its
+  own edge is handled by the voted-edge arm (`_margin_voted_edge`):
+  the edge must be outermost, narrow against the widest band
+  (`MARGIN_EDGE_MAX_FILL`), and ≥`MARGIN_EDGE_SHARE` of its
+  non-spanning non-furniture members must carry evidence (counted
+  on pages ≥1 like the outdent read; then every page's members
+  mark, since a margin column's page-0 content is marginalia too).
+  Region keys are `("margin", page, group)` /
+  `("margin-edge", page, edge)` — emission rides the shared
+  `<aside>` path unchanged. Table-legend anchoring: when a page
+  holds exactly one table region and exactly one legend aside
+  group, the legend's `Table N` member binds into the table's
+  `<caption>` (or becomes a raster region's alt donor) and the
+  remaining legend material emits as an aside immediately after
+  `</table>` rather than at page end; an ambiguous pairing (two
+  tables, two legends) degrades to the whole page-end aside, and a
+  legend whose table never emits falls back to the plain aside
+  rather than dropping. `scripts/eval_epub.py` replays the same
+  pass (and re-vote) before partitioning body vs furniture so the
+  evaluator sees the same claims conversion saw.
 - **Abstract** — first small-font inset block in the top half of pages 0–1
   injects an `Abstract` h2 (title from the language profile's
   `abstract_title`).
@@ -475,17 +518,20 @@ cases deselected). Converter heuristics and golden snapshots are unchanged.
   text, and real content near the edge — the same drift applies to any
   check that borrows a pipeline heuristic. Mirror every path that drops
   text *by design*, not just furniture: rotated tables leave the flow as
-  `images/table_*.png`, so `rasterized_blocks` copies
-  `analyze._rotated_table_region` plus `render`'s `tbl_ids` intersect;
-  figure regions leave it as `images/fig_*.png`, so
-  `figure_rasterized_blocks` replays the converter's own preparation
-  (signature splits, asides, document edges) and calls
-  `analyze._page_claims` — a replay, not a mirror, so the provisional-
-  label note mask, table precedence, and crop validation can't drift —
-  and a figure page stops flagging "not capturable" on vector geometry
-  alone — an unmodeled path grades intended behavior as loss, the
-  report contradicts itself, and the High gate fails a correct
-  conversion.
+  `images/table_*.png` and figure regions as `images/fig_*.png`, so both
+  raster mirrors replay the converter's own preparation through
+  `_claim_pages` (signature splits, asides, margin lifts, document
+  edges) and call `analyze._page_claims` — a replay, not a mirror, so
+  aside marks, the provisional-label note mask, table precedence, and
+  crop validation can't drift — and a figure page stops flagging "not
+  capturable" on vector geometry alone. `rasterized_blocks` additionally
+  replays `_bind_legend`'s raster arm (one table region + one
+  legend-carrying aside on the page): a margin legend bound into a
+  raster's `alt` never emits as text, so its words, its `Table N`, and
+  its window position leave the expected side and the disposition
+  resolves 'rasterized', not 'missing' — an unmodeled path grades
+  intended behavior as loss, the report contradicts itself, and the
+  High gate fails a correct conversion.
 - A repeated regex group must match its text exactly one way — no
   empty-able repeat nested inside it (`(?:<t>x</t>|[^<]*)*`,
   `(?:\.?\s*)*`) and no two alternatives that can consume the same

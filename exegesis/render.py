@@ -401,23 +401,40 @@ def _raster_frag(
     sequence the anchor sits in (``ordered`` on body pages, ``members``
     inside an aside). ``region.kind`` picks the caption label set and
     asset-name prefix — ``table_`` rasters take ``Table N`` legends,
-    tried above the region first.
+    tried above the region first; a margin legend ``_bind_legend``
+    bound into ``region.caption`` donates the alt directly — the whole
+    block, since it left the flow with its aside.
     """
     if region.kind == "table":
-        alt = _figure_alt(
-            blocks,
-            b_i,
-            edges,
-            page_width,
-            region=region.rect,
-            fallback=state.lang.table_alt,
-            pattern=state.lang.table_caption,
-            above_pattern=state.lang.caption,
-            skip_ids=skip_ids,
-            claimed=claimed,
-            lang=state.lang,
-            col_map=col_map,
-        )
+        if (
+            region.caption is not None
+            and id(region.caption) not in claimed
+        ):
+            # a margin legend bound by _bind_legend donates the alt —
+            # it left the flow with the aside, so the caption scan
+            # below can never see it. The whole block carries: unlike
+            # the figure arm's visible caption, nothing else emits, so
+            # a 200-char trim would drop the tail silently — matching
+            # the grid arm, which takes every caption line
+            claimed.add(id(region.caption))
+            alt = html.escape(
+                _block_text(region.caption, state.lang), quote=True
+            )
+        else:
+            alt = _figure_alt(
+                blocks,
+                b_i,
+                edges,
+                page_width,
+                region=region.rect,
+                fallback=state.lang.table_alt,
+                pattern=state.lang.table_caption,
+                above_pattern=state.lang.caption,
+                skip_ids=skip_ids,
+                claimed=claimed,
+                lang=state.lang,
+                col_map=col_map,
+            )
         name = "images/table_{digest}.{ext}"
     elif region.kind == "figure":
         # the anchor caption detection already found is the alt — it
@@ -476,6 +493,51 @@ def _aside_groups(blocks):
             min(m["bbox"][0] for m in ms),
         ),
     )
+
+
+def _has_table_legend(members, lang):
+    """True for an aside group carrying a ``Table N`` caption member —
+    the margin legend shape that binds to the page's table."""
+    return any(
+        m["type"] == 0
+        and lang.table_caption.match(_block_text(m, lang))
+        for m in members
+    )
+
+
+def _bind_legend(members, region, lang):
+    """Anchor a margin legend to its table region.
+
+    When the table has no caption of its own, the legend's ``Table N``
+    block fills its native slot — a grid's ``<caption>`` line list, or
+    the raster region's alt-text donor block — and the rest of the
+    legend (notes, DOI links) emits as an aside immediately behind the
+    table frag. Returns the members still needing the aside — ``[]``
+    when the caption consumed the whole legend.
+    """
+    if region.caption is not None:
+        return members
+    cap = next(
+        (
+            m
+            for m in members
+            if m["type"] == 0
+            and lang.table_caption.match(_block_text(m, lang))
+        ),
+        None,
+    )
+    if cap is None:
+        return members
+    if getattr(region, "kind", None) is None:
+        # a grid region takes the caption block's lines into <caption>
+        region.caption = sorted(
+            _block_lines(cap),
+            key=lambda l: (l["bbox"][1], l["bbox"][0]),
+        )
+    else:
+        # a raster region adopts the caption block as its alt donor
+        region.caption = cap
+    return [m for m in members if m is not cap]
 
 
 def _aside_frag(members, page, state):
@@ -686,6 +748,20 @@ def _render_page(page, page_index: int, state: PipelineState):
     nonbody_ids = raster_ids | set(grid_of) | foot_ids | {
         id(b) for b in ordered if b.get("is_furniture")
     }
+    # a margin legend stays with the table it describes when that table
+    # is identifiable — exactly one detected table region (grid or
+    # raster) and exactly one legend-carrying aside group; ambiguity
+    # degrades the legend to the shared page-end path instead
+    aside_groups = _aside_groups(aside_blocks)
+    tables = [r for r in rasters if r.kind == "table"] + list(grids)
+    anchor_of = {}
+    if len(tables) == 1:
+        legends = [
+            g for g in aside_groups if _has_table_legend(g, state.lang)
+        ]
+        if len(legends) == 1:
+            anchor_of[id(tables[0])] = legends[0]
+            aside_groups.remove(legends[0])
     raster_done = set()
     grid_done = set()
     claimed_caps = set()
@@ -766,6 +842,12 @@ def _render_page(page, page_index: int, state: PipelineState):
             if id(r) not in raster_done:
                 raster_done.add(id(r))
                 flush_par()
+                members = anchor_of.pop(id(r), None)
+                rest = (
+                    _bind_legend(members, r, state.lang)
+                    if members is not None
+                    else []
+                )
                 frags.append(
                     _raster_frag(
                         state,
@@ -780,6 +862,9 @@ def _render_page(page, page_index: int, state: PipelineState):
                         col_map=col_map,
                     )
                 )
+                if rest:
+                    state.asides += 1
+                    frags.append(_aside_frag(rest, page, state))
             continue
 
         if id(block) in grid_of:
@@ -787,7 +872,16 @@ def _render_page(page, page_index: int, state: PipelineState):
             if id(g) not in grid_done:
                 grid_done.add(id(g))
                 flush_par()
+                members = anchor_of.pop(id(g), None)
+                rest = (
+                    _bind_legend(members, g, state.lang)
+                    if members is not None
+                    else []
+                )
                 frags.append(_table_html(g, body_size, state.lang))
+                if rest:
+                    state.asides += 1
+                    frags.append(_aside_frag(rest, page, state))
             continue
 
         if block.get("is_furniture"):
@@ -1032,8 +1126,11 @@ def _render_page(page, page_index: int, state: PipelineState):
     # paragraph open they append to this page's frags after body flow.
     # The known cost — an aside can drift to the end of a long
     # multi-page paragraph — is accepted: prose integrity wins.
-    if aside_blocks:
+    # Anchor leftovers are legends whose table never emitted — they fall
+    # back to the same page-end path rather than vanishing.
+    leftover = list(anchor_of.values())
+    if aside_groups or leftover:
         target = state.pending_asides if state.par else frags
-        for members in _aside_groups(aside_blocks):
+        for members in aside_groups + leftover:
             state.asides += 1
             target.append(_aside_frag(members, page, state))
