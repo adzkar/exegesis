@@ -59,6 +59,18 @@ REQUIRED_CONTENT = {
         *(f"Quoted consumer passage {number} one" for number in range(2, 6)),
         *(f"quoted consumer passage {number} two" for number in range(2, 6)),
     ],
+    "outdented_chain": [
+        *(f"Pt {number}{part}" for number in range(6) for part in ("a", "b")),
+        *(f"Sec {number}{part}" for number in range(6) for part in ("a", "b")),
+        *(f"Chain body {number} {part}" for number in range(6)
+          for part in ("alpha", "beta", "gamma")),
+    ],
+    "outdented_note_zone": [
+        *(f"Head {number} {part}" for number in range(4) for part in ("alpha", "beta")),
+        *(f"Zone body {number} {part}" for number in range(4) for part in ("alpha", "beta")),
+        *(f"Zone body {number} gamma" for number in range(2)),
+        *(f"Late label {number}" for number in range(2, 4)),
+    ],
     "two_col_heading_run": [
         *(f"Left head {number}" for number in range(4)),
         *(f"Left prose {number} {part}" for number in range(4)
@@ -314,6 +326,60 @@ def _contract_consumers(pages):
         assert note["bbox"][1] > page.rect.height * 0.6
 
 
+def _contract_chain(pages):
+    """Two short-fragment strips flank a wrapped body column on all six pages."""
+    assert len(pages) == 6
+    edges = _doc_column_edges(pages)
+    assert edges == [42, 96, 166]
+    for page, pdict in pages:
+        for x0, prefix in ((42, "Pt"), (96, "Sec")):
+            heads = [b for b in _texts(pdict)
+                     if _block_text(b).startswith(prefix)]
+            assert len(heads) == 2
+            for head in heads:
+                assert head["bbox"][0] == x0 and len(head["lines"]) == 1
+                assert not _is_spanning(head, edges)
+                assert not _is_furniture(head, page, _block_text(head))
+                _upright(head)
+        assert all(
+            _assign_column(b, edges) == 2
+            for b in _texts(pdict)
+            if _block_text(b).startswith("Chain body")
+        )
+
+
+def _contract_note_zone(pages):
+    """Low small blocks open each column's note zone; heads stay strip-shaped."""
+    assert len(pages) == 4
+    edges = _doc_column_edges(pages)
+    assert edges == [42, 166]
+    for number, (page, pdict) in enumerate(pages):
+        heads = [b for b in _texts(pdict)
+                 if _block_text(b).startswith(f"Head {number}")]
+        assert len(heads) == 2
+        for head in heads:
+            assert head["bbox"][0] == 42 and len(head["lines"]) == 1
+            assert not _is_spanning(head, edges)
+            assert not _is_furniture(head, page, _block_text(head))
+        strip_notes = [b for b in _texts(pdict)
+                       if _block_text(b).startswith("Margin note")]
+        assert len(strip_notes) == 1
+        assert strip_notes[0]["bbox"][0] == 42
+        assert not _is_furniture(
+            strip_notes[0], page, _block_text(strip_notes[0])
+        )
+        body_notes = [b for b in _texts(pdict)
+                      if _block_text(b).startswith("Zone footnote")]
+        assert len(body_notes) == 1
+        assert body_notes[0]["bbox"][0] == 166
+        if number < 2:
+            victim = _find(pdict, f"Zone body {number} gamma")
+            assert victim["bbox"][0] == 166 and victim["bbox"][1] > 613
+        else:
+            label = _find(pdict, f"Late label {number}")
+            assert label["bbox"][0] == 42 and label["bbox"][1] > 613
+
+
 def _contract_heading_run(pages):
     """Four wrapped paragraphs under one head keep the left column's share low."""
     assert len(pages) == 4
@@ -415,6 +481,8 @@ CONTRACTS = {
     "outdented_heads": _contract_outdent,
     "outdented_two_spans": _contract_two_spans,
     "outdented_consumers": _contract_consumers,
+    "outdented_chain": _contract_chain,
+    "outdented_note_zone": _contract_note_zone,
     "two_col_heading_run": _contract_heading_run,
     "two_col_label_list": _contract_label_list,
     "span_only_edge": _contract_span_only,
@@ -554,6 +622,45 @@ def _semantic_consumers(result):
             "#43 edge-flush body prose must not become a quotation")
 
 
+def _semantic_chain(result):
+    """#43: the transitive fold orders both strips inside the one body column."""
+    require(result[2]["columns"] == 1,
+            f"chained outdent edges fold to one reading column: {result[2]['columns']}")
+    for number in range(6):
+        require_order(result[3], f"Pt {number}a", f"Sec {number}a",
+                      f"Chain body {number} alpha", f"Pt {number}b",
+                      f"Sec {number}b", f"Chain body {number} beta",
+                      f"Chain body {number} gamma",
+                      issue="#43 chained outdent fold")
+
+
+def _semantic_note_zone(result):
+    """#43: note zones stay physical — neither side's top sweeps the other."""
+    _, _, stats, body, htmls = result
+    require(stats["columns"] == 1,
+            f"note-zone fixture must fold to one reading column: {stats['columns']}")
+    require(stats["footnotes"] == 8,
+            f"merged tops would sweep two gammas and two labels: {stats['footnotes']}")
+    for number in range(4):
+        require_order(body, f"Head {number} alpha", f"Zone body {number} alpha",
+                      f"Head {number} beta", f"Zone body {number} beta",
+                      issue="#43 physical note zones")
+    notes = htmls.get("notes.xhtml", "")
+    for number in range(2):
+        require(body.count(f"Zone body {number} gamma") == 1,
+                "#43 the strip's note-top must not claim body blocks below it")
+        require(f"Margin note {number}" in notes,
+                "#43 a strip note must still file through its own zone")
+    for number in range(2, 4):
+        require(body.count(f"Late label {number}") == 1,
+                "#43 the body column's note-top must not claim strip blocks")
+        require(f"Margin note {number}" in notes,
+                "#43 a strip note must file through its own zone")
+    for number in range(4):
+        require(f"Zone footnote {number}" in notes,
+                "#43 body-column notes must reach notes.xhtml")
+
+
 def _semantic_heading_run(result):
     """A genuine 2-col page keeps its columns when the left share stays low."""
     require(result[2]["columns"] == 2,
@@ -628,6 +735,8 @@ SEMANTICS = {
     "outdented_heads": _semantic_outdent,
     "outdented_two_spans": _semantic_two_spans,
     "outdented_consumers": _semantic_consumers,
+    "outdented_chain": _semantic_chain,
+    "outdented_note_zone": _semantic_note_zone,
     "two_col_heading_run": _semantic_heading_run,
     "two_col_label_list": _semantic_label_list,
     "span_only_edge": _semantic_span_only,
@@ -655,6 +764,8 @@ READING_MAPS = {
     "outdented_heads": [0, 0],
     "outdented_two_spans": [0, 0],
     "outdented_consumers": [0, 0],
+    "outdented_chain": [0, 0, 0],
+    "outdented_note_zone": [0, 0],
     "heads_only_phantom": [0, 0],
     "signature_outdent_margin": [0],
     "two_col_heading_run": [0, 1],

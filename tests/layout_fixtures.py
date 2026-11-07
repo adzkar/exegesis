@@ -158,6 +158,57 @@ def outdented_consumers(path):
     return _save(doc, path)
 
 
+def outdented_chain(path):
+    """Two adjacent outdent edges chain-fold into the same body column (#43)."""
+    doc = fitz.open()
+    for number in range(6):
+        page = _page(doc)
+        text(page, 42, 200, f"Pt {number}a", font="hebo")
+        text(page, 96, 240, f"Sec {number}a", font="hebo")
+        paragraph(page, (166, 270, 576, 340),
+                   f"Chain body {number} alpha follows the paired heads.")
+        text(page, 42, 400, f"Pt {number}b", font="hebo")
+        text(page, 96, 440, f"Sec {number}b", font="hebo")
+        paragraph(page, (166, 470, 576, 540),
+                   f"Chain body {number} beta follows the paired heads.")
+        paragraph(page, (166, 590, 576, 660),
+                   f"Chain body {number} gamma closes the page.")
+    return _save(doc, path)
+
+
+def outdented_note_zone(path):
+    """Strip and body note zones stay physical: neither top sweeps the other (#43)."""
+    doc = fitz.open()
+    variants = ("alpha", "beta", "gamma", "delta")
+    for number in range(4):
+        page = _page(doc)
+        text(page, 42, 190, f"Head {number} alpha", font="hebo")
+        paragraph(page, (166, 220, 576, 290),
+                   f"Zone body {number} alpha follows its own section head.")
+        text(page, 42, 380, f"Head {number} beta", font="hebo")
+        paragraph(page, (166, 410, 576, 480),
+                   f"Zone body {number} beta keeps ordinary prose.")
+        if number < 2:
+            # strip top (~613) above body top (~728): a merged zone would
+            # sweep the gamma paragraph into notes; physical zones keep it.
+            # Edge-zone texts need unique signatures or they normalize into
+            # the boilerplate set and drop
+            text(page, 42, 620, f"Margin note {number} alpha", size=8)
+            paragraph(page, (166, 645, 576, 690),
+                       f"Zone body {number} gamma {variants[number]} stays "
+                       "in the chapter flow.")
+            text(page, 166, 735,
+                 f"Zone footnote {number}: grant variant {variants[number]}.", size=8)
+        else:
+            # body top (~613) above strip top (~723): a merged zone would
+            # sweep the strip label into notes; physical zones keep it
+            text(page, 166, 620,
+                 f"Zone footnote {number}: grant variant {variants[number]}.", size=8)
+            text(page, 42, 660, f"Late label {number} {variants[number]}")
+            text(page, 42, 730, f"Margin note {number} {variants[number]}", size=8)
+    return _save(doc, path)
+
+
 def two_col_heading_run(path):
     """A real 2-col page: the left column mixes lone heads with wrapped prose (#43)."""
     doc = fitz.open()
@@ -263,6 +314,8 @@ GENERATORS = {
     "outdented_heads": outdented_heads,
     "outdented_two_spans": outdented_two_spans,
     "outdented_consumers": outdented_consumers,
+    "outdented_chain": outdented_chain,
+    "outdented_note_zone": outdented_note_zone,
     "two_col_heading_run": two_col_heading_run,
     "two_col_label_list": two_col_label_list,
     "span_only_edge": span_only_edge,
