@@ -19,6 +19,7 @@ from furniture_fixtures import (
     rotated_page_upright_margin,
     rotated_table_margin_cells,
     rotated_table_staggered_cells,
+    stacked_fused_heads,
 )
 
 from exegesis import convert
@@ -247,6 +248,19 @@ def test_eval_fused_head_is_excused(tmp_path):
     pdf = tmp_path / "fused.pdf"
     fused_running_head_title(pdf)
     epub = tmp_path / "fused.epub"
+    convert(pdf, epub)
+    r = _run(pdf, epub)
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_eval_stacked_fused_heads_are_excused(tmp_path):
+    """Two independently-recurring heads fused ahead of the title split
+    one at a time — the second head's remainder is itself signature
+    furniture, so convert drops it and the eval must excuse its words
+    rather than report genuine loss on a correct conversion (#46)."""
+    pdf = tmp_path / "stacked.pdf"
+    stacked_fused_heads(pdf)
+    epub = tmp_path / "stacked.epub"
     convert(pdf, epub)
     r = _run(pdf, epub)
     assert r.returncode == 0, r.stdout + r.stderr

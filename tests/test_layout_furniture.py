@@ -37,6 +37,9 @@ from furniture_fixtures import (
     ROTATED_PREFIX,
     ROTATED_STAMP,
     ROTATED_SUFFIX,
+    STACKED_BODY,
+    STACKED_HEAD_LINES,
+    STACKED_TITLE,
     STAG_BODY,
     STAG_CELL_BASE,
     STAG_CELL_X,
@@ -57,6 +60,7 @@ from furniture_fixtures import (
     rotated_page_upright_margin,
     rotated_table_margin_cells,
     rotated_table_staggered_cells,
+    stacked_fused_heads,
 )
 from helpers import chapter_body_text, doc_html, lint_epub
 from layout_assertions import (
@@ -152,6 +156,13 @@ def fused_pdf(tmp_path_factory):
 
 
 @pytest.fixture(scope="module")
+def stacked_pdf(tmp_path_factory):
+    """Generate the stacked-heads source independently of EPUB setup."""
+    directory = tmp_path_factory.mktemp("stacked_fused_heads")
+    return stacked_fused_heads(directory / "input.pdf")
+
+
+@pytest.fixture(scope="module")
 def info_box_pdf(tmp_path_factory):
     """Generate the two-field source before and independently of conversion."""
     directory = tmp_path_factory.mktemp("front_matter_info_box")
@@ -198,6 +209,19 @@ def fused_keep_case(fused_pdf):
         f"Fused-head body page {number} {part}" for number in range(1, 4)
         for part in ("retains", "preserves")
     ))
+    return case
+
+
+@pytest.fixture(scope="module")
+def stacked_case(stacked_pdf):
+    """Convert the stacked-heads source once for output assertions."""
+    case = _converted_case(stacked_pdf)
+    assert_retained_once(case.text, STACKED_TITLE, *(
+        f"Stacked-head body page {number} {part}" for number in range(1, 4)
+        for part in ("retains", "closes")
+    ))
+    assert case.text.count(STACKED_BODY[1]) == 3
+    assert case.text.count(STACKED_BODY[3]) == 3
     return case
 
 
@@ -556,6 +580,17 @@ def test_issue40_fused_head_leaves_title_as_h1(fused_case):
     )
 
 
+def test_stacked_fused_heads_conversion_and_lint(stacked_case):
+    """Both stacked heads leave body flow one split at a time — the
+    second head's remainder is signature furniture in its own right —
+    while the fused title stays (#46)."""
+    _assert_conversion(stacked_case, 3)
+    require_absent(
+        stacked_case.text, *STACKED_HEAD_LINES,
+        issue="#46: stacked heads must not leak into body flow",
+    )
+
+
 def test_issue40_fused_head_kept_verbatim_under_keep_headers(fused_keep_case):
     """--keep-headers emits the split head verbatim at the page top —
     once per page like every other running head — while the title still
@@ -602,12 +637,20 @@ def test_signature_prefix_len_split_rules():
         (FUSED_HEAD_LINES[0], 40), (FUSED_HEAD_LINES[1], 398),
         ("Real title line one", 40)], y0=300.0)
     assert _signature_prefix_len(low, H, boilerplate) == 0
-    # a match needing more lines than the cap is a lookalike, not a head
-    four = ("Line one", "Line two", "Line three", "Line four")
-    deep = _prefix_block(
-        [(t, 40) for t in (*four, "Real title line one")])
+    # the cap rides the boilerplate bound: a five-line head — the
+    # medRxiv-license reach — splits, a seven-line join is a lookalike
+    five = tuple(f"License head line {i}" for i in range(1, 6))
+    deep5 = _prefix_block(
+        [(t, 40) for t in (*five, "Real title line one")],
+        y0=40.0, leading=10)
     assert _signature_prefix_len(
-        deep, H, {_signature(" ".join(four))}) == 0
+        deep5, H, {_signature(" ".join(five))}) == 5
+    seven = tuple(f"License head line {i}" for i in range(1, 8))
+    deep7 = _prefix_block(
+        [(t, 40) for t in (*seven, "Real title line one")],
+        y0=40.0, leading=10)
+    assert _signature_prefix_len(
+        deep7, H, {_signature(" ".join(seven))}) == 0
     # a prefix whose union straddles the zone boundary is not furniture —
     # line 0 sits inside the zone but the 2-line prefix's bottom crosses it
     straddle = _prefix_block(
@@ -621,6 +664,17 @@ def test_signature_prefix_len_split_rules():
     whole = _prefix_block(
         [(FUSED_HEAD_LINES[0], 40), (FUSED_HEAD_LINES[1], 398)])
     assert _signature_prefix_len(whole, H, boilerplate) == 0
+    # ... even when a proper prefix also matches — alternating heads
+    # nest as prefixes of each other, and splitting would leak a
+    # non-boilerplate remainder into body flow
+    nested = {_signature("JournalX"), _signature("JournalX Vol Twelve")}
+    nested_whole = _prefix_block([("JournalX", 40), ("Vol Twelve", 40)])
+    assert _signature_prefix_len(nested_whole, H, nested) == 0
+    # and the longest verified prefix wins — first-match would leave the
+    # real head's tail fused to the title
+    nested_fused = _prefix_block(
+        [("JournalX", 40), ("Vol Twelve", 40), ("Real title line one", 40)])
+    assert _signature_prefix_len(nested_fused, H, nested) == 2
 
 
 def test_split_signature_prefixes_recomputes_bboxes():
@@ -642,6 +696,29 @@ def test_split_signature_prefixes_recomputes_bboxes():
     # untouched blocks pass through by identity
     plain = _prefix_block([("Ordinary body", 72)], y0=300.0)
     assert _split_signature_prefixes([plain], H, boilerplate) == [plain]
+
+
+def test_split_signature_prefixes_iterates_stacked_heads():
+    """Stacked heads each independently boilerplate split one at a time
+    — a single split leaves the second fused to the title (#46)."""
+    boilerplate = {_signature("HoneSig Alpha"), _signature("HtwoSig Beta")}
+    fused = _prefix_block([
+        ("HoneSig Alpha", 40), ("HtwoSig Beta", 40),
+        ("Real title line one", 40), ("Real title line two", 40)])
+    head1, head2, rest = _split_signature_prefixes([fused], H, boilerplate)
+    assert [l["spans"][0]["text"] for l in head1["lines"]] == ["HoneSig Alpha"]
+    assert [l["spans"][0]["text"] for l in head2["lines"]] == ["HtwoSig Beta"]
+    assert _is_signature_furniture(head1, H, boilerplate)
+    assert _is_signature_furniture(head2, H, boilerplate)
+    assert [l["spans"][0]["text"] for l in rest["lines"]] == [
+        "Real title line one", "Real title line two"]
+    assert not _is_signature_furniture(rest, H, boilerplate)
+    # a two-line block of both heads leaves a remainder that is itself
+    # signature furniture — convert drops it; the eval mirrors the drop
+    both = _prefix_block([("HoneSig Alpha", 40), ("HtwoSig Beta", 40)])
+    head, rest = _split_signature_prefixes([both], H, boilerplate)
+    assert _is_signature_furniture(head, H, boilerplate)
+    assert _is_signature_furniture(rest, H, boilerplate)
 
 
 def test_front_matter_info_box_extraction_contract(info_box_pdf):
