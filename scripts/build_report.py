@@ -65,6 +65,7 @@ _COLUMNS = [
     ("images", "Img"),
     ("grid_tables", "Grid"),
     ("raster_tables", "Raster"),
+    ("raster_figures", "Fig"),
     ("seconds", "Sec"),
 ]
 
@@ -73,8 +74,8 @@ def _convert_one(pdf: Path, out_dir: Path) -> dict:
     """Convert one corpus PDF; returns its report row.
 
     ``convert()`` stats carry the layout signals (columns, both table
-    kinds); failures are recorded rather than raised so one bad paper
-    can't kill the whole report.
+    kinds, figure regions); failures are recorded rather than raised
+    so one bad paper can't kill the whole report.
     """
     row: dict = {"pdf": pdf.name, "status": "ok"}
     start = time.perf_counter()
