@@ -13,7 +13,13 @@ from .text import _block_text
 
 
 def _ordered_blocks(
-    page, blocks, boilerplate, edges, drop_furniture=True, lang: LangProfile = EN
+    page,
+    blocks,
+    boilerplate,
+    edges,
+    drop_furniture=True,
+    lang: LangProfile = EN,
+    col_map=None,
 ):
     """Return page blocks in reading order for any column layout.
 
@@ -21,8 +27,13 @@ def _ordered_blocks(
     ``page`` supplies only geometry (rect).
 
     Blocks above the first spanning element come first (page header zone).
-    Each column then emits its own sequence — non-spanning blocks plus the
-    spanning elements that cover it, in y order — columns left to right.
+    Each reading column then emits its own sequence — non-spanning blocks
+    plus the spanning elements that cover it, in y order — columns left to
+    right. ``col_map`` translates physical edge indices into reading
+    columns (``_reading_columns``; identity when omitted): an outdent
+    edge's heads merge into the body column's sequence and interleave by
+    y instead of front-loading the page, and a span's covered columns
+    collapse the same way so no span-only outdent sequence survives.
     A span covering several columns emits at its first encounter only.
     Text blocks whose signature is in ``boilerplate``, margin strips,
     pattern furniture, and page numbers are dropped when ``drop_furniture``
@@ -77,12 +88,19 @@ def _ordered_blocks(
         else nonspans
     )
 
-    cols = {i: [] for i in range(len(edges))}
+    if col_map is None:
+        col_map = list(range(len(edges)))
+    # key the sequences by reading column, not physical edge: mapping both
+    # non-span assignments and every span's covered columns through
+    # ``col_map`` merges an outdent edge's members into the body column's
+    # y-ordered sequence (and dedupes a span that covered two edges now
+    # sharing one reading column)
+    cols = {i: [] for i in set(col_map)}
     for b in nonspans:
-        cols[_assign_column(b, edges)].append(b)
+        cols[col_map[_assign_column(b, edges)]].append(b)
     for b in items:
         if id(b) in spans:
-            for c in _covered_cols(b, edges, rect.width):
+            for c in {col_map[k] for k in _covered_cols(b, edges, rect.width)}:
                 cols[c].append(b)
     for seq in cols.values():
         seq.sort(key=key)

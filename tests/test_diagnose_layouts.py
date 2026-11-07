@@ -5,7 +5,7 @@ from pathlib import Path
 
 import fitz
 import pytest
-from builders import _page, _save, paragraph, text
+from builders import _page, _save, block, paragraph, text
 from furniture_fixtures import rotated_margin_stamp
 from layout_fixtures import GENERATORS
 
@@ -30,12 +30,29 @@ def reports(tmp_path_factory):
     paragraph(page, (72, 410, 540, 470), "Normal article text continues below the short control.")
     text(page, 72, 760, "www.a.io")
     _save(doc, directory / "furniture.pdf")
+    doc = fitz.open()
+    page = _page(doc)
+    # page-0 prose at the outdent edge joins the INPUT denominator but can
+    # never join the FOLD evidence — the divergence the share rows must show
+    for y in (200, 340):
+        block(page, 90, y, ["Front", "matter", "prose", "lines"])
+    paragraph(page, (150, 200, 570, 300),
+              "Front body keeps the true column edge beside page-zero prose.")
+    for number in range(1, 4):
+        page = _page(doc)
+        text(page, 90, 200, f"Pt {number}a", font="hebo")
+        text(page, 90, 400, f"Pt {number}b", font="hebo")
+        paragraph(page, (150, 240, 570, 320),
+                  f"Strip body {number} upper follows its own section head.")
+        paragraph(page, (150, 440, 570, 520),
+                  f"Strip body {number} lower follows its own section head.")
+    _save(doc, directory / "outdent_page0.pdf")
     result = subprocess.run(
         [sys.executable, str(DIAGNOSTIC), "--journals-dir", str(directory)],
         cwd=ROOT, capture_output=True, text=True, check=False, timeout=60,
     )
     assert result.returncode == 0, result.stdout + result.stderr
-    assert result.stdout.count("epub: lint=clean") == 7
+    assert result.stdout.count("epub: lint=clean") == 8
     return result.stdout
 
 
@@ -73,13 +90,35 @@ def test_diagnostic_reports_rotated_direction_and_bounds(reports):
 
 
 def test_diagnostic_reports_nonspanning_outdent_shares(reports):
-    """The heading-like edge metric is separate from the <=12-character location metric."""
+    """The outdent-strip edge metric is separate from the <=12-char location metric."""
     spans = _report(reports, "outdented_two_spans")
     heads = _report(reports, "heads_only_phantom")
     assert "edge=36.0" in spans and "INPUT 4/4 (100.0%)" in spans
     assert "edge=90.0" in heads and "INPUT 6/6 (100.0%)" in heads
-    assert "heading-like single-line share (<=120 chars)" in spans
+    assert "outdent-strip-like share" in spans
     assert "total=6 non-spanning=6 spanning=0" in heads
+
+
+def test_diagnostic_fold_share_uses_deciding_evidence(reports):
+    """FOLD counts the converter's own pages>=1 non-furniture evidence, so the
+    printed share can never contradict the (outdent) tag the way the all-pages
+    INPUT/SURVIVING probes can — page-0 blocks pollute INPUT only."""
+    page0 = _report(reports, "outdent_page0")
+    heads = _report(reports, "heads_only_phantom")
+    assert "edge=90.0 -> rcol0 (outdent)" in page0
+    assert "FOLD 6/6 (100.0%)" in page0
+    assert "INPUT 6/8 (75.0%)" in page0
+    assert "FOLD 4/4 (100.0%)" in heads
+
+
+def test_diagnostic_reports_physical_edges_and_reading_map(reports):
+    """Each physical edge prints its mapped reading column and the fold reason."""
+    spans = _report(reports, "outdented_two_spans")
+    heads = _report(reports, "heads_only_phantom")
+    assert "reading_cols=1" in spans
+    assert "edge=36.0 -> rcol0 (outdent)" in spans
+    assert "edge=166.0 -> rcol0" in spans
+    assert "edge=90.0 -> rcol0 (outdent)" in heads
 
 
 def test_diagnostic_flags_twoup_whitespace(reports):

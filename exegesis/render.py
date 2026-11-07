@@ -160,6 +160,7 @@ def _figure_alt(
     above_pattern=EN.caption,
     claimed: set | None = None,
     lang: LangProfile = EN,
+    col_map=None,
 ):
     """Alt text for a figure: the nearest foreign text block beyond the
     figure's facing edge is its caption when it opens with a caption
@@ -187,8 +188,13 @@ def _figure_alt(
     cannot alt two images (a figure's 'Figure N.' directly above a
     rotated table would otherwise caption the table too).
     """
+    if col_map is None:
+        col_map = list(range(len(edges)))
     bbox = region if region is not None else ordered[b_i]["bbox"]
-    img_cols = _overlap_cols(bbox, edges, page_width)
+    # the column band is a *reading*-column band: an outdented caption
+    # shares its figure's column through ``col_map``, while a genuinely
+    # adjacent column still can't donate
+    img_cols = {col_map[c] for c in _overlap_cols(bbox, edges, page_width)}
     claimed = claimed if claimed is not None else set()
 
     def _is_caption(b, pat):
@@ -197,7 +203,9 @@ def _figure_alt(
         t = _block_text(b, lang)
         if not pat.match(t):
             return None
-        if not img_cols & _overlap_cols(b["bbox"], edges, page_width):
+        if not img_cols & {
+            col_map[c] for c in _overlap_cols(b["bbox"], edges, page_width)
+        }:
             return None
         return html.escape(t[:200], quote=True)
 
@@ -348,6 +356,7 @@ def _render_page(page, page_index: int, state: PipelineState):
     """
     body_size = state.body_size
     edges = state.edges
+    col_map = state.col_map
     ordered = _ordered_blocks(
         page,
         state.page_items[page_index],
@@ -355,10 +364,17 @@ def _render_page(page, page_index: int, state: PipelineState):
         edges,
         state.drop_edges,
         lang=state.lang,
+        col_map=col_map,
     )
     # kept furniture is render-only: it never feeds footnote-zone detection
     # or rotated-table candidate sets
     body_blocks = [b for b in ordered if not b.get("is_furniture")]
+    # note zones stay physical even though their membership feeds the
+    # mapped reading column below: a zone is page geometry (a horizontal
+    # band at a column's foot), not column identity — merging tops by min
+    # across a folded edge lets a note-shaped strip block widen the swept
+    # region and misfile body text as notes (a strip's own top still files
+    # its notes; they just can't claim the body column's blocks)
     foot_tops = _footnote_tops(
         body_blocks, edges, body_size, page.rect.height, state.line_h,
         lang=state.lang,
@@ -453,6 +469,7 @@ def _render_page(page, page_index: int, state: PipelineState):
                     skip_ids=nonbody_ids,
                     claimed=claimed_caps,
                     lang=state.lang,
+                    col_map=col_map,
                 )
                 frags.append(
                     f'<p class="fig"><img src="{state.images[digest].file_name}"'
@@ -478,6 +495,7 @@ def _render_page(page, page_index: int, state: PipelineState):
                     above_pattern=state.lang.caption,
                     claimed=claimed_caps,
                     lang=state.lang,
+                    col_map=col_map,
                 )
                 mb = page.mediabox
                 tbl = fitz.Rect(
@@ -524,6 +542,7 @@ def _render_page(page, page_index: int, state: PipelineState):
             continue
 
         col = _assign_column(block, edges)
+        rcol = col_map[col]
         if col in foot_tops and block["bbox"][1] >= foot_tops[col] - 5:
             state.footnotes.append(
                 _footnote_text(block, body_size, state.lang)
@@ -547,8 +566,10 @@ def _render_page(page, page_index: int, state: PipelineState):
         # their column — a trailing bold line at a section/page end is
         # far more often a note than a heading (a block that is itself a
         # heading doesn't count either). The scan is column- and
-        # page-local: a bold line ending a column or page can't see its
-        # next-column/next-page follower and stays demoted.
+        # page-local on the *reading* column: a bold line ending a
+        # column or page can't see its next-column/next-page follower
+        # and stays demoted, while an outdented head shares its body
+        # column's followers through ``col_map``.
         in_edge = (
             block["bbox"][1] < page.rect.height * 0.12
             or block["bbox"][3] > page.rect.height * 0.88
@@ -559,7 +580,11 @@ def _render_page(page, page_index: int, state: PipelineState):
                 if (
                     b["type"] != 0
                     or id(b) in nonbody_ids
-                    or col not in _covered_cols(b, edges, page.rect.width)
+                    or rcol
+                    not in {
+                        col_map[c]
+                        for c in _covered_cols(b, edges, page.rect.width)
+                    }
                 ):
                     continue
                 # the first body-flow block in the column decides: a
@@ -659,11 +684,11 @@ def _render_page(page, page_index: int, state: PipelineState):
             isolated = (
                 prev is not None
                 and prev["type"] == 0
-                and _assign_column(prev, edges) == col
+                and col_map[_assign_column(prev, edges)] == rcol
                 and block["bbox"][1] - prev["bbox"][3] > state.line_h * 0.7
                 and nxt is not None
                 and nxt["type"] == 0
-                and _assign_column(nxt, edges) == col
+                and col_map[_assign_column(nxt, edges)] == rcol
                 and nxt["bbox"][1] - block["bbox"][3] > state.line_h * 0.7
             )
             if isolated:

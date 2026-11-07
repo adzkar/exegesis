@@ -15,6 +15,7 @@ from .analyze import (
     _body_font_size,
     _boilerplate_signatures,
     _doc_column_edges,
+    _reading_columns,
     _split_signature_prefixes,
 )
 from .const import PAGES_PER_FALLBACK_CHAPTER
@@ -71,11 +72,13 @@ def convert(
         pdict["blocks"] = _split_signature_prefixes(
             pdict["blocks"], page.rect.height, boilerplate, profile
         )
+    edges = _doc_column_edges(pages, boilerplate, profile)
     state = PipelineState(
         body_size=body_size,
         line_h=line_h,
         page_items=[pdict["blocks"] for _p, pdict in pages],
-        edges=_doc_column_edges(pages, boilerplate, profile),
+        edges=edges,
+        col_map=_reading_columns(pages, edges, boilerplate, profile),
         drop_edges=drop_edges,
         boilerplate=boilerplate,
         page_frags=[[] for _ in range(doc.page_count)],
@@ -284,7 +287,9 @@ def convert(
         "headings": len(state.headings),
         "footnotes": len(state.footnotes),
         "images": len(state.images),
-        "columns": len(state.edges),
+        # reading columns, not physical edges: an outdent edge that folds
+        # into its body column does not count (MDPI reports 1, not 2)
+        "columns": len(set(state.col_map)),
         "grid_tables": state.grid_tables,
         "raster_tables": state.raster_tables,
         "output": str(out_path),

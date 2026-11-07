@@ -124,6 +124,142 @@ def outdented_two_spans(path):
     return _save(doc, path)
 
 
+def outdented_consumers(path):
+    """Heads, notes, a caption, and quote isolation resolve on the folded column (#43)."""
+    doc = fitz.open()
+    for number in range(6):
+        page = _page(doc)
+        if number < 2:
+            for y in (190, 450):
+                paragraph(page, (36, y, 576, y + 60),
+                           f"Consumer span {number} at {y} crosses the body edge and votes it.")
+            for y in (290, 550):
+                paragraph(page, (166, y, 576, y + 60),
+                           f"Consumer span-body {number} at {y} sits in the true column.")
+            continue
+        text(page, 42, 180, f"Head {number} alpha", font="hebo")
+        paragraph(page, (166, 210, 576, 275),
+                   f"Consumer body {number} alpha follows its head in reading order.")
+        image(page, (200, 300, 340, 440))
+        # outdented short caption: adopts only under the shared reading column
+        text(page, 42, 470, f"Figure {number}. View")
+        text(page, 42, 500, f"Head {number} beta", font="hebo")
+        paragraph(page, (166, 530, 576, 600),
+                   f"Consumer body {number} beta remains body prose, not a quotation.")
+        block(page, 200, 620,
+              [f"Quoted consumer passage {number} one continues.",
+               f"quoted consumer passage {number} two concludes."])
+        # unique wording per page: a digit-only difference normalizes into
+        # the bottom-edge boilerplate set and the note would drop as furniture
+        text(page, 166, 700,
+             f"Consumer footnote {number}: grant acknowledgement variant "
+             f"{('alpha', 'beta', 'gamma', 'delta')[number - 2]} continues.",
+             size=8)
+    return _save(doc, path)
+
+
+def outdented_chain(path):
+    """Two adjacent outdent edges chain-fold into the same body column (#43)."""
+    doc = fitz.open()
+    for number in range(6):
+        page = _page(doc)
+        text(page, 42, 200, f"Pt {number}a", font="hebo")
+        text(page, 96, 240, f"Sec {number}a", font="hebo")
+        paragraph(page, (166, 270, 576, 340),
+                   f"Chain body {number} alpha follows the paired heads.")
+        text(page, 42, 400, f"Pt {number}b", font="hebo")
+        text(page, 96, 440, f"Sec {number}b", font="hebo")
+        paragraph(page, (166, 470, 576, 540),
+                   f"Chain body {number} beta follows the paired heads.")
+        paragraph(page, (166, 590, 576, 660),
+                   f"Chain body {number} gamma closes the page.")
+    return _save(doc, path)
+
+
+def outdented_note_zone(path):
+    """Strip and body note zones stay physical: neither top sweeps the other (#43)."""
+    doc = fitz.open()
+    variants = ("alpha", "beta", "gamma", "delta")
+    for number in range(4):
+        page = _page(doc)
+        text(page, 42, 190, f"Head {number} alpha", font="hebo")
+        paragraph(page, (166, 220, 576, 290),
+                   f"Zone body {number} alpha follows its own section head.")
+        text(page, 42, 380, f"Head {number} beta", font="hebo")
+        paragraph(page, (166, 410, 576, 480),
+                   f"Zone body {number} beta keeps ordinary prose.")
+        if number < 2:
+            # strip top (~613) above body top (~728): a merged zone would
+            # sweep the gamma paragraph into notes; physical zones keep it.
+            # Edge-zone texts need unique signatures or they normalize into
+            # the boilerplate set and drop
+            text(page, 42, 620, f"Margin note {number} alpha", size=8)
+            paragraph(page, (166, 645, 576, 690),
+                       f"Zone body {number} gamma {variants[number]} stays "
+                       "in the chapter flow.")
+            text(page, 166, 735,
+                 f"Zone footnote {number}: grant variant {variants[number]}.", size=8)
+        else:
+            # body top (~613) above strip top (~723): a merged zone would
+            # sweep the strip label into notes; physical zones keep it
+            text(page, 166, 620,
+                 f"Zone footnote {number}: grant variant {variants[number]}.", size=8)
+            text(page, 42, 660, f"Late label {number} {variants[number]}")
+            text(page, 42, 730, f"Margin note {number} {variants[number]}", size=8)
+    return _save(doc, path)
+
+
+def two_col_heading_run(path):
+    """A real 2-col page: the left column mixes lone heads with wrapped prose (#43)."""
+    doc = fitz.open()
+    for number in range(4):
+        page = _page(doc)
+        # below the boilerplate edge zone so lone heads can't pass as furniture
+        text(page, 72, 200, f"Left head {number}", font="hebo")
+        for y, label in ((230, "upper"), (360, "middle"), (490, "lower"), (620, "closing")):
+            paragraph(page, (72, y, 330, y + 60),
+                       f"Left prose {number} {label} wraps across several lines "
+                       "inside its own genuine column band.")
+        for y, label in ((230, "upper"), (490, "lower")):
+            paragraph(page, (360, y, 580, y + 60),
+                       f"Right prose {number} {label} keeps the second column.")
+    return _save(doc, path)
+
+
+def two_col_label_list(path):
+    """A short-line label column under the outdent share keeps its own column (#43)."""
+    doc = fitz.open()
+    for number in range(4):
+        page = _page(doc)
+        for i, y in enumerate(range(190, 610, 60)):
+            if i in (2, 5):
+                # three nonempty lines: a wrapped list entry, never a strip
+                # fragment, so the edge's share stays below the fold
+                block(page, 72, y, [f"Wrapped label {number} {i} line one",
+                                    f"wrapped label {number} {i} line two",
+                                    f"wrapped label {number} {i} line three"])
+            else:
+                text(page, 72, y, f"Label {number} {i}")
+        for y, label in ((230, "upper"), (490, "lower")):
+            paragraph(page, (360, y, 580, y + 60),
+                       f"List body {number} {label} supplies the real prose column.")
+    return _save(doc, path)
+
+
+def span_only_edge(path):
+    """An edge voted only by spans has no non-spanning evidence and stays (#43)."""
+    doc = fitz.open()
+    for number in range(4):
+        page = _page(doc)
+        for y, label in ((190, "upper"), (450, "lower")):
+            paragraph(page, (36, y, 576, y + 60),
+                       f"Wide band {number} {label} crosses every gutter as a span.")
+        for y, label in ((290, "first"), (550, "second")):
+            paragraph(page, (166, y, 576, y + 60),
+                       f"Span-only body {number} {label} reads after the bands.")
+    return _save(doc, path)
+
+
 def signature_outdent_margin(path):
     """Match the 29-page, 13-versus-17-vote interaction with a quorum of 14."""
     doc = fitz.open()
@@ -177,6 +313,12 @@ GENERATORS = {
     "raster_figure": raster_figure,
     "outdented_heads": outdented_heads,
     "outdented_two_spans": outdented_two_spans,
+    "outdented_consumers": outdented_consumers,
+    "outdented_chain": outdented_chain,
+    "outdented_note_zone": outdented_note_zone,
+    "two_col_heading_run": two_col_heading_run,
+    "two_col_label_list": two_col_label_list,
+    "span_only_edge": span_only_edge,
     "signature_outdent_margin": signature_outdent_margin,
     "heads_only_phantom": heads_only_phantom,
     "retained_content": retained_content,

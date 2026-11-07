@@ -7,11 +7,22 @@ bboxes, short-fragment locations, and per-document-edge heading-like line shares
 
 A fragment is a nonempty extracted text BLOCK, not a span, line, or output HTML
 fragment. Location counts use 1..12 characters of ``_block_text`` (including spaces).
-Edge shares instead count heading-like blocks: one nonempty line, 1..120 characters
-(``MAX_HEADING_CHARS``), no terminal .!?… after closing quotes/brackets. Their
-denominator is all non-spanning text blocks assigned to that edge, not just lines.
+Edge shares instead count outdent-strip-like blocks: up to two nonempty lines,
+1..120 characters (``MAX_HEADING_CHARS``), no terminal .!?… after closing
+quotes/brackets, and an x-extent that stays inside ``OUTDENT_BAND_FILL`` of the
+band the edge shares with its right column. FOLD is the share that decided the
+tag — read straight from ``_reading_columns``'s own evidence locals, so only
+pages >=1, non-spanning, non-furniture blocks bound numerator and denominator
+while note/table-bound blocks still count. INPUT/SURVIVING stay broader
+all-pages probes (denominator: every non-spanning text block at the edge) and
+can legitimately differ from FOLD — page-0 and furniture blocks pollute INPUT,
+note/table-bound exits shrink SURVIVING.
 Total/spanning heading-like counts also expose heads that cross a phantom gutter.
-This is a text-shape probe, not the renderer's font/context heading classifier.
+This is a text-shape probe — the same ``analyze._outdent_like`` shape the
+converter's outdent-edge detection uses — not the renderer's font/context
+heading classifier. Each physical edge prints its reading column (``-> rcolN``;
+``(outdent)`` when it folds into a later edge); reading-order tags use mapped
+``colN`` like the converter does.
 INPUT counts precede furniture removal. SURVIVING BODY-FLOW counts use the actual
 renderer's ``ordered`` blocks minus ``nonbody_ids``: headings/bylines/labels count,
 but furniture, notes, rasterized cells, and grid-table cells/captions do not.
@@ -26,8 +37,9 @@ is outside a figure. Bboxes and line dirs are in extraction (unrotated) coordina
 page /Rotate is reported separately.
 
 Preparation and rendering run through ``convert`` itself. A temporary profiling
-hook reads private renderer locals at return, before convert releases each page.
-Keep that small instrumentation contract in sync if those locals change. This
+hook reads private renderer locals at return, before convert releases each
+page, and ``_reading_columns``'s ``evidence`` locals at its return. Keep that
+small instrumentation contract in sync if those locals change. This
 manual corpus tool is not a test helper and must never be imported by tests.
 It runs on ``requirements.txt`` alone, so the test helpers it borrows must not
 require test-only deps at import time.
@@ -57,9 +69,12 @@ from exegesis import convert, render
 from exegesis.analyze import (
     _assign_column,
     _column_edges,
+    _heading_like,
     _is_spanning,
+    _outdent_like,
+    _reading_columns,
 )
-from exegesis.const import MAX_HEADING_CHARS
+from exegesis.const import MAX_HEADING_CHARS, OUTDENT_BAND_FILL, OUTDENT_MIN_BLOCKS
 from exegesis.text import _block_lines, _block_text, _line_text
 
 JOURNALS = ROOT / "journals"
@@ -77,33 +92,21 @@ class _Fragment:
     column: int
     chars: int
     heading_like: bool
+    outdent_like: bool
     spanning: bool
     location: str
     survives: bool
-
-
-def _heading_like(block, text):
-    """Probe one nonempty <=MAX_HEADING_CHARS line without terminal .!?….
-
-    Ignore closing quotes/brackets for punctuation; do not borrow the <=12
-    location threshold or pretend this shape probe is a rendered heading.
-    """
-    nonempty = sum(bool(_line_text(line).strip()) for line in _block_lines(block))
-    return (
-        nonempty == 1
-        and 0 < len(text) <= MAX_HEADING_CHARS
-        and not text.rstrip("\"'”’»)]} \t\r\n").endswith((".", "!", "?", "…"))
-    )
 
 
 def _column_profiles(fragments, edges):
     """Profile nearest-edge text assignments, keeping spans out of the share.
 
     The share denominator is all nonempty non-spanning text blocks at this
-    edge; the numerator additionally requires the documented heading-like shape.
+    edge; the numerator additionally requires the documented strip shape.
     """
     prof = [
-        {"lens": [], "nonspan": 0, "heading_single": 0, "heading_total": 0}
+        {"lens": [], "nonspan": 0, "heading_single": 0, "heading_total": 0,
+         "strip_nonspan": 0}
         for _ in edges
     ]
     for f in fragments:
@@ -113,6 +116,7 @@ def _column_profiles(fragments, edges):
         if not f.spanning:
             p["nonspan"] += 1
             p["heading_single"] += f.heading_like
+            p["strip_nonspan"] += f.outdent_like
     for p in prof:
         p["median_len"] = median(p["lens"]) if p["lens"] else 0
     return prof
@@ -120,8 +124,46 @@ def _column_profiles(fragments, edges):
 
 def _share(profile):
     """Expose numerator and denominator so an empty edge is not called clean."""
-    n, d = profile["heading_single"], profile["nonspan"]
+    n, d = profile["strip_nonspan"], profile["nonspan"]
     return f"{n}/{d} ({100 * n / d:.1f}%)" if d else "0/0 (n/a)"
+
+
+def _fold_share(col, edges, width, evidence):
+    """The share ``_reading_columns`` itself evaluated for this edge.
+
+    ``evidence`` is read from the converter's own frame, so the printed
+    share cannot disagree with the ``(outdent)`` tag the way the all-pages
+    INPUT/SURVIVING probes can — page 0 and furniture are already out, and
+    note/table-bound blocks stay in. The last edge's share is never
+    evaluated (no right column to fold into); an under-floor edge shows
+    the ``OUTDENT_MIN_BLOCKS`` shortfall its tag is silent about.
+    """
+    if col + 1 >= len(edges) or col >= len(evidence):
+        return "n/a"
+    ev = evidence[col]
+    if not ev:
+        return "0/0 (n/a)"
+    n = sum(
+        _outdent_like(b, t, _band_end(col, edges, width)) for b, t in ev
+    )
+    floor = (
+        f"; <{OUTDENT_MIN_BLOCKS} evidence"
+        if len(ev) < OUTDENT_MIN_BLOCKS
+        else ""
+    )
+    return f"{n}/{len(ev)} ({100 * n / len(ev):.1f}%{floor})"
+
+
+def _band_end(col, edges, width):
+    """Same band bound `_reading_columns` gives `_outdent_like`.
+
+    The last edge has no right column and can never fold; its row still
+    prints a share, so bound its band at the page width for reporting.
+    """
+    edge = edges[col]
+    if col + 1 >= len(edges):
+        return edge + (width - edge) * OUTDENT_BAND_FILL
+    return edge + (edges[col + 1] - edge) * OUTDENT_BAND_FILL
 
 
 def _vector_regions(page):
@@ -271,8 +313,13 @@ def _line_directions(blocks, surviving_ids):
     return directions, rotated
 
 
-def _reading_order(ordered, edges, lang):
-    """Sample the renderer's actual ordering using its own column/span helpers."""
+def _reading_order(ordered, edges, col_map, lang):
+    """Sample the renderer's actual ordering using its own column/span helpers.
+
+    Tags show the *reading* column (``col_map``), matching the converter's
+    sequence keys — an outdented head tags the same ``colN`` as the body
+    column it folds into, while ``col{i} edge=`` headers stay physical.
+    """
     sample = []
     for b in ordered[:18]:
         tag = "IMG" if b["type"] == 1 else _block_text(b, lang)[:58]
@@ -280,7 +327,9 @@ def _reading_order(ordered, edges, lang):
             "furn"
             if b.get("is_furniture")
             else (
-                "span" if _is_spanning(b, edges) else f"col{_assign_column(b, edges)}"
+                "span"
+                if _is_spanning(b, edges)
+                else f"col{col_map[_assign_column(b, edges)]}"
             )
         )
         sample.append(f"y{b['bbox'][1]:5.0f} {col:5} {tag!r}")
@@ -298,15 +347,20 @@ def _page_report(local):
     rasters = [fitz.Rect(b["bbox"]) for b in blocks if b["type"] == 1]
     fragments = [
         _Fragment(
-            column=_assign_column(b, state.edges),
+            column=col,
             chars=len(text),
             heading_like=_heading_like(b, text),
+            outdent_like=_outdent_like(
+                b, text, _band_end(col, state.edges, page.rect.width),
+            ),
             spanning=_is_spanning(b, state.edges),
             location=_fragment_location(b["bbox"], vectors, rasters),
             survives=id(b) in surviving_ids,
         )
         for b in blocks
-        if b["type"] == 0 and (text := _block_text(b, state.lang))
+        if b["type"] == 0
+        and (text := _block_text(b, state.lang))
+        and (col := _assign_column(b, state.edges)) is not None
     ]
     clusters = _column_edges([b for b in blocks if b["type"] == 0])
     directions, rotated = _line_directions(blocks, surviving_ids)
@@ -330,7 +384,8 @@ def _page_report(local):
         "twoup": _twoup_flag(page, blocks),
         "directions": directions,
         "rotated": rotated,
-        "order": _reading_order(ordered, state.edges, state.lang),
+        "col_map": list(state.col_map),
+        "order": _reading_order(ordered, state.edges, state.col_map, state.lang),
     }
 
 
@@ -340,18 +395,22 @@ def _convert_with_reports(pdf, out, lang, drop_edges):
     Reading ``ordered``/``nonbody_ids`` at render return avoids duplicating
     preparation, table claims, note zones, or keep-headers decisions. The
     pending cross-page paragraph is subsequently finalized by convert itself.
+    ``_reading_columns``'s ``evidence`` locals are captured the same way, so
+    the FOLD row reports the share that actually decided each edge's tag.
     """
     reports = []
     render_code = render._render_page.__code__
+    reading_code = _reading_columns.__code__
+    fold = {"evidence": []}
 
     def capture(frame, event, arg):
         """Read completed render frames, leaving all converter data untouched."""
-        if (
-            event == "return"
-            and frame.f_code is render_code
-            and "nonbody_ids" in frame.f_locals
-        ):
+        if event != "return":
+            return
+        if frame.f_code is render_code and "nonbody_ids" in frame.f_locals:
             reports.append(_page_report(frame.f_locals))
+        elif frame.f_code is reading_code and "evidence" in frame.f_locals:
+            fold["evidence"] = frame.f_locals["evidence"]
 
     previous = sys.getprofile()
     sys.setprofile(capture)
@@ -363,12 +422,13 @@ def _convert_with_reports(pdf, out, lang, drop_edges):
         raise RuntimeError(
             "incomplete render trace; check renderer instrumentation contract"
         )
-    return stats, reports
+    return stats, reports, fold["evidence"]
 
 
-def _print_report(stats, pages):
+def _print_report(stats, pages, fold_evidence):
     """Separate raw input geometry from renderer-surviving source-block metrics."""
     first, edges = pages[0], pages[0]["edges"]
+    col_map = pages[0]["col_map"]
     fragments = [f for p in pages for f in p["fragments"]]
     surviving = [f for f in fragments if f.survives]
     raw_prof = _column_profiles(fragments, edges)
@@ -377,12 +437,17 @@ def _print_report(stats, pages):
     widths = sorted({round(p["width"], 1) for p in pages})
     print(
         f"  {stats['pages']}p  widths={widths}  body={first['body']:.1f}  "
-        f"line_h={first['line_h']:.1f}  doc_edges={_bbox(edges)}"
+        f"line_h={first['line_h']:.1f}  doc_edges={_bbox(edges)} "
+        f"reading_cols={len(set(col_map))}"
     )
     for i, edge in enumerate(edges):
+        # an edge folds rightward only when its mapped id is shared with a
+        # later edge — non-outdent edges keep a unique reading column
+        folded = col_map[i] in col_map[i + 1 :]
         raw, body = raw_prof[i], body_prof[i]
         print(
-            f"    col{i} edge={edge:.1f}: INPUT text={len(raw['lens'])} "
+            f"    col{i} edge={edge:.1f} -> rcol{col_map[i]}"
+            f"{' (outdent)' if folded else ''}: INPUT text={len(raw['lens'])} "
             f"img={image_cols[i]} median_len={raw['median_len']:g}; "
             f"SURVIVING BODY-FLOW text={len(body['lens'])} median_len={body['median_len']:g}"
         )
@@ -391,7 +456,9 @@ def _print_report(stats, pages):
             f"SURVIVING BODY-FLOW {_heading_counts(body)}"
         )
         print(
-            f"      non-spanning heading-like single-line share (<={MAX_HEADING_CHARS} chars): "
+            f"      non-spanning outdent-strip-like share "
+            f"(<={MAX_HEADING_CHARS} chars, <={OUTDENT_BAND_FILL:.0%} band fill): "
+            f"FOLD {_fold_share(i, edges, first['width'], fold_evidence)}; "
             f"INPUT {_share(raw)}; SURVIVING BODY-FLOW {_share(body)}"
         )
     print(f"  INPUT short <={SHORT_CHARS}: {_short_counts(fragments)}")
@@ -434,8 +501,10 @@ def diagnose(pdf: Path, lang="en", drop_edges=True):
     print(f"\n=== {pdf.name} ===\n  source={pdf}")
     with tempfile.TemporaryDirectory() as td:
         out = Path(td) / (pdf.stem + ".epub")
-        stats, pages = _convert_with_reports(pdf, out, lang, drop_edges)
-        _print_report(stats, pages)
+        stats, pages, fold_evidence = _convert_with_reports(
+            pdf, out, lang, drop_edges
+        )
+        _print_report(stats, pages, fold_evidence)
         problems = lint_epub(out)
         print(f"  epub: lint={problems or 'clean'}")
         text = chapter_body_text(out)
@@ -480,10 +549,15 @@ def main():
         f"Vector areas = connected path rects padded by {DRAWING_PAD:g}pt each; "
         f"paths >= {100 * PAGE_FRAME_RATIO:g}% of page width AND height are ignored."
     )
-    print("Columns use nearest-edge home assignments for text AND images.")
     print(
-        f"Edge share = one nonempty line, 1..{MAX_HEADING_CHARS} chars, "
-        "no terminal .!?… after closing quotes/brackets / all non-spanning text blocks."
+        "Columns use nearest-edge home assignments for text AND images; "
+        "rcolN is the reading column (outdent edges fold right)."
+    )
+    print(
+        f"Edge share = up to 2 nonempty lines, 1..{MAX_HEADING_CHARS} chars, "
+        "no terminal .!?… after closing quotes/brackets — FOLD over the "
+        "converter's own deciding evidence (pages>=1, non-furniture); "
+        "INPUT/SURVIVING over all non-spanning text blocks."
     )
     print(
         "Heading-like totals include spans; a phantom gutter can classify an outdented head as spanning."
