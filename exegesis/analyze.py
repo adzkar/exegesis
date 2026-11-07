@@ -705,9 +705,11 @@ def _detect_margins(pages, edges, boilerplate, lang: LangProfile = EN,
     page's own active grid instead of the doc grid — a margin strip
     that was in-band under the committed grid can surface as a
     candidate once the page's true columns bound the bands. The arm
-    only ever adds marks (already-claimed blocks stay claimed), and
-    the doc-level ``_margin_voted_edge`` re-vote is reserved for the
-    first pass, which runs before page grids exist.
+    only ever adds marks (already-claimed blocks stay claimed), the
+    group counter continues from the earlier pass's same-page marks
+    so a new region never collides with an existing ``("margin", pi,
+    gi)`` key, and the doc-level ``_margin_voted_edge`` re-vote is
+    reserved for the first pass, which runs before page grids exist.
     """
     lead_re = _info_lead_re(lang)
     voted = (
@@ -735,7 +737,19 @@ def _detect_margins(pages, edges, boilerplate, lang: LangProfile = EN,
         zones = {}
         for b in cands:
             zones.setdefault(_margin_zone(b, bands), []).append(b)
+        # a second pass ("page_edges" given) can lift groups the first
+        # missed under the doc bands — continue the page's numbering
+        # rather than re-issuing ("margin", pi, 0), which would merge
+        # the new region with the earlier one in ``_aside_groups``
         gi = 0
+        for b in pages[pi][1]["blocks"]:
+            a = b.get("aside")
+            if (
+                isinstance(a, tuple)
+                and len(a) == 3
+                and a[:2] == ("margin", pi)
+            ):
+                gi = max(gi, a[2] + 1)
         for zone in sorted(zones, key=str):
             ms = sorted(
                 zones[zone], key=lambda b: (b["bbox"][1], b["bbox"][0])
