@@ -127,15 +127,21 @@ def _standalone_heading_level(block, body_size):
     return level if _looks_like_heading(text) else None
 
 
-def _line_html(line, body_size):
+def _line_html(line, body_size, link_fns=True):
     """Render a line's spans to HTML: sup markers link to notes, font-name
-    bold/italic suffixes become <b>/<i>."""
+    bold/italic suffixes become <b>/<i>. ``link_fns`` is false inside
+    asides — aside text is never a note source and never links into
+    notes.xhtml, so a digit sup stays a plain ``<sup>``."""
     parts = []
     for s in line["spans"]:
         text = html.escape(s["text"])
         if s["size"] < body_size * 0.75 and s["text"].strip():
             inner = html.escape(s["text"].strip())
-            if s["text"].strip().isdigit() and len(inner) <= 4:
+            if (
+                link_fns
+                and s["text"].strip().isdigit()
+                and len(inner) <= 4
+            ):
                 parts.append(f'<sup><a href="notes.xhtml#fn{inner}">{inner}</a></sup>')
             else:
                 parts.append(f"<sup>{inner}</sup>")
@@ -326,6 +332,186 @@ def _table_html(region, body_size, lang: LangProfile = EN):
     return "".join(parts)
 
 
+def _register_image(state, data, *, ext, name):
+    """Package image bytes once, keyed by content sha1; return the EpubItem.
+
+    Body figures and rasterized tables share this — dedup by digest so
+    the same pixels never package twice. ``name`` is a format template
+    filled with ``n`` (image count at registration) and ``digest`` (the
+    truncated content hash the raster names carry).
+    """
+    digest = hashlib.sha1(data).hexdigest()
+    if digest not in state.images:
+        state.images[digest] = epub.EpubItem(
+            file_name=name.format(
+                n=len(state.images), digest=digest[:16], ext=ext
+            ),
+            media_type=(
+                f"image/{'jpeg' if ext in ('jpg', 'jpeg') else ext}"
+            ),
+            content=data,
+        )
+    return state.images[digest]
+
+
+def _rasterize(page, rect):
+    """Rasterize a page region to PNG bytes — the rotated-table path.
+
+    ``rect`` arrives in unrotated mediabox space (block bboxes); the
+    padded clip maps into displayed space via ``page.rotation_matrix``
+    because ``get_pixmap`` clips in rotated coordinates.
+    """
+    mb = page.mediabox
+    padded = fitz.Rect(
+        max(0, rect.x0 - 8), max(0, rect.y0 - 20),
+        min(mb.width, rect.x1 + 8), min(mb.height, rect.y1 + 20),
+    )
+    clip = _rotate_clip(padded, page.rotation_matrix)
+    return page.get_pixmap(clip=clip, matrix=fitz.Matrix(2, 2)).tobytes("png")
+
+
+def _flush_paragraph(state):
+    """Emit the open paragraph into its start page's frags, then drain
+    queued asides right behind it.
+
+    The one paragraph-flush site — render's ``flush_par`` closure and
+    emit's end-of-document flush both fold into this so a document that
+    ends mid-paragraph can't drop asides queued while it was open.
+    Draining into ``page_frags[par_page]`` keeps an aside in the
+    paragraph's chapter, ahead of any following heading.
+    """
+    if state.par:
+        state.page_frags[state.par_page].append(
+            f"<p>{_join_lines(state.par, state.lang)}</p>"
+        )
+        state.par = []
+    if state.pending_asides:
+        state.page_frags[state.par_page].extend(state.pending_asides)
+        state.pending_asides.clear()
+
+
+def _aside_groups(blocks):
+    """Group marked blocks into aside regions, ordered by top member.
+
+    ``block["aside"]`` carries the region key its detector assigned;
+    members emit in (y, x) reading order inside their aside.
+    """
+    groups = {}
+    for b in blocks:
+        groups.setdefault(b["aside"], []).append(b)
+    return sorted(
+        groups.values(),
+        key=lambda ms: (
+            min(m["bbox"][1] for m in ms),
+            min(m["bbox"][0] for m in ms),
+        ),
+    )
+
+
+def _aside_frag(members, page, state):
+    """Render one lifted region to a ``<aside class="sidebar">`` fragment.
+
+    Everything a detector claimed is preserved: text blocks become
+    aside-local paragraphs, grid tables real ``<table>`` markup, and
+    images/rotated tables embedded figures — the same structuring the
+    body pass applies, rerun on the region's own geometry. The local
+    helpers get edges ``[aside_x0]`` and the absolute right boundary as
+    their ``page_width`` (``_table_regions`` takes it with a +8 pad
+    since it insets its own right band by 8pt — a tight content bbox
+    must not exclude the rightmost cell). With a single edge the doc
+    grid's multi-column guard can't reinterpret the strip as body
+    columns. Whatever the local pass can't structure degrades to
+    paragraphs — nothing is dropped. Superscripts never link into
+    notes.xhtml, and no ``<hN>``/heading id can appear inside, so the
+    fragment never triggers a chapter split or TOC anchor.
+    """
+    body_size = state.body_size
+    members = sorted(
+        members, key=lambda b: (b["bbox"][1], b["bbox"][0])
+    )
+    a_edges = [min(b["bbox"][0] for b in members)]
+    a_right = max(b["bbox"][2] for b in members)
+    texts = [b for b in members if b["type"] == 0]
+    tbl = _rotated_table_region(texts)
+    if tbl is not None:
+        state.raster_tables += 1
+    tbl_ids = (
+        {id(b) for b in texts if fitz.Rect(b["bbox"]).intersects(tbl)}
+        if tbl is not None
+        else set()
+    )
+    grids = _table_regions(
+        [b for b in texts if id(b) not in tbl_ids],
+        state.line_h,
+        a_edges,
+        a_right + 8,
+        state.lang,
+    )
+    state.grid_tables += len(grids)
+    grid_of = {bid: g for g in grids for bid in g.claimed}
+    skip_ids = tbl_ids | set(grid_of)
+    claimed = set()
+    inner, tbl_done, grid_done = [], False, set()
+    for b_i, b in enumerate(members):
+        if b["type"] == 1:
+            data = b.get("image")
+            if not data or len(data) < MIN_IMAGE_BYTES:
+                continue
+            item = _register_image(
+                state, data,
+                ext=b.get("ext", "png"), name="images/img_{n}.{ext}",
+            )
+            alt = _figure_alt(
+                members, b_i, a_edges, a_right,
+                pattern=state.lang.figure_caption,
+                skip_ids=skip_ids, claimed=claimed, lang=state.lang,
+            )
+            inner.append(
+                f'<p class="fig"><img src="{item.file_name}"'
+                f' alt="{alt}"/></p>'
+            )
+            continue
+        if id(b) in tbl_ids:
+            if not tbl_done:
+                tbl_done = True
+                alt = _figure_alt(
+                    members, b_i, a_edges, a_right,
+                    region=tbl, fallback=state.lang.table_alt,
+                    pattern=state.lang.table_caption,
+                    above_pattern=state.lang.caption,
+                    skip_ids=skip_ids, claimed=claimed, lang=state.lang,
+                )
+                item = _register_image(
+                    state, _rasterize(page, tbl),
+                    ext="png", name="images/table_{digest}.{ext}",
+                )
+                inner.append(
+                    f'<p class="fig"><img src="{item.file_name}"'
+                    f' alt="{alt}"/></p>'
+                )
+            continue
+        if id(b) in grid_of:
+            g = grid_of[id(b)]
+            if id(g) not in grid_done:
+                grid_done.add(id(g))
+                inner.append(_table_html(g, body_size, state.lang))
+            continue
+        text = _join_lines(
+            (
+                _line_html(l, body_size, link_fns=False).strip()
+                for l in _block_lines(b)
+            ),
+            state.lang,
+        )
+        if not text:
+            continue
+        if b.get("aside_title"):
+            inner.append(f'<p class="aside-title">{text}</p>')
+        else:
+            inner.append(f"<p>{text}</p>")
+    return f'<aside class="sidebar">{"".join(inner)}</aside>'
+
+
 def _strip_dead_fn_links(frag, fn_nums):
     """Unlink sup-markers whose ``#fnN`` target has no note entry — links to
     real notes survive; other raised digits (years, cross-refs) revert to
@@ -352,7 +538,11 @@ def _render_page(page, page_index: int, state: PipelineState):
     first line is indented start a new one. A paragraph that crosses a page
     boundary is emitted on the page where it began, so chapter splits never
     relocate text. Footnote-region blocks are pulled out of the flow into
-    ``state.footnotes``.
+    ``state.footnotes``. Blocks carrying an ``aside`` mark were lifted by
+    ``_ordered_blocks`` before any classifier could see them; they render
+    through the shared aside path at page end — appended to the page's
+    frags when no paragraph is open, else queued into
+    ``state.pending_asides`` for the paragraph-close drain.
     """
     body_size = state.body_size
     edges = state.edges
@@ -366,6 +556,11 @@ def _render_page(page, page_index: int, state: PipelineState):
         lang=state.lang,
         col_map=col_map,
     )
+    # aside members never reach ``ordered`` — collect them from the
+    # page's own items for the shared aside path at page end
+    aside_blocks = [
+        b for b in state.page_items[page_index] if b.get("aside") is not None
+    ]
     # kept furniture is render-only: it never feeds footnote-zone detection
     # or rotated-table candidate sets
     body_blocks = [b for b in ordered if not b.get("is_furniture")]
@@ -423,11 +618,7 @@ def _render_page(page, page_index: int, state: PipelineState):
     claimed_caps = set()
 
     def flush_par():
-        if state.par:
-            state.page_frags[state.par_page].append(
-                f"<p>{_join_lines(state.par, state.lang)}</p>"
-            )
-            state.par = []
+        _flush_paragraph(state)
         flush_item()
 
     def flush_item():
@@ -451,15 +642,12 @@ def _render_page(page, page_index: int, state: PipelineState):
             data = block.get("image")
             if data and len(data) >= MIN_IMAGE_BYTES:
                 flush_par()
-                digest = hashlib.sha1(data).hexdigest()
-                if digest not in state.images:
-                    ext = block.get("ext", "png")
-                    name = f"images/img_{len(state.images)}.{ext}"
-                    state.images[digest] = epub.EpubItem(
-                        file_name=name,
-                        media_type=f"image/{'jpeg' if ext in ('jpg', 'jpeg') else ext}",
-                        content=data,
-                    )
+                item = _register_image(
+                    state,
+                    data,
+                    ext=block.get("ext", "png"),
+                    name="images/img_{n}.{ext}",
+                )
                 alt = _figure_alt(
                     ordered,
                     b_i,
@@ -472,7 +660,7 @@ def _render_page(page, page_index: int, state: PipelineState):
                     col_map=col_map,
                 )
                 frags.append(
-                    f'<p class="fig"><img src="{state.images[digest].file_name}"'
+                    f'<p class="fig"><img src="{item.file_name}"'
                     f' alt="{alt}"/></p>'
                 )
             continue
@@ -497,24 +685,14 @@ def _render_page(page, page_index: int, state: PipelineState):
                     lang=state.lang,
                     col_map=col_map,
                 )
-                mb = page.mediabox
-                tbl = fitz.Rect(
-                    max(0, tbl.x0 - 8), max(0, tbl.y0 - 20),
-                    min(mb.width, tbl.x1 + 8),
-                    min(mb.height, tbl.y1 + 20),
+                item = _register_image(
+                    state,
+                    _rasterize(page, tbl),
+                    ext="png",
+                    name="images/table_{digest}.{ext}",
                 )
-                clip = _rotate_clip(tbl, page.rotation_matrix)
-                pix = page.get_pixmap(clip=clip, matrix=fitz.Matrix(2, 2))
-                data = pix.tobytes("png")
-                digest = hashlib.sha1(data).hexdigest()[:16]
-                if digest not in state.images:
-                    state.images[digest] = epub.EpubItem(
-                        file_name=f"images/table_{digest}.png",
-                        media_type="image/png",
-                        content=data,
-                    )
                 frags.append(
-                    f'<p class="fig"><img src="{state.images[digest].file_name}"'
+                    f'<p class="fig"><img src="{item.file_name}"'
                     f' alt="{alt}"/></p>'
                 )
             continue
@@ -761,3 +939,16 @@ def _render_page(page, page_index: int, state: PipelineState):
                 state.par_page = page_index
             state.par.append(t)
         flush_item()
+
+    # aside members emit last — they never merged with the flow above.
+    # List items already flushed per block, so only an open paragraph
+    # defers the page's asides: they queue in page order and drain into
+    # par_page's frags right behind the closing paragraph; with no
+    # paragraph open they append to this page's frags after body flow.
+    # The known cost — an aside can drift to the end of a long
+    # multi-page paragraph — is accepted: prose integrity wins.
+    if aside_blocks:
+        target = state.pending_asides if state.par else frags
+        for members in _aside_groups(aside_blocks):
+            state.asides += 1
+            target.append(_aside_frag(members, page, state))

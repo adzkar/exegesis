@@ -798,7 +798,7 @@ def nav_entries(nav: str) -> list[str]:
 # retry every split of the sup text (2^n), and a 107-char `<sup>` at a
 # block start hung the eval on a corpus paper.
 _BLOCK_OPEN = (r"<(?:p|td|th|caption|figcaption|h[1-6]|blockquote|"
-               r"dt|dd|li|div|section|thead|tbody)\b[^>]*>")
+               r"dt|dd|li|div|section|thead|tbody|aside)\b[^>]*>")
 _LEGEND_AT = (rf"(?:^|\n|{_BLOCK_OPEN})(?:[\s*†‡§]|<(?!sup\b)[^>]+>|"
               rf"<sup\b[^>]*>(?:[^<]|<(?!/sup>)[^>]*>)*</sup>)*")
 

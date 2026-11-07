@@ -240,6 +240,33 @@ chapters.
   tries the block *above* the region first against the full label set
   and rescues a later column's `Table N.` legend that column-major
   order emits after the cells.
+- **Asides** — detector-claimed regions ride a `block["aside"]` region
+  key, checked before the furniture tests in `_ordered_blocks` (a
+  claimed block survives a furniture-matching line, and never seeds
+  the strip clip, a span/cut, or a column edge — the same exclusion
+  keeps marked blocks out of `_doc_column_edges` votes and
+  `_reading_columns` outdent evidence). Lifted members never enter
+  `ordered`, so no body classifier (headings/TOC, bylines, abstract,
+  notes diversion, blockquote isolation, paragraph merges, caption
+  donation) can see them. At page end each region emits one
+  `<aside class="sidebar">` fragment through `_aside_frag`: an
+  aside-local pass over the region's own blocks that reuses the grid
+  table, rotated-table, and caption-alt machinery with the region's
+  x0/x1 as its edges/page_width — `_table_regions`'s 8pt right-band
+  inset is compensated so a tight bbox can't lose the rightmost cell —
+  and anything unstructureable degrades to aside-local paragraphs,
+  never dropped. Superscripts stay plain `<sup>` (aside text never
+  links notes.xhtml), a region title flag renders
+  `<p class="aside-title">`, and no `<hN>`/heading id can appear
+  inside, so an aside can't split a chapter or seed the TOC. When a
+  paragraph is still open the page's asides queue in
+  `state.pending_asides` and `_flush_paragraph` — the one paragraph
+  flush, shared by render's closure and emit's document tail — drains
+  them into `par_page`'s frags right behind the closing paragraph, so
+  a document ending mid-paragraph can't drop them; with no open
+  paragraph they append to their own page's frags after body flow
+  (aside order follows member y). `stats["asides"]` counts emitted
+  regions; `dev/diagnose_layouts.py` reports the lifted count per page.
 - **Abstract** — first small-font inset block in the top half of pages 0–1
   injects an `Abstract` h2 (title from the language profile's
   `abstract_title`).
@@ -277,7 +304,8 @@ chapters.
   back to the first h1 heading and the byline text (affiliation tail and
   footnote markers stripped from the author).
 - **Style** — a minimal `style.css` is embedded (italic bylines, small-caps
-  labels, indented list items/quotes, centered figures).
+  labels, indented list items/quotes, centered figures, bordered
+  `aside.sidebar` boxes — no floats or fixed widths).
 
 ## Layout baseline integration audit (#33)
 

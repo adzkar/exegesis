@@ -46,3 +46,8 @@ class PipelineState:
     # emit real <table> markup, raster tables are region-clipped PNGs
     grid_tables: int = 0
     raster_tables: int = 0
+    # aside regions emitted so far (stats dict) plus the <aside>
+    # fragments queued while a paragraph is still open — the queue
+    # drains into par_page's frags right behind the closing paragraph
+    asides: int = 0
+    pending_asides: list[str] = field(default_factory=list)

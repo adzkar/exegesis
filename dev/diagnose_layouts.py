@@ -26,6 +26,8 @@ heading classifier. Each physical edge prints its reading column (``-> rcolN``;
 INPUT counts precede furniture removal. SURVIVING BODY-FLOW counts use the actual
 renderer's ``ordered`` blocks minus ``nonbody_ids``: headings/bylines/labels count,
 but furniture, notes, rasterized cells, and grid-table cells/captions do not.
+Blocks the detector lifted into ``<aside>`` regions never reach ``ordered``;
+each page's ``aside-lifted`` line reports that claimed count beside SURVIVING.
 These are source-block counts, not final paragraph counts or text-quality scores.
 
 Locations require full block-bbox containment in a connected vector area bbox or
@@ -37,7 +39,8 @@ is outside a figure. Bboxes and line dirs are in extraction (unrotated) coordina
 page /Rotate is reported separately.
 
 Preparation and rendering run through ``convert`` itself. A temporary profiling
-hook reads private renderer locals at return, before convert releases each
+hook reads private renderer locals at return (``page``/``page_index``/``state``
+/``ordered``/``nonbody_ids``/``aside_blocks``), before convert releases each
 page, and ``_reading_columns``'s ``evidence`` locals at its return. Keep that
 small instrumentation contract in sync if those locals change. This
 manual corpus tool is not a test helper and must never be imported by tests.
@@ -343,6 +346,7 @@ def _page_report(local):
     surviving_ids = {
         id(b) for b in ordered if b["type"] == 0 and id(b) not in local["nonbody_ids"]
     }
+    n_asides = len(local["aside_blocks"])
     vectors = _vector_regions(page)
     rasters = [fitz.Rect(b["bbox"]) for b in blocks if b["type"] == 1]
     fragments = [
@@ -385,6 +389,7 @@ def _page_report(local):
         "directions": directions,
         "rotated": rotated,
         "col_map": list(state.col_map),
+        "asides": n_asides,
         "order": _reading_order(ordered, state.edges, state.col_map, state.lang),
     }
 
@@ -480,6 +485,7 @@ def _print_report(stats, pages, fold_evidence):
         )
         print(f"    INPUT short <={SHORT_CHARS}: {_short_counts(raw)}")
         print(f"    SURVIVING BODY-FLOW short <={SHORT_CHARS}: {_short_counts(body)}")
+        print(f"    aside-lifted blocks={p['asides']}")
         print(
             f"    INPUT line dirs={dict(p['directions'])} rotated-lines={len(p['rotated'])}"
         )

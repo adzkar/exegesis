@@ -127,11 +127,13 @@ def _doc_column_edges(
     for page, pdict in pages:
         # furniture shapes can't form column edges — a sidebar or running
         # head recurring at the same x on every page is the classic
-        # phantom-edge generator
+        # phantom-edge generator. Aside members cast no votes either:
+        # a claimed info-box column must not vote a phantom edge
         items = [
             b
             for b in pdict["blocks"]
             if b["type"] == 0
+            and b.get("aside") is None
             and not _is_furniture(
                 b, page, _block_text(b, lang), lang
             )
@@ -280,7 +282,11 @@ def _reading_columns(
         if pi == 0:
             continue
         for b in pdict["blocks"]:
-            if b["type"] != 0 or _is_spanning(b, edges):
+            if (
+                b["type"] != 0
+                or b.get("aside") is not None
+                or _is_spanning(b, edges)
+            ):
                 continue
             text = _block_text(b, lang)
             if (
