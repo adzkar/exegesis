@@ -97,15 +97,23 @@ chapters.
   page right after the boilerplate set is built) rescues heads fused to
   the block below them — a whole-block signature can never match a fused
   block, so when a block's first line lies in an edge zone its leading
-  lines join incrementally (≤`SIGNATURE_PREFIX_MAX_LINES` = 3, never the
-  whole block) and the first joined signature found in the boilerplate
-  set splits off into its own signature-furniture block while the
-  remainder continues as a normal block with a recomputed bbox. The
-  matched prefix's union must stay inside the zone or nothing splits: a
-  head straddling the boundary would leak as a paragraph — the same
-  failure the split fixes. Column-edge voting, the strip clip, and
-  render all see the post-split blocks, so a recurring fused head can't
-  vote a phantom column edge either.
+  lines join incrementally (≤`SIGNATURE_PREFIX_MAX_LINES`, the
+  boilerplate set's own 6-line bound — a matched join is already a
+  verified signature) and the *longest* joined signature found in the
+  boilerplate set splits off into its own signature-furniture block —
+  alternating heads nest as prefixes of each other, so first-match
+  would leave the real head's tail fused to the body. A block whose
+  whole signature is already boilerplate is the signature arm's own
+  case and never splits — splitting would leak a non-boilerplate
+  remainder into body flow. The remainder continues as a normal block
+  with a recomputed bbox and re-enters the scan, so stacked heads each
+  independently recurring split one at a time; a remainder that is
+  itself signature furniture then drops downstream like any other
+  head. The matched prefix's union must stay inside the zone or nothing
+  splits: a head straddling the boundary would leak as a paragraph —
+  the same failure the split fixes. Column-edge voting, the strip clip,
+  and render all see the post-split blocks, so a recurring fused head
+  can't vote a phantom column edge either.
   Rotated margin strips (tall+narrow blocks in the outer 10% margins,
   measured in `page.mediabox` space so /Rotate pages compare correctly)
   qualify by *line direction*, not width: every line with reliable
