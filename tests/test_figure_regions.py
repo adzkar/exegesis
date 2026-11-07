@@ -384,3 +384,54 @@ def test_unrelated_image_emits_separately(tmp_path):
     xhtml = "\n".join(doc_html(out).values())
     assert xhtml.count('src="images/fig_') == 1
     assert 'src="images/img_' in xhtml  # the unrelated image still emits
+
+
+def test_caption_in_other_column_no_claim(tmp_path):
+    """A caption in the adjacent column shares no band with the
+    artwork — `_overlap_cols` leaves the candidate unanchored."""
+    doc = fitz.open()
+    page = _page(doc)
+    paragraph(page, (72, 150, 290, 215),
+              "Left column body sets the first column edge here.")
+    paragraph(page, (322, 150, 540, 215),
+              "Right column body sets the second column edge too.")
+    image(page, (100, 290, 300, 470))
+    text(page, 130, 350, "COLA")
+    text(page, 200, 400, "COLB")
+    text(page, 330, 490, "Figure 1. Right side.")
+    paragraph(page, (72, 560, 290, 630),
+              "Left column prose continues below the figure zone.")
+    pdf = _save(doc, tmp_path / "othercol.pdf")
+    out = tmp_path / "othercol.epub"
+    stats = convert(pdf, out)
+    assert stats["raster_figures"] == 0
+    body = chapter_body_text(out)
+    for kept in ("COLA", "COLB", "Figure 1. Right side."):
+        assert kept in body
+
+
+def test_full_width_figure_spans_gutter(tmp_path):
+    """A figure crossing the gutter shares a band with a caption in
+    either column and claims normally."""
+    doc = fitz.open()
+    page = _page(doc)
+    paragraph(page, (72, 150, 290, 215),
+              "Left column body sets the first column edge here.")
+    paragraph(page, (322, 150, 540, 215),
+              "Right column body sets the second column edge too.")
+    image(page, (100, 290, 500, 470))
+    text(page, 150, 350, "WIDEA")
+    text(page, 350, 400, "WIDEB")
+    text(page, 72, 520, "Figure 1. Full width.")
+    paragraph(page, (72, 560, 290, 630),
+              "Left column prose continues below the figure zone.")
+    paragraph(page, (322, 560, 540, 630),
+              "Right column prose continues below the figure too.")
+    pdf = _save(doc, tmp_path / "wide.pdf")
+    out = tmp_path / "wide.epub"
+    stats = convert(pdf, out)
+    assert stats["raster_figures"] == 1
+    assert len(_fig_imgs(doc_html(out))) == 1
+    body = chapter_body_text(out)
+    assert "WIDEA" not in body and "WIDEB" not in body
+    assert "Figure 1. Full width." in body
