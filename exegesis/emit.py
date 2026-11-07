@@ -335,8 +335,11 @@ def convert(
         # reading columns, not physical edges: an outdent edge that folds
         # into its body column does not count (MDPI reports 1, not 2).
         # Once grids vary per page (#37) the stat reports the widest
-        # reading grid any page commits — the doc's columnar maximum
-        "columns": max(len(set(m)) for m in state.page_col_map),
+        # reading grid any page commits — the doc's columnar maximum; a
+        # zero-page document has no page maps at all and reports 0
+        "columns": max(
+            (len(set(m)) for m in state.page_col_map), default=0
+        ),
         "grid_tables": state.grid_tables,
         "raster_tables": state.raster_tables,
         "raster_figures": state.raster_figures,
