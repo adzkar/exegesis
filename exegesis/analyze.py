@@ -41,6 +41,7 @@ from .const import (
     PAGE_FRAME_RATIO,
     SIGNATURE_PREFIX_MAX_LINES,
     WRAP_BAND_SHARE,
+    WRAP_COVER_GAP,
     WRAP_EDGE_TOL,
     WRAP_MIN_IMG,
     WRAP_SIDE_TOL,
@@ -148,22 +149,30 @@ def _wrap_fragments(blocks, items):
     x0 clustering reads that variance as a phantom edge and emits the
     far strip after the resumed full-width body (#38). A strip
     qualifies only when blocks sit on *both* sides of the image and
-    some eligible text block encloses image + strips horizontally:
-    the resume/opening block that proves they share one column (a
-    genuine second column has no text crossing its gutter to cover
-    it). Fragments must also hold most of their height inside the
-    image's y-band — a real column's blocks flow past the float, not
-    around it — which keeps a true neighboring column's blocks from
-    being claimed when a wide heading happens to span the page.
-    Strips at the cover's own x0 keep voting (they are the column's
-    normal lines), so only the interior-x0 side is withheld. An
-    edge-flush float — a mug shot with text on one side — has no
-    both-sides signal and is deliberately not claimed here.
-    ``items`` is the page's voting-eligible text blocks; images come
-    from ``blocks`` (claimed asides and furniture may still enclose
-    the band as prose, but only ``items`` may vote or cover).
+    some eligible text block encloses image + strips horizontally
+    *and* adjoins the band vertically: the resume/opening block that
+    proves they share one column. The vertical adjacency is what
+    makes the proof local — a distant full-width span (title,
+    abstract, spanning section head) horizontally encloses any strip
+    pair on the page, so an unbounded cover test lets it brand a real
+    neighboring column's in-band blocks as fragments and the true
+    edge dies. Fragments must also hold most of their height inside
+    the image's y-band — a real column's blocks flow past the float,
+    not around it — and a strip whose own x0 is shared by eligible
+    blocks outside the strip set keeps its vote: that column
+    continues above or below the float, the genuine second-column
+    case the cover test alone cannot rule out once a spanning head
+    sits close to the band. Strips at the cover's own x0 keep voting
+    (they are the column's normal lines), so only the interior-x0
+    side is withheld. An edge-flush float — a mug shot with text on
+    one side — has no both-sides signal and is deliberately not
+    claimed here. ``items`` is the page's voting-eligible text
+    blocks; images come from ``blocks`` (claimed asides and furniture
+    may still enclose the band as prose, but only ``items`` may vote
+    or cover).
     """
-    frags = set()
+    claims = []
+    strip_ids = set()
     for img in blocks:
         if img["type"] != 1:
             continue
@@ -181,19 +190,33 @@ def _wrap_fragments(blocks, items):
                 right.append(b)
         if not left or not right:
             continue
+        # band-bound beside any image, claimed or not: such blocks can
+        # never be a column flowing past *this* float's band either
+        strip_ids.update(id(b) for b in left + right)
         lo = min(ix0, min(b["bbox"][0] for b in left + right))
         hi = max(ix1, max(b["bbox"][2] for b in left + right))
         covers = [
             b for b in items
             if b["bbox"][0] <= lo + WRAP_SIDE_TOL
             and b["bbox"][2] >= hi - WRAP_SIDE_TOL
+            and max(iy0 - b["bbox"][3], b["bbox"][1] - iy1) <= WRAP_COVER_GAP
         ]
-        if not covers:
-            continue
-        edge_x0 = median(b["bbox"][0] for b in covers)
+        if covers:
+            claims.append(
+                (median(b["bbox"][0] for b in covers), left, right)
+            )
+    frags = set()
+    for edge_x0, left, right in claims:
         for b in left + right:
-            if abs(b["bbox"][0] - edge_x0) >= WRAP_EDGE_TOL:
-                frags.add(id(b))
+            if abs(b["bbox"][0] - edge_x0) < WRAP_EDGE_TOL:
+                continue
+            if any(
+                id(o) not in strip_ids
+                and abs(o["bbox"][0] - b["bbox"][0]) < WRAP_EDGE_TOL
+                for o in items
+            ):
+                continue
+            frags.add(id(b))
     return frags
 
 

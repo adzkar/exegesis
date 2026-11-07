@@ -114,13 +114,22 @@ PAGE_FRAME_RATIO = 0.9
 # bullet can't host a wrap), with most of its own height inside the
 # image's y-band (a real column's blocks flow past the float, not around
 # it), and only when an eligible text block encloses image + strips
-# horizontally — the resume/opening block that proves one column, since a
-# genuine second column has no text crossing its gutter to cover it.
-# The edge tolerance matches ``_column_edges``'s own cluster window.
+# horizontally *and* adjoins the band vertically — the resume/opening
+# block that proves one column. The vertical bound is what makes the
+# proof local: a distant full-width span (title, abstract, spanning
+# section head) horizontally encloses any strip pair on the page, so an
+# unbounded cover test lets it brand the neighboring column's blocks as
+# wrap fragments and the real edge dies. The gap is generous — the
+# resume/opening block can sit several lines off the float — while a
+# page-distant span cannot reach it. Even with a near cover, a strip
+# whose x0 is shared by blocks flowing past the band keeps its vote:
+# that column continues above or below the float, the real second-column
+# case. The edge tolerance matches ``_column_edges``'s own cluster window.
 WRAP_MIN_IMG = 24.0
 WRAP_SIDE_TOL = 2.0
 WRAP_BAND_SHARE = 0.5
 WRAP_EDGE_TOL = 15.0
+WRAP_COVER_GAP = 96.0
 
 # Language profiles live in exegesis/lang.py — `convert(lang=...)`/`--lang`
 # select the pattern set stamped into the EPUB; defaults to English.
