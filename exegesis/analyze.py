@@ -981,28 +981,30 @@ def _strong_grid(cand, items, line_h, body_size):
     * width: median block x-extent ≥``ZONE_COL_MIN_WIDTH``×body_size —
       a column holds ~8em of prose; table cells and margin strips run
       narrower;
-    * gutter: at most ``ZONE_GUTTER_GRAZE`` of its blocks reach within
-      ``ZONE_GUTTER_TOL`` of the next edge — a real column's text stops
-      at its own right bound, while indent clusters and hanging
-      reference starts ride right through the proposed boundary.
+    * gutter: at most ``ZONE_GUTTER_GRAZE`` of the blocks it claims
+      reach within ``ZONE_GUTTER_TOL`` of the next edge — a real
+      column's text stops at its own right bound, while indent
+      clusters and hanging reference starts ride right through the
+      proposed boundary.
 
-    Spanning blocks are excluded from support on every clause — they
-    legitimately cover the gutter, so they can neither vote a column
-    down nor hold one up. One weak column demotes the whole candidate:
-    partial grids reorder nothing safely.
+    Spanning blocks stay out of the support set on the first four
+    clauses — they legitimately cover the gutter — but count in the
+    graze share's claims: the 12pt span window already strips every
+    edge-reacher out of support, so measuring ``sup`` alone leaves the
+    clause dead for any realistic edge gap. One weak column demotes
+    the whole candidate: partial grids reorder nothing safely.
     """
     if len(cand) < 2 or not items:
         return False
     cols: list[list[dict]] = [[] for _ in cand]
     for b in items:
-        if _is_spanning(b, cand):
-            continue
         cols[_assign_column(b, cand)].append(b)
     text_extent = (
         max(b["bbox"][3] for b in items)
         - min(b["bbox"][1] for b in items)
     )
-    for i, sup in enumerate(cols):
+    for i, col in enumerate(cols):
+        sup = [b for b in col if not _is_spanning(b, cand)]
         if len(sup) < ZONE_COL_MIN_BLOCKS:
             return False
         if (
