@@ -118,6 +118,54 @@ def test_margin_table_legend_anchors_into_table(tmp_path):
     assert body.count("Note: *p<0.1;") == 1
 
 
+def _margin_raster_table(path):
+    """A rotated table in the body column whose margin strip carries the
+    legend — the raster arm of legend anchoring: the ``Table N`` block
+    donates the PNG's alt and the rest of the strip emits as an aside."""
+    doc = fitz.open()
+    page = _page(doc)
+    paragraph(page, (BODY_X, 200, 560, 300), PROSE[0] + " opening page.")
+    paragraph(page, (BODY_X, 400, 560, 500), PROSE[1] + " opening page.")
+    page = _page(doc)
+    paragraph(page, (BODY_X, 120, 560, 185), PROSE[0] + " above the table.")
+    for i, x in enumerate((BODY_X, 260, 320)):
+        page.insert_textbox(
+            fitz.Rect(x, 380, x + 15, 520), f"r1c{i} r2c{i} r3c{i}",
+            fontsize=10,
+        )
+    text(page, MARGIN_X, 370, "Table 1. Rotated margin legend.", size=9)
+    text(page, MARGIN_X, 420, "Note: *p<0.1;", size=9)
+    paragraph(page, (BODY_X, 560, 560, 625), PROSE[1] + " below the table.")
+    return _save(doc, path)
+
+
+def test_margin_raster_legend_binds_into_alt(tmp_path):
+    """A margin legend beside a *raster* table donates the PNG's alt —
+    the ``Table N`` block leaves the aside members, so the legend emits
+    inside ``alt`` only while the note rides the anchored aside."""
+    pdf = _margin_raster_table(tmp_path / "margin_raster.pdf")
+    out = tmp_path / "out.epub"
+    stats = convert(pdf, out)
+    html = _full_html(out)
+
+    assert stats["raster_tables"] == 1
+    assert stats["asides"] == 1
+    assert lint_epub(out) == []
+    assert 'alt="Table 1. Rotated margin legend."' in html
+    # the remaining legend member rides the anchored aside right behind
+    # the raster — adjacent, not at page end among the paragraphs
+    tail = html.split(
+        'alt="Table 1. Rotated margin legend."/></p>', 1
+    )[1]
+    assert tail.lstrip().startswith('<aside class="sidebar">')
+    assert "Note: *p&lt;0.1;" in tail.split("</aside>", 1)[0]
+    # the legend emits only inside the alt — never as visible text —
+    # while the note stays visible through the aside
+    body = chapter_body_text(out)
+    assert "Table 1. Rotated margin legend." not in body
+    assert body.count("Note: *p<0.1;") == 1
+
+
 def test_margin_members_all_preserved(tmp_path):
     """A margin group preserves every text token and image member —
     a strip below the edge quorum is a *band outsider*, and its image

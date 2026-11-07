@@ -1236,7 +1236,9 @@ class _RasterRegion:
     # the validated raster crop when it differs from ``rect`` (figure
     # claims rasterize an exact clip; tables pad inside _rasterize)
     clip: fitz.Rect | None = None
-    # a figure's anchor caption block — stays in body flow, donates alt
+    # the raster's alt-donor caption block — a figure's anchor caption
+    # stays in body flow; a margin legend bound by ``_bind_legend`` is
+    # consumed by the alt and never re-emits as text
     caption: dict | None = None
 
 

@@ -401,23 +401,37 @@ def _raster_frag(
     sequence the anchor sits in (``ordered`` on body pages, ``members``
     inside an aside). ``region.kind`` picks the caption label set and
     asset-name prefix — ``table_`` rasters take ``Table N`` legends,
-    tried above the region first.
+    tried above the region first; a margin legend ``_bind_legend``
+    bound into ``region.caption`` donates the alt directly, since it
+    left the flow with its aside.
     """
     if region.kind == "table":
-        alt = _figure_alt(
-            blocks,
-            b_i,
-            edges,
-            page_width,
-            region=region.rect,
-            fallback=state.lang.table_alt,
-            pattern=state.lang.table_caption,
-            above_pattern=state.lang.caption,
-            skip_ids=skip_ids,
-            claimed=claimed,
-            lang=state.lang,
-            col_map=col_map,
-        )
+        if (
+            region.caption is not None
+            and id(region.caption) not in claimed
+        ):
+            # a margin legend bound by _bind_legend donates the alt —
+            # it left the flow with the aside, so the caption scan
+            # below can never see it
+            claimed.add(id(region.caption))
+            alt = html.escape(
+                _block_text(region.caption, state.lang)[:200], quote=True
+            )
+        else:
+            alt = _figure_alt(
+                blocks,
+                b_i,
+                edges,
+                page_width,
+                region=region.rect,
+                fallback=state.lang.table_alt,
+                pattern=state.lang.table_caption,
+                above_pattern=state.lang.caption,
+                skip_ids=skip_ids,
+                claimed=claimed,
+                lang=state.lang,
+                col_map=col_map,
+            )
         name = "images/table_{digest}.{ext}"
     elif region.kind == "figure":
         # the anchor caption detection already found is the alt — it
