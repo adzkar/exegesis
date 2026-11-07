@@ -255,8 +255,13 @@ chapters.
   x0/x1 as its edges/page_width — `_table_regions`'s 8pt right-band
   inset is compensated so a tight bbox can't lose the rightmost cell —
   and anything unstructureable degrades to aside-local paragraphs,
-  never dropped. Superscripts stay plain `<sup>` (aside text never
-  links notes.xhtml), a region title flag renders
+  never dropped. The grid pass gets the region's full member list, not
+  only texts, so `_region_from_run`'s image-overlap rejection still
+  vetoes a false table wrapped around an aside figure (non-text
+  members never seed bands or claims). Superscripts stay plain `<sup>`
+  everywhere inside — `link_fns=False` threads through `_table_html`
+  into cells and captions, so no aside path ever links notes.xhtml —
+  a region title flag renders
   `<p class="aside-title">`, and no `<hN>`/heading id can appear
   inside, so an aside can't split a chapter or seed the TOC. When a
   paragraph is still open the page's asides queue in
