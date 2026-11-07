@@ -271,12 +271,13 @@ def _page_ctx(page, boilerplate: set[str], lang: LangProfile):
     converter rightfully rasterizes it, and a margin-strips-only band
     can't self-exempt on either side. `splits` mirrors the
     `_split_signature_prefixes` pre-pass `convert` runs before ordering —
-    iterated like the pre-pass itself so stacked heads split one at a
-    time: for each fused-head block, the split-off head lines' words
-    (the furniture side) and the remainder's text/bbox (the kept
-    side). The strip clip reads the same post-split block stream
-    `_ordered_blocks` does — a fused block's head lines can't inflate
-    the clip's tall-seed shape or stretch its region union."""
+    iterated like the pre-pass itself (each remainder re-enters on its
+    recomputed bbox) so stacked heads split one at a time: for each
+    fused-head block, the split-off head lines' words (the furniture
+    side) and the remainder's text/bbox (the kept side). The strip clip
+    reads the canonical helper's post-split stream — the same
+    `_ordered_blocks` sees — so a fused block's head lines can't
+    inflate the clip's tall-seed shape or stretch its region union."""
     from types import SimpleNamespace
 
     # lazy like main(): pulling analyze pulls fitz — an ImportError must
@@ -284,6 +285,7 @@ def _page_ctx(page, boilerplate: set[str], lang: LangProfile):
     from exegesis.analyze import (
         _lines_bbox,
         _signature_prefix_len,
+        _split_signature_prefixes,
         _strip_clip,
         _upright_dir,
     )
@@ -291,39 +293,38 @@ def _page_ctx(page, boilerplate: set[str], lang: LangProfile):
 
     pdict = page.get_text("dict")
     dmap = {tuple(b["bbox"]): b for b in pdict["blocks"]}
+    # the post-split stream ordering sees — the pipeline's own pre-pass,
+    # not a re-implementation, so the clip input can never drift
+    post = _split_signature_prefixes(
+        pdict["blocks"], page.rect.height, boilerplate, lang)
     splits = {}
-    post = []
     for b in pdict["blocks"]:
         if b["type"] != 0:
-            post.append(b)
             continue
-        heads, rest = [], b["lines"]
-        while len(rest) >= 2:
+        heads, rest = [], b
+        while True:
             k = _signature_prefix_len(
-                dict(b, lines=rest), page.rect.height, boilerplate, lang)
+                rest, page.rect.height, boilerplate, lang)
             if not k:
                 break
-            heads.append(rest[:k])
-            rest = rest[k:]
+            lines = _block_lines(rest)
+            heads.append(lines[:k])
+            rest = dict(
+                rest, lines=lines[k:], bbox=_lines_bbox(lines[k:]))
         if not heads:
-            post.append(b)
             continue
-        kept_bbox = _lines_bbox(rest)
         splits[tuple(b["bbox"])] = SimpleNamespace(
             head_words=WORD_RE.findall(
                 " ".join(
                     _line_text(l) for group in heads for l in group
                 ).lower()),
-            kept_text="".join(_line_text(l) + "\n" for l in rest),
-            kept_bbox=kept_bbox,
+            kept_text="".join(
+                _line_text(l) + "\n" for l in rest["lines"]),
+            kept_bbox=rest["bbox"],
         )
         # the remainder is a synthetic block — give `_strip` its real
         # line dirs like a dict hit, not a miss that falls back to <25pt
-        dmap[kept_bbox] = {"lines": rest}
-        # and keep the same post-split stream ordering sees — each
-        # matched head its own block, then the remainder
-        post.extend(dict(b, lines=g, bbox=_lines_bbox(g)) for g in heads)
-        post.append(dict(b, lines=rest, bbox=kept_bbox))
+        dmap[rest["bbox"]] = {"lines": rest["lines"]}
     return SimpleNamespace(
         page=page,
         rect=page.rect,
