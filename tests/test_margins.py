@@ -171,7 +171,9 @@ def test_margin_raster_legend_binds_into_alt(tmp_path):
     # the remaining legend member rides the anchored aside right behind
     # the raster — adjacent, not at page end among the paragraphs
     tail = html.split('alt="Table 1.', 1)[1]
-    assert "Note: *p&lt;0.1;" in tail.split("</aside>", 1)[0]
+    rest = tail.split('"/></p>', 1)[1]
+    assert rest.lstrip().startswith('<aside class="sidebar">')
+    assert "Note: *p&lt;0.1;" in rest.split("</aside>", 1)[0]
     # the legend emits only inside the alt — never as visible text —
     # while the note stays visible through the aside
     body = chapter_body_text(out)
