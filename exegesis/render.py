@@ -14,8 +14,9 @@ from ebooklib import epub
 from .analyze import (
     _assign_column,
     _covered_cols,
-    _footnote_tops,
     _overlap_cols,
+    _page_claims,
+    _RasterRegion,
     _rotate_clip,
     _rotated_table_region,
     _sup_marker,
@@ -363,20 +364,80 @@ def _register_image(state, data, *, ext, name):
     return state.images[digest]
 
 
-def _rasterize(page, rect):
+def _rasterize(page, rect, pad=(8.0, 20.0)):
     """Rasterize a page region to PNG bytes — the rotated-table path.
 
     ``rect`` arrives in unrotated mediabox space (block bboxes); the
     padded clip maps into displayed space via ``page.rotation_matrix``
-    because ``get_pixmap`` clips in rotated coordinates.
+    because ``get_pixmap`` clips in rotated coordinates. Figure claims
+    pass ``pad=(0, 0)``: their clip is the exact rect the crop
+    validation already approved.
     """
     mb = page.mediabox
     padded = fitz.Rect(
-        max(0, rect.x0 - 8), max(0, rect.y0 - 20),
-        min(mb.width, rect.x1 + 8), min(mb.height, rect.y1 + 20),
+        max(0, rect.x0 - pad[0]), max(0, rect.y0 - pad[1]),
+        min(mb.width, rect.x1 + pad[0]), min(mb.height, rect.y1 + pad[1]),
     )
     clip = _rotate_clip(padded, page.rotation_matrix)
     return page.get_pixmap(clip=clip, matrix=fitz.Matrix(2, 2)).tobytes("png")
+
+
+def _raster_frag(
+    state,
+    page,
+    region,
+    blocks,
+    b_i,
+    edges,
+    page_width,
+    skip_ids,
+    claimed,
+    col_map=None,
+):
+    """One rasterized region as a ``<p class="fig">`` fragment.
+
+    The caller anchors the fragment at the region's first member in
+    reading order; the caption-alt scan runs over the same block
+    sequence the anchor sits in (``ordered`` on body pages, ``members``
+    inside an aside). ``region.kind`` picks the caption label set and
+    asset-name prefix — ``table_`` rasters take ``Table N`` legends,
+    tried above the region first.
+    """
+    if region.kind == "table":
+        alt = _figure_alt(
+            blocks,
+            b_i,
+            edges,
+            page_width,
+            region=region.rect,
+            fallback=state.lang.table_alt,
+            pattern=state.lang.table_caption,
+            above_pattern=state.lang.caption,
+            skip_ids=skip_ids,
+            claimed=claimed,
+            lang=state.lang,
+            col_map=col_map,
+        )
+        name = "images/table_{digest}.{ext}"
+    elif region.kind == "figure":
+        # the anchor caption detection already found is the alt — it
+        # stays in the body flow and can caption only one raster
+        if region.caption is not None and id(region.caption) not in claimed:
+            claimed.add(id(region.caption))
+            alt = html.escape(
+                _block_text(region.caption, state.lang)[:200], quote=True
+            )
+        else:
+            alt = ""
+        name = "images/fig_{digest}.{ext}"
+    else:
+        raise AssertionError(f"unknown raster region kind {region.kind!r}")
+    src = region.clip if region.clip is not None else region.rect
+    pad = (0.0, 0.0) if region.clip is not None else (8.0, 20.0)
+    item = _register_image(
+        state, _rasterize(page, src, pad=pad), ext="png", name=name
+    )
+    return f'<p class="fig"><img src="{item.file_name}" alt="{alt}"/></p>'
 
 
 def _flush_paragraph(state):
@@ -444,19 +505,26 @@ def _aside_frag(members, page, state):
     a_edges = [min(b["bbox"][0] for b in members)]
     a_right = max(b["bbox"][2] for b in members)
     texts = [b for b in members if b["type"] == 0]
-    tbl = _rotated_table_region(texts)
-    if tbl is not None:
+    rasters = []
+    if (tbl := _rotated_table_region(texts)) is not None:
         state.raster_tables += 1
-    tbl_ids = (
-        {id(b) for b in texts if fitz.Rect(b["bbox"]).intersects(tbl)}
-        if tbl is not None
-        else set()
-    )
+        rasters.append(
+            _RasterRegion(
+                rect=tbl,
+                kind="table",
+                ids=frozenset(
+                    id(b)
+                    for b in texts
+                    if fitz.Rect(b["bbox"]).intersects(tbl)
+                ),
+            )
+        )
+    raster_of = {i: r for r in rasters for i in r.ids}
     # the grid pass gets the whole region, not just texts — its
     # image-overlap guard must still veto a false table claimed around
     # an aside figure (non-text members never seed lines or claims)
     grids = _table_regions(
-        [b for b in members if id(b) not in tbl_ids],
+        [b for b in members if id(b) not in raster_of],
         state.line_h,
         a_edges,
         a_right + 8,
@@ -464,9 +532,9 @@ def _aside_frag(members, page, state):
     )
     state.grid_tables += len(grids)
     grid_of = {bid: g for g in grids for bid in g.claimed}
-    skip_ids = tbl_ids | set(grid_of)
+    skip_ids = set(raster_of) | set(grid_of)
     claimed = set()
-    inner, tbl_done, grid_done = [], False, set()
+    inner, raster_done, grid_done = [], set(), set()
     for b_i, b in enumerate(members):
         if b["type"] == 1:
             data = b.get("image")
@@ -486,23 +554,15 @@ def _aside_frag(members, page, state):
                 f' alt="{alt}"/></p>'
             )
             continue
-        if id(b) in tbl_ids:
-            if not tbl_done:
-                tbl_done = True
-                alt = _figure_alt(
-                    members, b_i, a_edges, a_right,
-                    region=tbl, fallback=state.lang.table_alt,
-                    pattern=state.lang.table_caption,
-                    above_pattern=state.lang.caption,
-                    skip_ids=skip_ids, claimed=claimed, lang=state.lang,
-                )
-                item = _register_image(
-                    state, _rasterize(page, tbl),
-                    ext="png", name="images/table_{digest}.{ext}",
-                )
+        if id(b) in raster_of:
+            r = raster_of[id(b)]
+            if id(r) not in raster_done:
+                raster_done.add(id(r))
                 inner.append(
-                    f'<p class="fig"><img src="{item.file_name}"'
-                    f' alt="{alt}"/></p>'
+                    _raster_frag(
+                        state, page, r, members, b_i, a_edges, a_right,
+                        skip_ids, claimed,
+                    )
                 )
             continue
         if id(b) in grid_of:
@@ -581,56 +641,52 @@ def _render_page(page, page_index: int, state: PipelineState):
     # kept furniture is render-only: it never feeds footnote-zone detection
     # or rotated-table candidate sets
     body_blocks = [b for b in ordered if not b.get("is_furniture")]
-    # note zones stay physical even though their membership feeds the
-    # mapped reading column below: a zone is page geometry (a horizontal
-    # band at a column's foot), not column identity — merging tops by min
-    # across a folded edge lets a note-shaped strip block widen the swept
-    # region and misfile body text as notes (a strip's own top still files
-    # its notes; they just can't claim the body column's blocks)
-    foot_tops = _footnote_tops(
-        body_blocks, edges, body_size, page.rect.height, state.line_h,
-        lang=state.lang,
+    # the page's claim composition — note zones, raster regions (the
+    # rotated table plus validated figure claims), and grid tables —
+    # computed together so provisional figure labels can't distort the
+    # note analysis they mask and established tables keep precedence.
+    # Note zones stay physical even though the emit loop reads the
+    # mapped reading column: a zone is page geometry (a horizontal band
+    # at a column's foot), not column identity — merging tops by min
+    # across a folded edge lets a note-shaped strip block widen the
+    # swept region and misfile body text as notes (a strip's own top
+    # still files its notes; it just can't claim the body column's
+    # blocks)
+    claims = _page_claims(
+        page,
+        body_blocks,
+        state.page_items[page_index],
+        edges,
+        page.rect.width,
+        state.line_h,
+        body_size,
+        state.lang,
     )
-    frags = state.page_frags[page_index]
-
-    tbl = _rotated_table_region(body_blocks)
-    if tbl is not None:
-        state.raster_tables += 1
-    tbl_ids = (
-        {id(b) for b in body_blocks if fitz.Rect(b["bbox"]).intersects(tbl)}
-        if tbl is not None
-        else set()
-    )
+    foot_tops = claims.foot_tops
+    rasters = claims.rasters
+    raster_of = {i: r for r in rasters for i in r.ids}
+    raster_ids = set(raster_of)
     # footnote-region blocks leave the flow like rasterized cells and
     # kept furniture do — excluded up front, a note can't seed a grid
     # and can't be claimed into <td>s (the emit loop tests grid_of
     # before foot_tops, so a swallowed note would never reach
     # notes.xhtml)
-    foot_ids = {
-        id(b)
-        for b in body_blocks
-        if b["type"] == 0
-        and (fc := _assign_column(b, edges)) in foot_tops
-        and b["bbox"][1] >= foot_tops[fc] - 5
-    }
+    foot_ids = claims.foot_ids
     # horizontal tables claim their cell blocks like the rotated path
     # does, but emit real <table> markup instead of a rasterized image
-    grids = _table_regions(
-        [b for b in body_blocks if id(b) not in tbl_ids | foot_ids],
-        state.line_h,
-        edges,
-        page.rect.width,
-        state.lang,
-    )
+    grids = claims.grids
+    state.raster_tables += sum(r.kind == "table" for r in rasters)
+    state.raster_figures += sum(r.kind == "figure" for r in rasters)
     state.grid_tables += len(grids)
+    frags = state.page_frags[page_index]
     grid_of = {bid: g for g in grids for bid in g.claimed}
     # ids of blocks that leave (or never enter) the body flow — rasterized
     # table cells, footnote-region blocks, kept furniture — none of them can
     # count as a bold-only h2's follower or donate alt text to a figure
-    nonbody_ids = tbl_ids | set(grid_of) | foot_ids | {
+    nonbody_ids = raster_ids | set(grid_of) | foot_ids | {
         id(b) for b in ordered if b.get("is_furniture")
     }
-    tbl_done = False
+    raster_done = set()
     grid_done = set()
     claimed_caps = set()
 
@@ -655,6 +711,30 @@ def _render_page(page, page_index: int, state: PipelineState):
         frags.append(f'<h{level} id="{anchor}">{html.escape(text)}</h{level}>')
 
     for b_i, block in enumerate(ordered):
+        r = raster_of.get(id(block))
+        if r is not None and r.kind == "figure":
+            # figure members — images and labels alike — leave the flow
+            # for the shared raster; a table member that happens to be
+            # an image still emits individually below, like before
+            if id(r) not in raster_done:
+                raster_done.add(id(r))
+                flush_par()
+                frags.append(
+                    _raster_frag(
+                        state,
+                        page,
+                        r,
+                        ordered,
+                        b_i,
+                        edges,
+                        page.rect.width,
+                        nonbody_ids,
+                        claimed_caps,
+                        col_map=col_map,
+                    )
+                )
+            continue
+
         if block["type"] == 1:
             data = block.get("image")
             if data and len(data) >= MIN_IMAGE_BYTES:
@@ -682,35 +762,23 @@ def _render_page(page, page_index: int, state: PipelineState):
                 )
             continue
 
-        if id(block) in tbl_ids:
-            if not tbl_done:
-                # tbl_ids is empty when the region is None, so tbl exists here
-                assert tbl is not None
-                tbl_done = True
+        if r is not None:
+            if id(r) not in raster_done:
+                raster_done.add(id(r))
                 flush_par()
-                alt = _figure_alt(
-                    ordered,
-                    b_i,
-                    edges,
-                    page.rect.width,
-                    region=tbl,
-                    fallback=state.lang.table_alt,
-                    skip_ids=nonbody_ids,
-                    pattern=state.lang.table_caption,
-                    above_pattern=state.lang.caption,
-                    claimed=claimed_caps,
-                    lang=state.lang,
-                    col_map=col_map,
-                )
-                item = _register_image(
-                    state,
-                    _rasterize(page, tbl),
-                    ext="png",
-                    name="images/table_{digest}.{ext}",
-                )
                 frags.append(
-                    f'<p class="fig"><img src="{item.file_name}"'
-                    f' alt="{alt}"/></p>'
+                    _raster_frag(
+                        state,
+                        page,
+                        r,
+                        ordered,
+                        b_i,
+                        edges,
+                        page.rect.width,
+                        nonbody_ids,
+                        claimed_caps,
+                        col_map=col_map,
+                    )
                 )
             continue
 

@@ -65,6 +65,7 @@ _COLUMNS = [
     ("images", "Img"),
     ("grid_tables", "Grid"),
     ("raster_tables", "Raster"),
+    ("raster_figures", "Fig"),
     ("seconds", "Sec"),
 ]
 
@@ -73,8 +74,8 @@ def _convert_one(pdf: Path, out_dir: Path) -> dict:
     """Convert one corpus PDF; returns its report row.
 
     ``convert()`` stats carry the layout signals (columns, both table
-    kinds); failures are recorded rather than raised so one bad paper
-    can't kill the whole report.
+    kinds, figure regions); failures are recorded rather than raised
+    so one bad paper can't kill the whole report.
     """
     row: dict = {"pdf": pdf.name, "status": "ok"}
     start = time.perf_counter()
@@ -134,7 +135,8 @@ def _render_html(rows: list[dict], generated: str) -> str:
 <p class="meta">Cols = detected reading columns — an outdented head
 strip folds into the column on its right and is not counted as its
 own; Grid = upright tables emitted as &lt;table&gt;; Raster = rotated
-tables embedded as images.</p>
+tables embedded as images; Fig = captioned figure regions embedded
+as images.</p>
 </body></html>
 """
 

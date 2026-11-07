@@ -17,9 +17,10 @@ from dataclasses import dataclass
 # dash-joined ranges ('Tables 3–4'); the label must open the text so
 # mid-sentence 'see Table 1' citations never match
 _CAP_NUM = r"s?\d+(?:[a-z]|\s*\([a-zA-Z]\))?(?:\s*[–-]\s*s?\d+)?"
-# after the number: a dash, '.', ':', ')', a real layout gap (2+ spaces —
-# Springer-style 'Table 1  Title'), or end-of-text
-_CAP_TAIL = r"(?:\s+[—–-]|\s*[.:)]|\s{2,}|$)"
+# after the number: a dash or pipe ('Fig. 2 |' — Nature's legend style),
+# '.', ':', ')', a real layout gap (2+ spaces — Springer-style
+# 'Table 1  Title'), or end-of-text
+_CAP_TAIL = r"(?:\s+[—–\-|]|\s*[.:)]|\s{2,}|$)"
 
 
 def _caption_re(labels: str) -> re.Pattern:

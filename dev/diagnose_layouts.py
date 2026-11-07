@@ -40,8 +40,9 @@ page /Rotate is reported separately.
 
 Preparation and rendering run through ``convert`` itself. A temporary profiling
 hook reads private renderer locals at return (``page``/``page_index``/``state``
-/``ordered``/``nonbody_ids``/``aside_blocks``), before convert releases each
-page, and ``_reading_columns``'s ``evidence`` locals at its return. Keep that
+/``ordered``/``nonbody_ids``/``aside_blocks``/``rasters``), before convert
+releases each page, and ``_reading_columns``'s ``evidence`` locals at its
+return. Keep that
 small instrumentation contract in sync if those locals change. This
 manual corpus tool is not a test helper and must never be imported by tests.
 It runs on ``requirements.txt`` alone, so the test helpers it borrows must not
@@ -76,15 +77,20 @@ from exegesis.analyze import (
     _is_spanning,
     _outdent_like,
     _reading_columns,
+    _vector_areas,
 )
-from exegesis.const import MAX_HEADING_CHARS, OUTDENT_BAND_FILL, OUTDENT_MIN_BLOCKS
+from exegesis.const import (
+    DRAWING_PAD,
+    MAX_HEADING_CHARS,
+    OUTDENT_BAND_FILL,
+    OUTDENT_MIN_BLOCKS,
+    PAGE_FRAME_RATIO,
+)
 from exegesis.text import _block_lines, _block_text, _line_text
 
 JOURNALS = ROOT / "journals"
 EDGE_TOL = 15
 SHORT_CHARS = 12
-DRAWING_PAD = 1.0
-PAGE_FRAME_RATIO = 0.9
 LOCATIONS = ("vector-only", "raster-only", "both", "neither")
 
 
@@ -170,37 +176,17 @@ def _band_end(col, edges, width):
 
 
 def _vector_regions(page):
-    """Bound connected drawing rects without requiring newer cluster_drawings.
+    """Bound connected drawing rects — the figure pass's own clustering.
 
-    Pad each path by 1pt so thin/touching axes connect (gaps <2pt can join).
-    Ignore near-page-size paths: width AND height >=90% of the unrotated page.
-    Connectivity uses individual padded rects, not the empty space introduced
-    by their union bbox. Bbox proxies can still cover unrelated enclosed text,
-    and the frame guard also excludes genuine page-sized plots.
+    ``analyze._vector_areas`` pads each path by ``DRAWING_PAD`` so
+    thin/touching axes connect (gaps <2pt can join) and ignores
+    near-page-size paths (width AND height >= ``PAGE_FRAME_RATIO`` of
+    the unrotated page). These are bounding-box proxies, not detected
+    figures: clipping is ignored, containment does not prove figure
+    membership, and the frame guard also excludes genuine page-sized
+    plots.
     """
-    page_rect = page.rect * page.derotation_matrix
-    remaining = []
-    for drawing in page.get_drawings():
-        rect = fitz.Rect(drawing["rect"])
-        if not rect.is_valid or (
-            rect.width >= PAGE_FRAME_RATIO * page_rect.width
-            and rect.height >= PAGE_FRAME_RATIO * page_rect.height
-        ):
-            continue
-        remaining.append(rect + (-DRAWING_PAD, -DRAWING_PAD, DRAWING_PAD, DRAWING_PAD))
-    regions = []
-    while remaining:
-        pending = [remaining.pop()]
-        region = fitz.Rect(pending[0])
-        while pending:
-            current = pending.pop()
-            for i in range(len(remaining) - 1, -1, -1):
-                if current.intersects(remaining[i]):
-                    neighbor = remaining.pop(i)
-                    pending.append(neighbor)
-                    region |= neighbor
-        regions.append(region)
-    return regions
+    return _vector_areas(page)
 
 
 def _heading_counts(profile):
@@ -390,6 +376,12 @@ def _page_report(local):
         "rotated": rotated,
         "col_map": list(state.col_map),
         "asides": n_asides,
+        "fig_regions": sum(
+            1 for r in local["rasters"] if r.kind == "figure"
+        ),
+        "fig_members": sum(
+            len(r.ids) for r in local["rasters"] if r.kind == "figure"
+        ),
         "order": _reading_order(ordered, state.edges, state.col_map, state.lang),
     }
 
@@ -487,6 +479,10 @@ def _print_report(stats, pages, fold_evidence):
         print(f"    SURVIVING BODY-FLOW short <={SHORT_CHARS}: {_short_counts(body)}")
         print(f"    aside-lifted blocks={p['asides']}")
         print(
+            f"    figure raster claims: regions={p['fig_regions']} "
+            f"member-blocks={p['fig_members']}"
+        )
+        print(
             f"    INPUT line dirs={dict(p['directions'])} rotated-lines={len(p['rotated'])}"
         )
         for line in p["rotated"]:
@@ -497,7 +493,8 @@ def _print_report(stats, pages, fold_evidence):
                 print(f"      {block}")
     print(
         f"  conversion: grid_tables={stats['grid_tables']} "
-        f"raster_tables={stats['raster_tables']} notes={stats['footnotes']} "
+        f"raster_tables={stats['raster_tables']} "
+        f"raster_figures={stats['raster_figures']} notes={stats['footnotes']} "
         f"images={stats['images']} asides={stats['asides']}"
     )
 

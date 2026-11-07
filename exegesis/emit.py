@@ -301,6 +301,7 @@ def convert(
         "columns": len(set(state.col_map)),
         "grid_tables": state.grid_tables,
         "raster_tables": state.raster_tables,
+        "raster_figures": state.raster_figures,
         "asides": state.asides,
         "output": str(out_path),
     }

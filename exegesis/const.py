@@ -46,5 +46,24 @@ INFO_MEMBER_MAX_LINES = 3
 INFO_ATTACH_MAX = 4
 INFO_ATTACH_GAP = 1.5
 
+# figure-region detection (#35): a raster image block or a merged
+# vector-drawing area earns a raster claim only with short label
+# density over it and an adjoining figure caption — all three signals.
+# The label pad covers panel letters sitting just outside the artwork;
+# the char cap is the survey's <=12-char fragment measure; the clip pad
+# is the margin validated against foreign blocks before rasterizing.
+FIGURE_LABEL_PAD = 14.0
+FIGURE_LABEL_CHARS = 12
+FIGURE_MIN_LABELS = 2
+FIGURE_CLIP_PAD = 4.0
+# area merge gap: panels inside one figure sit a few points apart
+# (eLife's grids ~5pt); page decoration keeps a wider berth (~9pt), so
+# merging beyond this pulls headers/logos into the figure union
+FIGURE_AREA_MERGE = 7.0
+# vector figure areas: drawing-path rects padded so thin or touching
+# strokes connect, ignoring near-page-size frames
+DRAWING_PAD = 1.0
+PAGE_FRAME_RATIO = 0.9
+
 # Language profiles live in exegesis/lang.py — `convert(lang=...)`/`--lang`
 # select the pattern set stamped into the EPUB; defaults to English.

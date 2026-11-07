@@ -219,6 +219,42 @@ chapters.
   leaves the whole block in body flow rather than silently dropping the
   un-emitted lines. An all-bold first row becomes `<thead>` `<th>`s.
   Misses degrade to ordinary text flow, never to mangled prose.
+- **Figures** — an artwork area (a ≥`MIN_IMAGE_BYTES` raster block, or
+  connected drawing-path rects from `page.get_drawings()` padded
+  `DRAWING_PAD` each and ignoring near-page-size frames, merged across
+  ≤`FIGURE_AREA_MERGE` gaps transitively — page decoration keeps a
+  wider berth) carrying ≥`FIGURE_MIN_LABELS` short
+  (≤`FIGURE_LABEL_CHARS`-char) text members is a figure candidate when
+  an adjoining `figure_caption` block sits within 120pt sharing a
+  column band. Members are line-level: a block enclosed by the member
+  union or touching it with label-like (non-sentence) lines joins —
+  panel letters in the `FIGURE_LABEL_PAD` ring qualify only for
+  already-short blocks — while a block mixing a member line with
+  foreign lines (a straddler) rejects the whole candidate. A caption
+  counts as that straddler only when it touches the artwork itself —
+  a short caption grazing only the pad ring is the claim's own
+  anchor or a crop barrier, never a label member. Validation runs
+  inside `_page_claims`: note zones
+  are computed once unmasked and once with the provisional label set
+  masked out of seeds and gap neighbors (`_footnote_tops` records
+  per-column seed provenance; `_seeds_consistent` allows a dismissed
+  seed only when some evidence block is a member — masking alone never
+  convicts a note), furniture/asides keep their bboxes as crop
+  barriers, and rotated-table regions keep precedence on overlap.
+  `_figure_crop` shrinks the claim's `FIGURE_CLIP_PAD` clip around
+  barriers it can exclude and rejects when one crosses the union; any
+  failed gate drops the whole page's figure claims back to ordinary
+  text flow. A committed region emits one
+  `images/fig_<sha>.png` rasterized from the exact validated clip
+  (rotated-table rasters keep their padded clip), claims the caption
+  block as its `alt` (the caption still renders in flow), excludes
+  its members from every other claim through `raster_of`/`raster_ids`
+  and `nonbody_ids`, and counts in `stats["raster_figures"]`.
+  `dev/diagnose_layouts.py` reports per-page `figure raster claims`
+  (regions/member-blocks) beside the surviving short-fragment counts;
+  `scripts/eval_epub.py` replays the same `_page_claims` so claimed
+  label words leave the expected vocabulary only when an emitted
+  `images/fig_` raster exists — same excuse rule as `images/table_`.
 - **Caption alt text** — images and rasterized tables adopt the nearest
   text block beyond the region's facing edge as `alt` when it opens with
   a caption label from the language profile (EN:
@@ -234,7 +270,10 @@ chapters.
   leave the flow can't donate: rasterized cells, footnote-zone blocks,
   and kept furniture are skipped via the page's `nonbody_ids` set (a
   `Figure N.` bound for notes.xhtml or a caption-shaped running head
-  must not double as `alt`). Images
+  must not double as `alt`). A figure region instead takes the
+  caption that anchored its claim — `_figure_caption_near` prefers
+  the legend below, then above, and `Table N` can never anchor — so
+  its raster always carries a figure-flavored `alt`. Images
   never take `Table N.` (table legends sit above the body, so a
   following one belongs to a text-flowed table); the rotated-table call
   tries the block *above* the region first against the full label set
@@ -437,9 +476,16 @@ cases deselected). Converter heuristics and golden snapshots are unchanged.
   check that borrows a pipeline heuristic. Mirror every path that drops
   text *by design*, not just furniture: rotated tables leave the flow as
   `images/table_*.png`, so `rasterized_blocks` copies
-  `analyze._rotated_table_region` plus `render`'s `tbl_ids` intersect —
-  an unmodeled path grades intended behavior as loss, the report
-  contradicts itself, and the High gate fails a correct conversion.
+  `analyze._rotated_table_region` plus `render`'s `tbl_ids` intersect;
+  figure regions leave it as `images/fig_*.png`, so
+  `figure_rasterized_blocks` replays the converter's own preparation
+  (signature splits, asides, document edges) and calls
+  `analyze._page_claims` — a replay, not a mirror, so the provisional-
+  label note mask, table precedence, and crop validation can't drift —
+  and a figure page stops flagging "not capturable" on vector geometry
+  alone — an unmodeled path grades intended behavior as loss, the
+  report contradicts itself, and the High gate fails a correct
+  conversion.
 - A repeated regex group must match its text exactly one way — no
   empty-able repeat nested inside it (`(?:<t>x</t>|[^<]*)*`,
   `(?:\.?\s*)*`) and no two alternatives that can consume the same
