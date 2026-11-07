@@ -17,6 +17,12 @@ from .const import (
     BOILERPLATE_MAX_CHARS,
     BOILERPLATE_MAX_LINES,
     EDGE_ZONE,
+    INFO_ADJ_GAP,
+    INFO_ATTACH_GAP,
+    INFO_ATTACH_MAX,
+    INFO_CONT_X_TOL,
+    INFO_MEMBER_MAX_LINES,
+    INFO_RUN_MAX_LINES,
     MAX_HEADING_CHARS,
     OUTDENT_BAND_FILL,
     OUTDENT_HEADING_SHARE,
@@ -127,11 +133,13 @@ def _doc_column_edges(
     for page, pdict in pages:
         # furniture shapes can't form column edges — a sidebar or running
         # head recurring at the same x on every page is the classic
-        # phantom-edge generator
+        # phantom-edge generator. Aside members cast no votes either:
+        # a claimed info-box column must not vote a phantom edge
         items = [
             b
             for b in pdict["blocks"]
             if b["type"] == 0
+            and b.get("aside") is None
             and not _is_furniture(
                 b, page, _block_text(b, lang), lang
             )
@@ -150,6 +158,248 @@ def _doc_column_edges(
     needed = max(1, len(pages) // 2)
     edges = sorted(v[0] for v in votes if v[1] >= needed)
     return edges or [0.0]
+
+
+def _info_lead_re(lang: LangProfile):
+    """Compile the info-box label opener over the profile's vocabulary —
+    ``None`` when a hand-built profile never declared one (the detector
+    degrades rather than borrow English labels)."""
+    if not lang.info_labels:
+        return None
+    return re.compile(
+        rf"^\s*[*†‡§]?\s*({lang.info_labels})\b", re.IGNORECASE
+    )
+
+
+def _field_label(text, lead_re):
+    """The normalized label a line opens with, or None.
+
+    Two label forms qualify: ``Label:`` — any casing, multi-word
+    labels and ``*``-style markers included — and an all-caps label
+    with no colon (``EDITED BY``, ``RECEIVED  #35 April 2024``). A
+    mixed-case word without the colon is a sentence opener, not a
+    field; a mid-sentence ``Received:`` never reaches the anchor.
+    """
+    m = lead_re.match(text)
+    if not m:
+        return None
+    label = re.sub(r"\s+", " ", m.group(1)).strip()
+    if text[m.end():].lstrip().startswith(":") or label.isupper():
+        return label.lower()
+    return None
+
+
+def _field_runs(texts, first_of, h, boilerplate, line_h):
+    """Label-seeded field runs with aligned wrap continuations.
+
+    A run opens on a block whose first line is a field; following
+    unlabeled blocks join only with aligned text-run evidence — the
+    same left edge within ``INFO_CONT_X_TOL`` and a gap under
+    ``INFO_ADJ_GAP`` line heights. A wider wrap still joins (an
+    MDPI citation's continuation is wider than its first line) while
+    a paragraph in the body column — a different left edge — cannot.
+    The run caps at ``INFO_RUN_MAX_LINES`` so a wrapped citation can
+    extend without enabling growth into a following body paragraph;
+    a new field seed or a signature-furniture block ends it.
+    ``texts`` is the page's text blocks in (y, x) order.
+    """
+    runs = []
+    taken = set()
+    for i, b in enumerate(texts):
+        if id(b) in taken or not first_of.get(id(b)):
+            continue
+        run = [b]
+        nlines = len(_block_lines(b))
+        rx0 = b["bbox"][0]
+        for cand in texts[i + 1:]:
+            if first_of.get(id(cand)):
+                break
+            gap = cand["bbox"][1] - run[-1]["bbox"][3]
+            if (
+                not (
+                    -line_h <= gap <= INFO_ADJ_GAP * line_h
+                    and abs(cand["bbox"][0] - rx0) <= INFO_CONT_X_TOL
+                    and nlines + len(_block_lines(cand))
+                    <= INFO_RUN_MAX_LINES
+                )
+                or cand.get("aside") is not None
+                or _is_signature_furniture(cand, h, boilerplate)
+            ):
+                break
+            run.append(cand)
+            nlines += len(_block_lines(cand))
+        taken.update(id(c) for c in run)
+        runs.append(run)
+    return runs
+
+
+def _info_boxes(runs, labels_of, texts, line_h):
+    """Chain adjacent field runs into boxes of ≥2 distinct labels.
+
+    Runs chain while the vertical gap stays under ``INFO_ADJ_GAP``
+    line heights and their x-ranges overlap — a wider separation is a
+    section head or a prose column, not the same box. Ordinary body
+    text is a barrier: any other text block intersecting the open gap
+    inside the pair's x-union splits the chain — an info box's fields
+    can't wrap a prose paragraph, and unclaimed signature furniture
+    stops growth the same way. Distinctness counts every label line
+    inside the runs: the same label twice is not a box, and a single
+    labeled field never is.
+    """
+    boxes = []
+    chain, chain_labels = [], set()
+    for run in runs:
+        if chain:
+            prev = chain[-1]
+            prev_x0 = min(b["bbox"][0] for b in prev)
+            prev_x1 = max(b["bbox"][2] for b in prev)
+            prev_y1 = max(b["bbox"][3] for b in prev)
+            run_x0 = min(b["bbox"][0] for b in run)
+            run_x1 = max(b["bbox"][2] for b in run)
+            run_y0 = run[0]["bbox"][1]
+            member = {id(c) for r in chain for c in r} | {
+                id(c) for c in run
+            }
+            adjacent = (
+                run_y0 - prev_y1 <= INFO_ADJ_GAP * line_h
+                and min(prev_x1, run_x1) - max(prev_x0, run_x0) > 0
+                and not any(
+                    b["type"] == 0
+                    and id(b) not in member
+                    and b["bbox"][1] < run_y0
+                    and b["bbox"][3] > prev_y1
+                    and b["bbox"][2] > min(prev_x0, run_x0)
+                    and b["bbox"][0] < max(prev_x1, run_x1)
+                    for b in texts
+                )
+            )
+            if not adjacent:
+                if len(chain_labels) >= 2:
+                    boxes.append(chain)
+                chain, chain_labels = [], set()
+        chain.append(run)
+        chain_labels |= {
+            lbl for c in run for lbl in labels_of.get(id(c), set())
+        }
+    if len(chain_labels) >= 2:
+        boxes.append(chain)
+    return boxes
+
+
+def _detect_asides(pages, line_h, boilerplate, lang: LangProfile = EN):
+    """Mark front-matter info-box members with a ``block["aside"]`` key.
+
+    Runs pre-grid in ``convert()`` — right after the signature-prefix
+    split, before ``_doc_column_edges`` — so a claimed field column can
+    never vote a phantom document edge. Only pages 0–1 are scanned
+    (info boxes are front matter) and only grid-independent evidence:
+    labels open fields, aligned wraps extend them, adjacent
+    distinct-label runs form a box, and the frozen core admits only
+    inside-evidence members. ``pages`` is ``convert``'s extracted
+    ``(page, pdict)`` list; each validated member gets a shared
+    region key the render's aside path lifts wholesale.
+    """
+    lead_re = _info_lead_re(lang)
+    if lead_re is None:
+        return
+    region = 0
+    for page, pdict in pages[:2]:
+        h = page.rect.height
+        texts = sorted(
+            (b for b in pdict["blocks"] if b["type"] == 0),
+            key=lambda b: (b["bbox"][1], b["bbox"][0]),
+        )
+        labels_of, first_of = {}, {}
+        for b in texts:
+            if b.get("aside") is not None:
+                continue
+            ll = [
+                _field_label(_line_text(l), lead_re)
+                for l in _block_lines(b)
+            ]
+            labels_of[id(b)] = {x for x in ll if x}
+            first_of[id(b)] = ll[0] if ll else None
+        runs = _field_runs(texts, first_of, h, boilerplate, line_h)
+        for box in _info_boxes(runs, labels_of, texts, line_h):
+            members = [c for run in box for c in run]
+            member_ids = {id(c) for c in members}
+            cx0 = min(c["bbox"][0] for c in members)
+            cy0 = min(c["bbox"][1] for c in members)
+            cx1 = max(c["bbox"][2] for c in members)
+            cy1 = max(c["bbox"][3] for c in members)
+            # the core is frozen now — added members never expand it.
+            # Inside it admits only media or text with independent box
+            # evidence (short non-sentence values like an email line);
+            # a straddler stays whole in body flow. Outside, only a
+            # bounded media-anchored group within a hop of the field
+            # edge may attach — a nearby text-only paragraph never can
+            attached = []
+            for b in pdict["blocks"]:
+                if id(b) in member_ids or b.get("aside") is not None:
+                    continue
+                x0, y0, x1, y1 = b["bbox"]
+                if (
+                    x0 < cx0 - 4 or x1 > cx1 + 4
+                    or y0 < cy0 - 4 or y1 > cy1 + 4
+                ):
+                    continue
+                if b["type"] == 1 or (
+                    len(_block_lines(b)) <= INFO_MEMBER_MAX_LINES
+                    and not _is_signature_furniture(b, h, boilerplate)
+                    and not re.search(
+                        r"[.!?…][\"”’)\]]*$",
+                        _block_text(b, lang).rstrip(),
+                    )
+                ):
+                    attached.append(b)
+            attached_ids = {id(b) for b in attached}
+            media = [
+                b
+                for b in pdict["blocks"]
+                if b["type"] == 1
+                and id(b) not in member_ids | attached_ids
+                and b.get("aside") is None
+                and b["bbox"][2] > cx0
+                and b["bbox"][0] < cx1
+                and (
+                    0 <= b["bbox"][1] - cy1 <= INFO_ADJ_GAP * line_h
+                    or 0 <= cy0 - b["bbox"][3] <= INFO_ADJ_GAP * line_h
+                )
+            ]
+            # inside admits can already exceed the cap on a dense
+            # core — the remaining budget clamps at zero; a negative
+            # slice bound would invert it and attach all but the tail
+            for b in media[: max(0, INFO_ATTACH_MAX - len(attached))]:
+                attached.append(b)
+                attached_ids.add(id(b))
+            for b in texts:
+                if len(attached) >= INFO_ATTACH_MAX:
+                    break
+                if (
+                    id(b) in member_ids | attached_ids
+                    or b.get("aside") is not None
+                    or _is_signature_furniture(b, h, boilerplate)
+                    or not (
+                        b["bbox"][2] > cx0 and b["bbox"][0] < cx1
+                    )
+                    or not any(
+                        b["bbox"][1] <= m["bbox"][3]
+                        and b["bbox"][3] >= m["bbox"][1]
+                        or 0
+                        <= b["bbox"][1] - m["bbox"][3]
+                        <= INFO_ATTACH_GAP * line_h
+                        or 0
+                        <= m["bbox"][1] - b["bbox"][3]
+                        <= INFO_ATTACH_GAP * line_h
+                        for m in media
+                    )
+                ):
+                    continue
+                attached.append(b)
+                attached_ids.add(id(b))
+            for b in members + attached:
+                b["aside"] = region
+            region += 1
 
 
 def _assign_column(block, edges):
@@ -280,7 +530,11 @@ def _reading_columns(
         if pi == 0:
             continue
         for b in pdict["blocks"]:
-            if b["type"] != 0 or _is_spanning(b, edges):
+            if (
+                b["type"] != 0
+                or b.get("aside") is not None
+                or _is_spanning(b, edges)
+            ):
                 continue
             text = _block_text(b, lang)
             if (

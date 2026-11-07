@@ -42,6 +42,10 @@ def _ordered_blocks(
     top/bottom edge — they render verbatim without reaching any classifier
     or perturbing the spans/cut/column machinery (a gutter-crossing footer
     would otherwise collapse the page into interleaved top-zone order).
+    Blocks carrying an ``aside`` mark leave through the shared aside path
+    instead: checked before the furniture tests (a claimed block survives
+    a furniture-matching line), they never enter ``items`` and render via
+    ``_aside_frag`` at page end.
     """
     rect = page.rect
     items = []
@@ -51,9 +55,23 @@ def _ordered_blocks(
     # from the margin-strip arm so no cell is dropped as furniture. Only
     # blocks that can still reach the body flow seed it, and only when a
     # band member reaches the body band: a margin-strips-only band is a
-    # run of furniture, not a table, and must not exempt its own members
-    clip = _strip_clip(page, blocks, boilerplate, lang)
+    # run of furniture, not a table, and must not exempt its own members.
+    # Aside members can't reach the body flow either — they lift out
+    # below — so they seed no clip
+    clip = _strip_clip(
+        page,
+        [b for b in blocks if b.get("aside") is None],
+        boilerplate,
+        lang,
+    )
     for block in blocks:
+        # the aside mark is checked before the furniture tests: a block
+        # its detector positively claimed is preserved through the aside
+        # path even when its text or position also matches a furniture
+        # rule — and it never joins the spans/cut/column machinery (a
+        # gutter-crossing aside must not become the top-zone cut)
+        if block.get("aside") is not None:
+            continue
         if block["type"] == 0:
             text = _block_text(block, lang)
             if not text:

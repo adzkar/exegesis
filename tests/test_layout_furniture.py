@@ -1,6 +1,7 @@
 """Independent extraction, EPUB validity, and owned furniture-failure baselines."""
 from __future__ import annotations
 
+import re
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
@@ -64,7 +65,6 @@ from furniture_fixtures import (
 )
 from helpers import chapter_body_text, doc_html, lint_epub
 from layout_assertions import (
-    SemanticMismatch,
     assert_retained_once,
     require,
     require_absent,
@@ -760,8 +760,10 @@ def test_front_matter_info_box_extraction_contract(info_box_pdf):
 
 
 def test_front_matter_info_box_conversion_and_lint(info_box_case):
-    """Keep all field text and surrounding prose even while the fields splice the abstract."""
+    """The two-field box emits one <aside>; all field text and
+    surrounding prose stay in the document."""
     _assert_conversion(info_box_case, 4)
+    assert info_box_case.stats["asides"] == 1
     assert INFO_TITLE in info_box_case.text
     assert all(field in info_box_case.text for field in INFO_FIELDS)
     assert INFO_PREFIX[0] in info_box_case.text
@@ -769,13 +771,18 @@ def test_front_matter_info_box_conversion_and_lint(info_box_case):
     for number in range(2, 5):
         assert f"Info-box body page {number} continues" in info_box_case.text
         assert f"Info-box body page {number} closes" in info_box_case.text
+    html = "\n".join(doc_html(info_box_case.epub).values())
+    aside = next(
+        f for f in re.findall(
+            r"<aside class=\"sidebar\">.*?</aside>", html, re.DOTALL
+        )
+        if "Received:" in f
+    )
+    assert all(field in aside for field in INFO_FIELDS)
+    assert INFO_PREFIX[0] not in aside
+    assert INFO_SUFFIX[0] not in aside
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=SemanticMismatch,
-    reason="#41: stacked Received:/Accepted: fields splice the abstract between 'final' and 'observation'",
-)
 def test_issue41_info_box_preserves_uninterrupted_abstract(info_box_case):
     """Expect only the documented field intrusion, never missing fields or operational errors."""
     require(

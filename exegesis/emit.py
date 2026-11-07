@@ -14,15 +14,19 @@ from ebooklib import epub
 from .analyze import (
     _body_font_size,
     _boilerplate_signatures,
+    _detect_asides,
     _doc_column_edges,
     _reading_columns,
     _split_signature_prefixes,
 )
 from .const import PAGES_PER_FALLBACK_CHAPTER
 from .lang import LangProfile, get_lang
-from .render import _render_page, _strip_dead_fn_links
+from .render import (
+    _flush_paragraph,
+    _render_page,
+    _strip_dead_fn_links,
+)
 from .state import PipelineState
-from .text import _join_lines
 
 
 def _valid_title(t):
@@ -72,6 +76,9 @@ def convert(
         pdict["blocks"] = _split_signature_prefixes(
             pdict["blocks"], page.rect.height, boilerplate, profile
         )
+    # front-matter info boxes are claimed before column-edge voting so
+    # their field column can never seed a phantom document edge
+    _detect_asides(pages, line_h, boilerplate, lang=profile)
     edges = _doc_column_edges(pages, boilerplate, profile)
     state = PipelineState(
         body_size=body_size,
@@ -93,10 +100,9 @@ def convert(
         # pages stay alive until their turn.
         pdict.clear()
         state.page_items[i] = []
-    if state.par:
-        state.page_frags[state.par_page].append(
-            f"<p>{_join_lines(state.par, state.lang)}</p>"
-        )
+    # the shared flush also drains queued asides — a document ending
+    # mid-paragraph can't drop them
+    _flush_paragraph(state)
     fn_nums = {n for n, _ in state.footnotes if n is not None}
     for frags in state.page_frags:
         for k, frag in enumerate(frags):
@@ -158,7 +164,10 @@ def convert(
             "th, td { border: 1px solid #999; padding: 0.15em 0.4em; "
             "vertical-align: top; text-align: left; } "
             "caption { text-align: left; font-weight: bold; "
-            "margin-bottom: 0.3em; }"
+            "margin-bottom: 0.3em; } "
+            "aside.sidebar { margin: 1em 0; padding: 0.5em 0.8em; "
+            "border: 1px solid #999; font-size: 0.92em; } "
+            "p.aside-title { font-weight: bold; margin-top: 0; }"
         ),
     )
     book.add_item(css)
@@ -292,5 +301,6 @@ def convert(
         "columns": len(set(state.col_map)),
         "grid_tables": state.grid_tables,
         "raster_tables": state.raster_tables,
+        "asides": state.asides,
         "output": str(out_path),
     }

@@ -33,5 +33,18 @@ OUTDENT_MIN_BLOCKS = 3
 OUTDENT_BAND_FILL = 0.85
 PAGES_PER_FALLBACK_CHAPTER = 10
 
+# info-box detection bounds (#41): run adjacency and media attachment
+# are in body line-height units; continuation evidence is a left-edge
+# x tolerance; the run cap stops a wrapped MDPI citation (~6 narrow
+# lines) before a following paragraph can sneak in; inside-core text
+# members cap at 3 lines and never carry a sentence end; outside-core
+# badge groups cap at 4 media+label members with a 1.5-line hop.
+INFO_ADJ_GAP = 2.0
+INFO_CONT_X_TOL = 8.0
+INFO_RUN_MAX_LINES = 8
+INFO_MEMBER_MAX_LINES = 3
+INFO_ATTACH_MAX = 4
+INFO_ATTACH_GAP = 1.5
+
 # Language profiles live in exegesis/lang.py — `convert(lang=...)`/`--lang`
 # select the pattern set stamped into the EPUB; defaults to English.

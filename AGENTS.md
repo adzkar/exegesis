@@ -240,6 +240,63 @@ chapters.
   tries the block *above* the region first against the full label set
   and rescues a later column's `Table N.` legend that column-major
   order emits after the cells.
+- **Asides** — detector-claimed regions ride a `block["aside"]` region
+  key, checked before the furniture tests in `_ordered_blocks` (a
+  claimed block survives a furniture-matching line, and never seeds
+  the strip clip, a span/cut, or a column edge — the same exclusion
+  keeps marked blocks out of `_doc_column_edges` votes and
+  `_reading_columns` outdent evidence). Lifted members never enter
+  `ordered`, so no body classifier (headings/TOC, bylines, abstract,
+  notes diversion, blockquote isolation, paragraph merges, caption
+  donation) can see them. At page end each region emits one
+  `<aside class="sidebar">` fragment through `_aside_frag`: an
+  aside-local pass over the region's own blocks that reuses the grid
+  table, rotated-table, and caption-alt machinery with the region's
+  x0/x1 as its edges/page_width — `_table_regions`'s 8pt right-band
+  inset is compensated so a tight bbox can't lose the rightmost cell —
+  and anything unstructureable degrades to aside-local paragraphs,
+  never dropped. The grid pass gets the region's full member list, not
+  only texts, so `_region_from_run`'s image-overlap rejection still
+  vetoes a false table wrapped around an aside figure (non-text
+  members never seed bands or claims). Superscripts stay plain `<sup>`
+  everywhere inside — `link_fns=False` threads through `_table_html`
+  into cells and captions, so no aside path ever links notes.xhtml —
+  a region title flag renders
+  `<p class="aside-title">`, and no `<hN>`/heading id can appear
+  inside, so an aside can't split a chapter or seed the TOC. When a
+  paragraph is still open the page's asides queue in
+  `state.pending_asides` and `_flush_paragraph` — the one paragraph
+  flush, shared by render's closure and emit's document tail — drains
+  them into `par_page`'s frags right behind the closing paragraph, so
+  a document ending mid-paragraph can't drop them; with no open
+  paragraph they append to their own page's frags after body flow
+  (aside order follows member y). `stats["asides"]` counts emitted
+  regions; `dev/diagnose_layouts.py` reports the lifted count per page.
+- **Front-matter info boxes** — the machinery's first detector
+  (`analyze._detect_asides`, called in `convert()` after the
+  signature-prefix split, before `_doc_column_edges`, so a claimed
+  field column can't vote a phantom edge). Pages 0–1 only, and only
+  grid-independent evidence: a field block opens with a profile
+  `info_labels` label — `Label:` any casing (multi-word labels and
+  `*` markers included) or an all-caps label with no colon
+  (`EDITED BY`, `RECEIVED  #35 April 2024`) — a mid-sentence
+  `Received:` never reaches the anchor. Aligned wrap continuations
+  (same left edge ±8pt, ≤2× line-height gap, ≤8-line run cap) extend
+  a field — an MDPI `Citation:` wraps narrow lines while a body
+  paragraph, living on a different left edge, can't follow. Runs
+  chain while adjacent (≤2× line height, x-overlap) — ordinary body
+  text or unclaimed signature furniture intersecting the open gap
+  inside the pair's x-union is a barrier — and a box needs ≥2
+  distinct labels, so a single `Received:`, a repeated label, or a
+  top-edge `TYPE / PUBLISHED / DOI` stack with one known label stays
+  in flow. The frozen core is the run-members' union: inside it
+  admits only media or short non-sentence text (Frontiers' email
+  line); a straddler stays whole in body flow; outside, a bounded
+  media-anchored group within a hop of a field edge may attach
+  (natcomm's badge image + `Check for updates` text) — a nearby
+  text-only paragraph never can. Every member gets a shared
+  `block["aside"]` region key; `lang` profiles without
+  `info_labels` (hand-built profiles) detect nothing.
 - **Abstract** — first small-font inset block in the top half of pages 0–1
   injects an `Abstract` h2 (title from the language profile's
   `abstract_title`).
@@ -250,7 +307,8 @@ chapters.
   (`caption` union, `figure_caption` no-tables, `table_caption`
   tables-only), plus the localized `abstract_title`, `notes_title`,
   byline `name_joiner`, the `affiliation` tail-split for author
-  metadata, the `section_fallback` untitled-chapter name, the
+  metadata, the `info_labels` front-matter box vocabulary, the
+  `section_fallback` untitled-chapter name, the
   fallback literals `table_alt`/`unknown_author`/`start_title`, and
   the `single_letter_words` drop-cap exclusion set (lone letters that
   are words when sentence-initial — DE's is empty so every lone
@@ -277,7 +335,8 @@ chapters.
   back to the first h1 heading and the byline text (affiliation tail and
   footnote markers stripped from the author).
 - **Style** — a minimal `style.css` is embedded (italic bylines, small-caps
-  labels, indented list items/quotes, centered figures).
+  labels, indented list items/quotes, centered figures, bordered
+  `aside.sidebar` boxes — no floats or fixed widths).
 
 ## Layout baseline integration audit (#33)
 
