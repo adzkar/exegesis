@@ -83,6 +83,38 @@ def test_control_characters_stripped(tmp_path):
     assert not any("\x07" in h for h in htmls.values())
 
 
+def test_dirty_metadata_sanitized_before_nav_seed(tmp_path):
+    """A control-char ``--title``/``--author`` bypasses span cleaning, and
+    the same names feed the seeded nav Link on a headingless+noteless doc
+    plus the stats payload — sanitize must rebind them, not just guard
+    the dc: sinks, or lxml crashes through nav.xhtml instead (#58)."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 300),
+        "Body text fills the page with plain sentences.",
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "dirtymeta.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "dirtymeta.epub"
+    stats = convert(pdf, out, title="Bell \x07Title", author="A \x07Writer")
+    assert lint_epub(out) == []
+    assert stats["title"] == "Bell Title"
+    # every XML doc in the archive — dc: metadata in the OPF, the seeded
+    # Link's text in nav.xhtml's toc and the NCX navMap — reads the
+    # rebound names, so no member may carry the raw control char
+    with zipfile.ZipFile(out) as zf:
+        docs = [
+            zf.read(n).decode("utf8")
+            for n in zf.namelist()
+            if n.endswith((".xhtml", ".ncx", ".opf"))
+        ]
+    assert all("\x07" not in h for h in docs)
+    assert any(">Bell Title<" in h for h in docs)
+    assert any(">A Writer<" in h for h in docs)
+
+
 def test_keep_headers_preserves_furniture(tmp_path):
     doc = fitz.open()
     p = _page(doc)

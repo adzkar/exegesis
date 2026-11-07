@@ -188,11 +188,14 @@ def convert(
     book = epub.EpubBook()
     book.set_identifier(hashlib.sha1(str(pdf_path).encode()).hexdigest()[:16])
     # metadata/CLI values bypass the extraction-time span cleaning, so
-    # sanitize at the item boundary too — a control character in any
-    # title still crashes lxml the same way (#56)
-    book.set_title(_sanitize_text(title))
+    # rebind sanitized once — the seeded nav Link and the stats payload
+    # below read the same names, and a raw control char crashes lxml
+    # through nav.xhtml just as it does through dc:title (#56)
+    title = _sanitize_text(title)
+    author = _sanitize_text(author)
+    book.set_title(title)
     book.set_language(profile.code)
-    book.add_author(_sanitize_text(author))
+    book.add_author(author)
 
     css = epub.EpubItem(
         uid="style",
