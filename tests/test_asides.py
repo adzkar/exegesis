@@ -396,6 +396,38 @@ def test_aside_superscripts_never_link_notes(tmp_path):
     assert "notes.xhtml" not in aside
 
 
+def test_aside_grid_superscript_stays_plain(tmp_path):
+    """A sup digit inside an aside grid cell emits <sup>, never a
+    notes.xhtml link — link_fns=False threads through _table_html."""
+    doc = fitz.open()
+    page = _page(doc)
+    text(page, 72, 110, "Grid superscript control", size=18)
+    text(page, 360, 200, "Alpha", size=8)
+    text(page, 470, 200, "350 msec long value", size=8)
+    text(page, 360, 220, "Bravo a longer one", size=8)
+    # a note-marker digit as a cell — aside text is never a note
+    # source, so it must not cross-link into notes.xhtml
+    text(page, 470, 220, "7", size=6)
+    text(page, 360, 240, "Charlie", size=8)
+    text(page, 470, 240, "298", size=8)
+    block(page, 72, 500, BODY_BLOCK, leading=14)
+    pdf = _save(doc, tmp_path / "input.pdf")
+
+    def mark(pages):
+        for b in pages[0][1]["blocks"]:
+            t = _block_text(b)
+            if t == "7" or t.startswith(
+                ("Alpha", "Bravo", "Charlie", "350", "298")
+            ):
+                b["aside"] = 0
+
+    state, _edges = _render_doc(pdf, mark)
+    aside = _aside_frags(state, 0)[0]
+    assert "<table>" in aside
+    assert "<td><sup>7</sup></td>" in aside
+    assert "notes.xhtml" not in aside
+
+
 def test_aside_title_flag_renders_bold_paragraph(tmp_path):
     """``aside_title`` marks a region's own title — never an <hN>."""
     doc = fitz.open()

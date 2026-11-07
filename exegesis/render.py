@@ -285,18 +285,24 @@ def _footnote_text(block, body_size, lang: LangProfile = EN):
     )
 
 
-def _table_html(region, body_size, lang: LangProfile = EN):
+def _table_html(region, body_size, lang: LangProfile = EN,
+                link_fns=True):
     """Render a detected grid table to ``<table>`` markup.
 
     Recovered rows become ``<tr>``; the first row promotes to ``<thead>``
     when every cell is bold. Cells keep span-level markup (bold/italic/
     sup links) via ``_line_html``; holes between occupied columns emit
-    empty cells so column positions stay aligned.
+    empty cells so column positions stay aligned. ``link_fns`` is false
+    inside asides — a sup digit in an aside cell or caption stays a
+    plain ``<sup>``, never a link into notes.xhtml.
     """
     parts = ["<table>"]
     if region.caption:
         cap = _join_lines(
-            (_line_html(l, body_size).strip() for l in region.caption),
+            (
+                _line_html(l, body_size, link_fns=link_fns).strip()
+                for l in region.caption
+            ),
             lang,
         )
         if cap:
@@ -310,7 +316,10 @@ def _table_html(region, body_size, lang: LangProfile = EN):
                 cells.append(f"<{tag}></{tag}>")
                 cur += 1
             text = _join_lines(
-                (_line_html(l, body_size).strip() for l, _b in lns),
+                (
+                    _line_html(l, body_size, link_fns=link_fns).strip()
+                    for l, _b in lns
+                ),
                 lang,
             )
             sp = f' colspan="{span}"' if span > 1 else ""
@@ -422,8 +431,9 @@ def _aside_frag(members, page, state):
     grid's multi-column guard can't reinterpret the strip as body
     columns. Whatever the local pass can't structure degrades to
     paragraphs — nothing is dropped. Superscripts never link into
-    notes.xhtml, and no ``<hN>``/heading id can appear inside, so the
-    fragment never triggers a chapter split or TOC anchor.
+    notes.xhtml (``link_fns=False`` reaches cells and captions through
+    ``_table_html``), and no ``<hN>``/heading id can appear inside, so
+    the fragment never triggers a chapter split or TOC anchor.
     """
     body_size = state.body_size
     members = sorted(
@@ -494,7 +504,9 @@ def _aside_frag(members, page, state):
             g = grid_of[id(b)]
             if id(g) not in grid_done:
                 grid_done.add(id(g))
-                inner.append(_table_html(g, body_size, state.lang))
+                inner.append(
+                    _table_html(g, body_size, state.lang, link_fns=False)
+                )
             continue
         text = _join_lines(
             (
