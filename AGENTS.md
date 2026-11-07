@@ -63,13 +63,15 @@ chapters.
   whose support's y-union covers ≥`ZONE_COL_MIN_COVER` of the page's
   text extent (a real column flows down the page; an author grid or
   formula fragment covers a few bands), median x-extent
-  ≥`ZONE_COL_MIN_WIDTH`×body_size, and ≤`ZONE_GUTTER_GRAZE` of support
-  grazing within `ZONE_GUTTER_TOL` of the next edge (table cells and
-  indent clusters ride through the proposed gutter). A single-edge
+  ≥`ZONE_COL_MIN_WIDTH`×body_size, and ≤`ZONE_GUTTER_GRAZE` of claimed
+  blocks grazing within `ZONE_GUTTER_TOL` of the next edge (table cells
+  and indent clusters ride through the proposed gutter; graze counts
+  spans — the 12pt span window strips edge-reachers from support, so a
+  support-only measure could never see one). A single-edge
   candidate always wins its page — one column cannot zipper, and its
   edge still beats the prior for geometry — while a weak candidate
   falls back to the doc grid (`grid_sources`: `page` / `doc` /
-  `doc-weak`; mirrored-margin journals like ebiomedicine_lancet split
+  `doc-weak` / `doc-none`; mirrored-margin journals like ebiomedicine_lancet split
   real edges by parity so no single grid reaches the doc quorum, and
   per-page grids recover them). Pages sharing an agreeing grid
   (`_grids_agree`, `ZONE_EDGE_TOL` on sorted edges) group into zones —
@@ -82,8 +84,10 @@ chapters.
   doc prior's identity (diagnostics report both, plus the page's
   source). A second `_detect_margins` pass reads each page's active
   bands after grids settle (bands derived from the committed grid can
-  hide a strip the page's own columns expose); the margin-detector's
-  doc-grid re-vote stays reserved for the first pass.
+  hide a strip the page's own columns expose); the pass-2 group counter
+  continues from the page's existing `("margin", pi, gi)` marks so a
+  late-lifted region can't collide with a pass-1 key, and the
+  margin-detector's doc-grid re-vote stays reserved for the first pass.
   Physical edges stay the geometry grid; reading identity flows through
   `state.col_map` (`_reading_columns`): an edge whose non-spanning
   evidence on pages ≥1 is ≥80% (`OUTDENT_HEADING_SHARE`) outdented-strip
