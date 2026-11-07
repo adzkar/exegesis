@@ -518,17 +518,20 @@ cases deselected). Converter heuristics and golden snapshots are unchanged.
   text, and real content near the edge — the same drift applies to any
   check that borrows a pipeline heuristic. Mirror every path that drops
   text *by design*, not just furniture: rotated tables leave the flow as
-  `images/table_*.png`, so `rasterized_blocks` copies
-  `analyze._rotated_table_region` plus `render`'s `tbl_ids` intersect;
-  figure regions leave it as `images/fig_*.png`, so
-  `figure_rasterized_blocks` replays the converter's own preparation
-  (signature splits, asides, document edges) and calls
-  `analyze._page_claims` — a replay, not a mirror, so the provisional-
-  label note mask, table precedence, and crop validation can't drift —
-  and a figure page stops flagging "not capturable" on vector geometry
-  alone — an unmodeled path grades intended behavior as loss, the
-  report contradicts itself, and the High gate fails a correct
-  conversion.
+  `images/table_*.png` and figure regions as `images/fig_*.png`, so both
+  raster mirrors replay the converter's own preparation through
+  `_claim_pages` (signature splits, asides, margin lifts, document
+  edges) and call `analyze._page_claims` — a replay, not a mirror, so
+  aside marks, the provisional-label note mask, table precedence, and
+  crop validation can't drift — and a figure page stops flagging "not
+  capturable" on vector geometry alone. `rasterized_blocks` additionally
+  replays `_bind_legend`'s raster arm (one table region + one
+  legend-carrying aside on the page): a margin legend bound into a
+  raster's `alt` never emits as text, so its words, its `Table N`, and
+  its window position leave the expected side and the disposition
+  resolves 'rasterized', not 'missing' — an unmodeled path grades
+  intended behavior as loss, the report contradicts itself, and the
+  High gate fails a correct conversion.
 - A repeated regex group must match its text exactly one way — no
   empty-able repeat nested inside it (`(?:<t>x</t>|[^<]*)*`,
   `(?:\.?\s*)*`) and no two alternatives that can consume the same

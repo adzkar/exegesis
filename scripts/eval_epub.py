@@ -447,85 +447,36 @@ def furniture_words(ctxs, boilerplate: set[str],
     return furn
 
 
-def rasterized_blocks(ctxs, boilerplate: set[str],
-                      lang: LangProfile):
-    """Words the rotated-table path carries only as pixels. Mirrors
-    `analyze._rotated_table_region` over the page's body blocks
-    (non-empty text blocks `_dropped` keeps, each read through its
-    post-split `_kept` view so a fused head's lines can't seed or
-    supply a cell): >=3 tall-narrow blocks
-    (height > 4x width and > 60pt) sharing a y-point, region = the
-    union bbox of every tall block. Then `render._render_page`'s
-    `tbl_ids`: every body block whose bbox intersects the region leaves
-    the text flow and lives only in an `images/table_*.png`. Returns
-    the counted words of those blocks, the `Table N.`/`Fig. N` legends
-    opening any of them (a legend inside the region is rasterized with
-    its grid), the region count — at most one per page, as in the
-    pipeline — and the claimed blocks' (page, index) positions so the
-    F-check's coverage windows can mask cell text that can only ever
-    survive as pixels (a word-multiset can't: `cell`/`0` are also
-    common body words)."""
+def _pos_of(db, pos, raw_rects):
+    """Raw ``get_text("blocks")`` index a prepared dict block maps to —
+    the exact bbox tuple when the block survived unsplit, else the
+    fused source block containing the post-split remainder (a
+    remainder's lines came from that block, so its claim index
+    follows)."""
     import fitz  # lazy like main(): an ImportError must reach the exit-2 net
-    words: Counter = Counter()
-    legends: set[str] = set()
-    fig_legends: set[str] = set()
-    claimed: set[tuple[int, int]] = set()
-    regions = 0
-    for pi, ctx in enumerate(ctxs):
-        raw = ctx.page.get_text("blocks")
-        body = [(bi, *v) for bi, b in enumerate(raw)
-                if b[6] == 0 and b[4].strip()
-                and (v := _kept(b, ctx, boilerplate, lang))]
-        tall = [bb for _, bb, _t in body
-                if bb[3] - bb[1] > 4 * max(1, bb[2] - bb[0])
-                and bb[3] - bb[1] > 60]
-        cov, shared = 0, False
-        for _, d in sorted([(bb[1], 1) for bb in tall]
-                           + [(bb[3], -1) for bb in tall]):
-            cov += d
-            if cov >= 3:
-                shared = True
-                break
-        if not shared:
-            continue
-        region = fitz.Rect(min(bb[0] for bb in tall),
-                           min(bb[1] for bb in tall),
-                           max(bb[2] for bb in tall),
-                           max(bb[3] for bb in tall))
-        regions += 1
-        for bi, bb, bt in body:
-            if fitz.Rect(bb).intersects(region):
-                claimed.add((pi, bi))
-                words.update(WORD_RE.findall(bt.lower()))
-                legends.update(
-                    n.upper() for n in _table_legend_re(lang).findall(
-                        _flatten(bt)))
-                fig_legends.update(
-                    n.upper() for n in _fig_legend_re(lang).findall(
-                        _flatten(bt)))
-    return words, frozenset(legends), frozenset(fig_legends), regions, claimed
+
+    t = tuple(db["bbox"])
+    if t in pos:
+        return pos[t]
+    r = fitz.Rect(t)
+    for bi, rr in enumerate(raw_rects):
+        if rr.contains(r):
+            return bi
+    return None
 
 
-def figure_rasterized_blocks(ctxs, boilerplate: set[str],
-                             lang: LangProfile):
-    """Words validated figure regions carry only as pixels.
+def _claim_pages(ctxs, boilerplate: set[str], lang: LangProfile):
+    """Per-page claim composition replayed the way convert computes it.
 
-    Replays the pipeline's own preparation — signature splits, aside
-    detection, document column edges — then calls
-    `analyze._page_claims` per page, so the committed regions are the
-    converter's own rather than a mirror that could drift: the
-    provisional-label note mask, table precedence, and crop validation
-    all come along for free. Returns the counted words of claimed text
-    members (labels that emit only inside an `images/fig_*.png`), the
-    figure legends opening inside claimed members, the region count,
-    the claimed blocks' (page, index) positions for the text-window
-    masks, the set of pages carrying a committed figure — a
-    capturable vector page mustn't still flag "not capturable" — and
-    the sha1 digests of claimed source images, which emit inside the
-    region's raster rather than as their own `images/img_*` member.
+    Both raster mirrors share this prep — the pipeline's own
+    ``_split_signature_prefixes``, ``_detect_asides``, margin lifts
+    (``_detect_margins`` plus the voted-edge grid re-vote) — then
+    ``_page_claims`` over the same ``_is_body_block`` partition
+    render's ``body_blocks`` uses, so an aside-marked margin member can
+    neither seed a region nor be claimed into one, and the committed
+    regions are the converter's own rather than a hand-mirror that
+    could drift. Yields ``(ctx, page, blocks, claims)`` per page.
     """
-    import fitz  # lazy like main(): an ImportError must reach the exit-2 net
-
     from exegesis.analyze import (
         _body_font_size,
         _detect_asides,
@@ -547,6 +498,131 @@ def figure_rasterized_blocks(ctxs, boilerplate: set[str],
     edges = _doc_column_edges(pages, boilerplate, lang)
     if _detect_margins(pages, edges, boilerplate, lang=lang):
         edges = _doc_column_edges(pages, boilerplate, lang)
+    for ctx, (page, pdict) in zip(ctxs, pages):
+        blocks = pdict["blocks"]
+        clip = _strip_clip(
+            page, [b for b in blocks if b.get("aside") is None],
+            boilerplate, lang)
+        body = [b for b in blocks
+                if _is_body_block(b, page, boilerplate, lang, clip)]
+        yield ctx, page, blocks, _page_claims(
+            page, body, blocks, edges, page.rect.width, line_h,
+            body_size, lang)
+
+
+def rasterized_blocks(ctxs, boilerplate: set[str],
+                      lang: LangProfile):
+    """Words the rotated-table path carries only as pixels or alt text.
+
+    Replays ``_page_claims`` through ``_claim_pages`` — the same
+    prepared, aside-marked stream the figure mirror uses — so the
+    committed ``kind == "table"`` regions are the converter's own:
+    their members (every body block the raster swallows) live only in
+    an ``images/table_*.png``, and a margin legend bound into the
+    region's alt (``_bind_legend``'s raster arm — exactly one table
+    region and one legend-carrying aside group on the page, matching
+    ``_aside_groups``'s key split and ``_has_table_legend``'s member
+    test) lives only inside its ``alt`` attribute. Both leave the
+    expected word side, and the bound ``Table N`` joins ``legends`` so
+    the F-check's disposition resolves 'rasterized', not 'missing'; a
+    legend bound to a *grid* region is not excused — ``<caption>``
+    keeps it visible. Returns the counted words of claimed blocks, the
+    ``Table N.``/``Fig. N`` legends opening any of them (a legend
+    inside the region is rasterized with its grid), the region count —
+    at most one per page, as in the pipeline — and the claimed blocks'
+    (page, index) positions so the F-check's coverage windows can mask
+    cell text that can only ever survive as pixels (a word-multiset
+    can't: ``cell``/``0`` are also common body words)."""
+    import fitz  # lazy like main(): an ImportError must reach the exit-2 net
+
+    def _account(b, pos, raw_rects):
+        """Excuse one raster-swallowed text block's words and legends."""
+        bi = _pos_of(b, pos, raw_rects)
+        if bi is not None:
+            claimed.add((pi, bi))
+        text = _block_text(b, lang)
+        words.update(WORD_RE.findall(text.lower()))
+        legends.update(
+            n.upper() for n in _table_legend_re(lang).findall(
+                _flatten(text)))
+        fig_legends.update(
+            n.upper() for n in _fig_legend_re(lang).findall(
+                _flatten(text)))
+
+    words: Counter = Counter()
+    legends: set[str] = set()
+    fig_legends: set[str] = set()
+    claimed: set[tuple[int, int]] = set()
+    regions = 0
+    for pi, (ctx, page, blocks, claims) in enumerate(
+            _claim_pages(ctxs, boilerplate, lang)):
+        tbls = [r for r in claims.rasters if r.kind == "table"]
+        if not tbls:
+            continue
+        regions += len(tbls)
+        raw = ctx.page.get_text("blocks")
+        pos = {tuple(b[:4]): bi for bi, b in enumerate(raw)}
+        raw_rects = [fitz.Rect(b[:4]) for b in raw]
+        idmap = {id(b): b for b in blocks}
+        for r in tbls:
+            for mid in r.ids:
+                b = idmap.get(mid)
+                if b is not None and b["type"] == 0:
+                    _account(b, pos, raw_rects)
+        # a lone table region paired with a lone legend aside binds the
+        # legend's `Table N` block into the raster's alt — it leaves
+        # the emitted text like a cell, so its words, its legend, and
+        # its coverage-window position leave the expected side too
+        tables = tbls + list(claims.grids)
+        if len(tables) == 1 and getattr(tables[0], "kind", None):
+            groups: dict = {}
+            for b in blocks:
+                if (k := b.get("aside")) is not None:
+                    groups.setdefault(k, []).append(b)
+            legend_groups = [
+                ms for ms in groups.values()
+                if any(
+                    m["type"] == 0
+                    and lang.table_caption.match(_block_text(m, lang))
+                    for m in ms
+                )
+            ]
+            if len(legend_groups) == 1:
+                cap = next(
+                    (
+                        m
+                        for m in legend_groups[0]
+                        if m["type"] == 0
+                        and lang.table_caption.match(
+                            _block_text(m, lang))
+                    ),
+                    None,
+                )
+                if cap is not None:
+                    _account(cap, pos, raw_rects)
+    return words, frozenset(legends), frozenset(fig_legends), regions, claimed
+
+
+def figure_rasterized_blocks(ctxs, boilerplate: set[str],
+                             lang: LangProfile):
+    """Words validated figure regions carry only as pixels.
+
+    Replays ``_page_claims`` through ``_claim_pages`` — the pipeline's
+    own preparation (signature splits, aside detection, margin lifts,
+    document column edges) plus the per-page claim composition — so
+    the committed regions are the converter's own rather than a mirror
+    that could drift: the provisional-label note mask, table
+    precedence, and crop validation all come along for free. Returns
+    the counted words of claimed text
+    members (labels that emit only inside an `images/fig_*.png`), the
+    figure legends opening inside claimed members, the region count,
+    the claimed blocks' (page, index) positions for the text-window
+    masks, the set of pages carrying a committed figure — a
+    capturable vector page mustn't still flag "not capturable" — and
+    the sha1 digests of claimed source images, which emit inside the
+    region's raster rather than as their own `images/img_*` member.
+    """
+    import fitz  # lazy like main(): an ImportError must reach the exit-2 net
 
     words: Counter = Counter()
     fig_legends: set[str] = set()
@@ -554,16 +630,8 @@ def figure_rasterized_blocks(ctxs, boilerplate: set[str],
     claimed_digests: set[bytes] = set()
     regions = 0
     fig_pages: set[int] = set()
-    for pi, (ctx, (page, pdict)) in enumerate(zip(ctxs, pages)):
-        blocks = pdict["blocks"]
-        clip = _strip_clip(
-            page, [b for b in blocks if b.get("aside") is None],
-            boilerplate, lang)
-        body = [b for b in blocks
-                if _is_body_block(b, page, boilerplate, lang, clip)]
-        claims = _page_claims(
-            page, body, blocks, edges, page.rect.width, line_h,
-            body_size, lang)
+    for pi, (ctx, page, blocks, claims) in enumerate(
+            _claim_pages(ctxs, boilerplate, lang)):
         fig_regions = [r for r in claims.rasters if r.kind == "figure"]
         if not fig_regions:
             continue
@@ -573,25 +641,13 @@ def figure_rasterized_blocks(ctxs, boilerplate: set[str],
         pos = {tuple(b[:4]): bi for bi, b in enumerate(raw)}
         raw_rects = [fitz.Rect(b[:4]) for b in raw]
 
-        def _pos_of(db, pos=pos, raw_rects=raw_rects):
-            t = tuple(db["bbox"])
-            if t in pos:
-                return pos[t]
-            r = fitz.Rect(t)
-            # a post-split remainder has no exact tuple — it lies inside
-            # the fused source block it was split out of
-            for bi, rr in enumerate(raw_rects):
-                if rr.contains(r):
-                    return bi
-            return None
-
         idmap = {id(b): b for b in blocks}
         for r in fig_regions:
             for mid in r.ids:
                 b = idmap.get(mid)
                 if b is None:
                     continue
-                bi = _pos_of(b)
+                bi = _pos_of(b, pos, raw_rects)
                 if bi is not None:
                     claimed.add((pi, bi))
                 if b["type"] != 0:
