@@ -501,10 +501,14 @@ def _margin_bands(page, pdict, edges, boilerplate, lang: LangProfile = EN):
     starting inside the band's own left stretch (``MARGIN_RIGHT_START``
     of its nominal width), so a stray margin block can't stretch the
     band that would exclude it — and a right-margin strip starts too far
-    out to measure the column's reach."""
+    out to measure the column's reach. Widths compare in the bboxes' own
+    unrotated space (``page.mediabox``, the ``_is_margin_strip`` rule)
+    — displayed ``page.rect`` swaps axes on /Rotate pages."""
     bands = []
     for i, e in enumerate(edges):
-        nominal = edges[i + 1] if i + 1 < len(edges) else page.rect.width
+        nominal = (
+            edges[i + 1] if i + 1 < len(edges) else page.mediabox.width
+        )
         cap = e + MARGIN_RIGHT_START * (nominal - e)
         reach = [
             b["bbox"][2]
@@ -616,7 +620,7 @@ def _margin_voted_edge(pages, edges, boilerplate, lead_re,
     if len(edges) < 2:
         return False
     widths = [edges[i + 1] - edges[i] for i in range(len(edges) - 1)]
-    widths.append(median(p.rect.width for p, _d in pages) - edges[-1])
+    widths.append(median(p.mediabox.width for p, _d in pages) - edges[-1])
     widest = max(widths) or 1.0
     marked = False
     for i in (0, len(edges) - 1):
