@@ -38,8 +38,9 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from exegesis.const import BOILERPLATE_MAX_CHARS, BOILERPLATE_MAX_LINES
 from exegesis.lang import LangProfile, get_lang
-from exegesis.text import _join_lines
+from exegesis.text import _block_lines, _block_text, _join_lines
 
 WORD_RE = re.compile(r"[A-Za-z0-9]+")
 TAG_RE = re.compile(r"<[^>]+>")
@@ -238,35 +239,97 @@ def boilerplate_signatures(pdf_pages) -> set[str]:
     inside the outer 20% edge zones recurring on >= max(2, 40%*pages)
     pages — the zone restriction keeps body text repeated mid-page from
     being excused, and the 2-page floor stops a 1-page doc from calling
-    every block 'repeated'."""
+    every block 'repeated'. The dict pass supplies the line count the
+    bound needs — block tuples can't."""
     counts: Counter = Counter()
     for page in pdf_pages:
         h = page.rect.height
         seen = set()
-        for b in page.get_text("blocks"):
-            if b[6] == 0 and (b[3] < h * 0.20 or b[1] > h * 0.80):
-                sig = SIG_RE.sub("", b[4].lower())
-                if 3 <= len(sig) <= 80:
+        for b in page.get_text("dict")["blocks"]:
+            if b["type"] != 0:
+                continue
+            if (b["bbox"][3] < h * 0.20
+                    or b["bbox"][1] > h * 0.80):
+                sig = SIG_RE.sub("", _block_text(b).lower())
+                if (3 <= len(sig) <= BOILERPLATE_MAX_CHARS
+                        and len(_block_lines(b)) <= BOILERPLATE_MAX_LINES):
                     seen.add(sig)
         counts.update(seen)
     return {s for s, n in counts.items()
             if n >= max(2, int(len(pdf_pages) * 0.4))}
 
 
-def _dropped(block, rect, boilerplate: set[str],
+def _page_ctx(page, boilerplate: set[str], lang: LangProfile):
+    """Per-page context `_dropped` needs to mirror
+    `order._ordered_blocks` exactly: the displayed rect (edge zones),
+    the mediabox width and upright reading direction the margin-strip
+    arm compares in unrotated space, dict blocks keyed by bbox (block
+    tuples supply neither line dirs nor counts), and the same exemption
+    clip `_ordered_blocks` builds through `_strip_clip` — seeds reaching
+    the body band that still survive the signature/pattern arms — so a
+    margin-adjacent cell isn't excused here as a strip while the
+    converter rightfully rasterizes it, and a margin-strips-only band
+    can't self-exempt on either side."""
+    from types import SimpleNamespace
+
+    # lazy like main(): pulling analyze pulls fitz — an ImportError must
+    # reach the exit-2 net, so it can't sit at module top
+    from exegesis.analyze import _strip_clip, _upright_dir
+
+    pdict = page.get_text("dict")
+    return SimpleNamespace(
+        page=page,
+        rect=page.rect,
+        mb_w=page.mediabox.width,
+        upright=_upright_dir(page),
+        dmap={tuple(b["bbox"]): b for b in pdict["blocks"]},
+        rtbl=_strip_clip(page, pdict["blocks"], boilerplate, lang),
+    )
+
+
+def _strip(block, ctx) -> bool:
+    """Mirror of `analyze._is_margin_strip` over the tuple's bbox plus the
+    ctx's dict line data — the same mediabox-space margin test, rotated-
+    table clip exemption, upright veto, all-rotated qualifier, and <25pt
+    fallback when direction data is missing or unusable (a dict lookup
+    miss counts as missing)."""
+    import fitz  # lazy like main(): an ImportError must reach the exit-2 net
+
+    from exegesis.analyze import _line_dir
+
+    x0, y0, x1, y1 = block[:4]
+    width = x1 - x0
+    if not (y1 - y0 > 4 * width
+            and (x0 > ctx.mb_w * 0.9 or x1 < ctx.mb_w * 0.1)):
+        return False
+    clip = ctx.rtbl
+    if (clip is not None
+            and fitz.Rect((x0, y0, x1, y1)).intersects(clip)):
+        return False
+    dblock = ctx.dmap.get((x0, y0, x1, y1))
+    dirs = ([_line_dir(l) for l in dblock.get("lines", [])]
+            if dblock else [])
+    if any(d == ctx.upright for d in dirs):
+        return False
+    if dirs and all(d is not None for d in dirs):
+        return True
+    return width < 25
+
+
+def _dropped(block, ctx, boilerplate: set[str],
              lang: LangProfile) -> bool:
     """Does `order._ordered_blocks` drop this `get_text("blocks")` tuple?
     Mirrors its rule exactly — `analyze._is_signature_furniture` (an
     edge-zone sig in the boilerplate set) or `analyze._is_furniture`:
     pattern furniture and pure page numbers only inside the outer 7%
     edge (a wider or unconditional zone would excuse real edge content
-    as stripped), and narrow+tall blocks in the outer 10% horizontal
-    margins (rotated sidebars). One predicate per block, so a block
+    as stripped), and `_strip` for the rotated margin strips in the
+    outer 10% horizontal margins. One predicate per block, so a block
     qualifying under several arms (a content-matching head that also
     recurs — the norm on journal corpora) is dropped, and counted,
     once."""
-    x0, y0, x1, y1, text = block[:5]
-    h, w = rect.height, rect.width
+    _, y0, _, y1, text = block[:5]
+    h = ctx.rect.height
     joined = " ".join(text.split())
     # _is_furniture searches `_block_text` — `copy-`/`right` and
     # `D`/`oi:` heads read `copyright`/`Doi:` to the converter — so
@@ -284,11 +347,10 @@ def _dropped(block, rect, boilerplate: set[str],
         or ((y0 > h * 0.93 or y1 < h * 0.07)
             and (lang.furniture.search(dehyph)
                  or re.fullmatch(r"\d{1,4}", joined)))
-        or (x1 - x0 < 25 and y1 - y0 > 4 * (x1 - x0)
-            and (x0 > w * 0.9 or x1 < w * 0.1)))
+        or _strip(block, ctx))
 
 
-def furniture_words(pdf_pages, boilerplate: set[str],
+def furniture_words(ctxs, boilerplate: set[str],
                     lang: LangProfile) -> Counter:
     """Counted vocabulary of words the converter *should* have stripped
     — the words of every block `_dropped` holds for, so the excuse
@@ -299,14 +361,14 @@ def furniture_words(pdf_pages, boilerplate: set[str],
     the dehyphenated gate text — the missing-side words are the
     unjoined fragments."""
     furn: Counter = Counter()
-    for page in pdf_pages:
-        for b in page.get_text("blocks"):
-            if b[6] == 0 and _dropped(b, page.rect, boilerplate, lang):
+    for ctx in ctxs:
+        for b in ctx.page.get_text("blocks"):
+            if b[6] == 0 and _dropped(b, ctx, boilerplate, lang):
                 furn.update(WORD_RE.findall(b[4].lower()))
     return furn
 
 
-def rasterized_blocks(pdf_pages, boilerplate: set[str],
+def rasterized_blocks(ctxs, boilerplate: set[str],
                       lang: LangProfile):
     """Words the rotated-table path carries only as pixels. Mirrors
     `analyze._rotated_table_region` over the page's body blocks
@@ -328,11 +390,11 @@ def rasterized_blocks(pdf_pages, boilerplate: set[str],
     fig_legends: set[str] = set()
     claimed: set[tuple[int, int]] = set()
     regions = 0
-    for pi, page in enumerate(pdf_pages):
-        raw = page.get_text("blocks")
+    for pi, ctx in enumerate(ctxs):
+        raw = ctx.page.get_text("blocks")
         body = [(bi, b) for bi, b in enumerate(raw)
                 if b[6] == 0 and b[4].strip()
-                and not _dropped(b, page.rect, boilerplate, lang)]
+                and not _dropped(b, ctx, boilerplate, lang)]
         tall = [b for _, b in body
                 if b[3] - b[1] > 4 * max(1, b[2] - b[0]) and b[3] - b[1] > 60]
         cov, shared = 0, False
@@ -976,8 +1038,9 @@ def main() -> int:
     # anchors used for legend collection below.
     pdf_text = "\n".join(p.get_text("text") for p in pdf)
     boilerplate = boilerplate_signatures(pdf)
+    ctxs = [_page_ctx(p, boilerplate, lang) for p in pdf]
     raster_vocab, raster_legends, fig_raster_legends, n_regions, \
-        raster_claimed = rasterized_blocks(pdf, boilerplate, lang)
+        raster_claimed = rasterized_blocks(ctxs, boilerplate, lang)
     # Table and figure legends collect on block-joined text: each
     # extracted block flattens to one line, so `\n` anchors mean block
     # starts — a real caption opens its own block, while a sentence
@@ -987,8 +1050,9 @@ def main() -> int:
     # was never expected in the EPUB — a rotated caption beside a
     # landscape table mustn't open a disposition row.
     kept_text = [b[4]
-                 for p in pdf for b in p.get_text("blocks")
-                 if b[6] == 0 and not _dropped(b, p.rect, boilerplate, lang)]
+                 for p, ctx in zip(pdf, ctxs)
+                 for b in p.get_text("blocks")
+                 if b[6] == 0 and not _dropped(b, ctx, boilerplate, lang)]
     pdf_blocks_text = "\n".join(
         _flatten(t)
         for t in kept_text)
@@ -1003,7 +1067,7 @@ def main() -> int:
     pdf_lines_text = "\n".join(
         b[4]
         for pi, p in enumerate(pdf) for bi, b in enumerate(p.get_text("blocks"))
-        if b[6] == 0 and not _dropped(b, p.rect, boilerplate, lang)
+        if b[6] == 0 and not _dropped(b, ctxs[pi], boilerplate, lang)
         and (pi, bi) not in raster_claimed)
     # Coverage windows additionally mask region-claimed cell blocks:
     # rasterized text can only survive as pixels, so its grams could
@@ -1012,7 +1076,7 @@ def main() -> int:
     win_text = "\n".join(
         _flatten(b[4])
         for pi, p in enumerate(pdf) for bi, b in enumerate(p.get_text("blocks"))
-        if b[6] == 0 and not _dropped(b, p.rect, boilerplate, lang)
+        if b[6] == 0 and not _dropped(b, ctxs[pi], boilerplate, lang)
         and (pi, bi) not in raster_claimed)
     epub_text = (" ".join(xhtml_text(c) for c in chapters.values())
                  + " " + notes_text(notes, lang))
@@ -1020,7 +1084,7 @@ def main() -> int:
     if not pw:
         findings.append(("High", "C", ("no extractable text in PDF — scanned/"
                                       "image-only input, eval is blind")))
-    furn_vocab = furniture_words(pdf, boilerplate, lang)
+    furn_vocab = furniture_words(ctxs, boilerplate, lang)
     # The rotated-table path drops its text blocks in every mode and
     # emits only an `images/table_*.png`, so those words were never
     # expected in the text. They leave the expected side *before* the
@@ -1188,7 +1252,7 @@ def main() -> int:
         # that merely wraps at `Table 5.` misclassify a figure page as
         # a ruled grid.
         t = "\n".join(_flatten(b[4]) for b in pdf[i].get_text("blocks")
-                      if b[6] == 0 and not _dropped(b, pdf[i].rect,
+                      if b[6] == 0 and not _dropped(b, ctxs[i],
                                                   boilerplate, lang))
         if _table_legend_re(lang).search(t):
             return True

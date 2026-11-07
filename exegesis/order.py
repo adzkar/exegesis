@@ -6,6 +6,7 @@ from .analyze import (
     _is_furniture,
     _is_signature_furniture,
     _is_spanning,
+    _strip_clip,
 )
 from .lang import EN, LangProfile
 from .text import _block_text
@@ -34,6 +35,13 @@ def _ordered_blocks(
     rect = page.rect
     items = []
     furniture_items = []
+    # a rotated table's outer cells share the strip's tall/rotated shape
+    # and can sit in the outer margin — the detected region exempts them
+    # from the margin-strip arm so no cell is dropped as furniture. Only
+    # blocks that can still reach the body flow seed it, and only when a
+    # band member reaches the body band: a margin-strips-only band is a
+    # run of furniture, not a table, and must not exempt its own members
+    clip = _strip_clip(page, blocks, boilerplate, lang)
     for block in blocks:
         if block["type"] == 0:
             text = _block_text(block, lang)
@@ -42,7 +50,9 @@ def _ordered_blocks(
             sig_furniture = _is_signature_furniture(
                 block, rect.height, boilerplate
             )
-            if sig_furniture or _is_furniture(block, rect, text, lang):
+            if sig_furniture or _is_furniture(
+                block, page, text, lang, clip
+            ):
                 if drop_furniture:
                     continue
                 block["is_furniture"] = True
