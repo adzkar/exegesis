@@ -40,6 +40,10 @@ from .const import (
     OUTDENT_MIN_BLOCKS,
     PAGE_FRAME_RATIO,
     SIGNATURE_PREFIX_MAX_LINES,
+    WRAP_BAND_SHARE,
+    WRAP_EDGE_TOL,
+    WRAP_MIN_IMG,
+    WRAP_SIDE_TOL,
     ZONE_COL_MIN_BLOCKS,
     ZONE_COL_MIN_COVER,
     ZONE_COL_MIN_SPREAD,
@@ -135,6 +139,87 @@ def _column_edges(items):
     return [median(c) for c in clusters if len(c) >= 2] or [0.0]
 
 
+def _wrap_fragments(blocks, items):
+    """Ids of wrap-strip blocks: text fragments narrowed beside an
+    in-column image that must not seed a column edge.
+
+    A wrapped float narrows its column around the image, so the far
+    strip's blocks share a second x0 inside one logical column — raw
+    x0 clustering reads that variance as a phantom edge and emits the
+    far strip after the resumed full-width body (#38). A strip
+    qualifies only when blocks sit on *both* sides of the image and
+    some eligible text block encloses image + strips horizontally:
+    the resume/opening block that proves they share one column (a
+    genuine second column has no text crossing its gutter to cover
+    it). Fragments must also hold most of their height inside the
+    image's y-band — a real column's blocks flow past the float, not
+    around it — which keeps a true neighboring column's blocks from
+    being claimed when a wide heading happens to span the page.
+    Strips at the cover's own x0 keep voting (they are the column's
+    normal lines), so only the interior-x0 side is withheld. An
+    edge-flush float — a mug shot with text on one side — has no
+    both-sides signal and is deliberately not claimed here.
+    ``items`` is the page's voting-eligible text blocks; images come
+    from ``blocks`` (claimed asides and furniture may still enclose
+    the band as prose, but only ``items`` may vote or cover).
+    """
+    frags = set()
+    for img in blocks:
+        if img["type"] != 1:
+            continue
+        ix0, iy0, ix1, iy1 = img["bbox"]
+        if ix1 - ix0 < WRAP_MIN_IMG or iy1 - iy0 < WRAP_MIN_IMG:
+            continue
+        left, right = [], []
+        for b in items:
+            x0, y0, x1, y1 = b["bbox"]
+            if min(y1, iy1) - max(y0, iy0) < WRAP_BAND_SHARE * (y1 - y0):
+                continue
+            if x1 <= ix0 + WRAP_SIDE_TOL:
+                left.append(b)
+            elif x0 >= ix1 - WRAP_SIDE_TOL:
+                right.append(b)
+        if not left or not right:
+            continue
+        lo = min(ix0, min(b["bbox"][0] for b in left + right))
+        hi = max(ix1, max(b["bbox"][2] for b in left + right))
+        covers = [
+            b for b in items
+            if b["bbox"][0] <= lo + WRAP_SIDE_TOL
+            and b["bbox"][2] >= hi - WRAP_SIDE_TOL
+        ]
+        if not covers:
+            continue
+        edge_x0 = median(b["bbox"][0] for b in covers)
+        for b in left + right:
+            if abs(b["bbox"][0] - edge_x0) >= WRAP_EDGE_TOL:
+                frags.add(id(b))
+    return frags
+
+
+def _voting_texts(page, pdict, boilerplate, lang):
+    """Blocks eligible to vote column edges: non-furniture, non-aside,
+    non-signature text — minus wrap strips beside in-column images.
+
+    The shared eligibility filter behind ``_doc_column_edges`` and
+    ``_page_grids``: furniture shapes can't form column edges (a
+    sidebar or running head recurring at the same x is the classic
+    phantom-edge generator), a claimed info-box column must not vote
+    a phantom edge, and a wrap strip's second x0 inside one logical
+    column must not either (#38).
+    """
+    items = [
+        b
+        for b in pdict["blocks"]
+        if b["type"] == 0
+        and b.get("aside") is None
+        and not _is_furniture(b, page, _block_text(b, lang), lang)
+        and not _is_signature_furniture(b, page.rect.height, boilerplate)
+    ]
+    wrap = _wrap_fragments(pdict["blocks"], items)
+    return [b for b in items if id(b) not in wrap]
+
+
 def _doc_column_edges(
     pages,
     boilerplate: Container[str] = frozenset(),
@@ -150,23 +235,9 @@ def _doc_column_edges(
     """
     votes = []
     for page, pdict in pages:
-        # furniture shapes can't form column edges — a sidebar or running
-        # head recurring at the same x on every page is the classic
-        # phantom-edge generator. Aside members cast no votes either:
-        # a claimed info-box column must not vote a phantom edge
-        items = [
-            b
-            for b in pdict["blocks"]
-            if b["type"] == 0
-            and b.get("aside") is None
-            and not _is_furniture(
-                b, page, _block_text(b, lang), lang
-            )
-            and not _is_signature_furniture(
-                b, page.rect.height, boilerplate
-            )
-        ]
-        for e in _column_edges(items):
+        for e in _column_edges(
+            _voting_texts(page, pdict, boilerplate, lang)
+        ):
             for v in votes:
                 if abs(v[0] - e) < 15:
                     v[1] += 1
@@ -1063,16 +1134,7 @@ def _page_grids(pages, doc_edges, boilerplate, line_h, body_size,
     page_edges: list[list[float]] = []
     sources: list[str] = []
     for page, pdict in pages:
-        items = [
-            b
-            for b in pdict["blocks"]
-            if b["type"] == 0
-            and b.get("aside") is None
-            and not _is_furniture(b, page, _block_text(b, lang), lang)
-            and not _is_signature_furniture(
-                b, page.rect.height, boilerplate
-            )
-        ]
+        items = _voting_texts(page, pdict, boilerplate, lang)
         cand = _column_edges(items)
         adopt = cand != [0.0] and (
             len(cand) == 1

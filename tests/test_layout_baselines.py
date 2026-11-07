@@ -244,6 +244,9 @@ def _contract_wrap(pages):
     assert _is_spanning(resumed, edges)
     assert _assign_column(resumed, edges) == 0
     assert _assign_column(_find(pdict, "Far upper"), edges) == 1
+    # the far-side strip's second x0 must not seed a column edge (#38):
+    # wrap fragments don't vote, so the document grid stays single-column
+    assert _doc_column_edges(pages, _boilerplate_signatures(pages)) == [72]
 
 
 def _contract_twoup(pages):
@@ -823,9 +826,7 @@ SEMANTICS = {
     "heads_only_phantom": _semantic_heads_only,
     "retained_content": _semantic_retained,
 }
-SYMPTOMS = {
-    "magazine_wrap": "#38 far-side wrap lines follow resumed full-width body",
-}
+SYMPTOMS = {}
 SEMANTIC_CASES = [
     pytest.param(name, marks=pytest.mark.xfail(
         strict=True, raises=SemanticMismatch, reason=SYMPTOMS[name],

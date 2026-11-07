@@ -107,5 +107,20 @@ FIGURE_AREA_MERGE = 7.0
 DRAWING_PAD = 1.0
 PAGE_FRAME_RATIO = 0.9
 
+# wrapped floats (#38): a strip of text narrowed beside an in-column image
+# shares a second x0 inside one logical column — that x0 variance alone
+# must never seed a column edge, or the far strip emits after the resumed
+# body. A strip counts only beside a non-trivial image (an icon or a
+# bullet can't host a wrap), with most of its own height inside the
+# image's y-band (a real column's blocks flow past the float, not around
+# it), and only when an eligible text block encloses image + strips
+# horizontally — the resume/opening block that proves one column, since a
+# genuine second column has no text crossing its gutter to cover it.
+# The edge tolerance matches ``_column_edges``'s own cluster window.
+WRAP_MIN_IMG = 24.0
+WRAP_SIDE_TOL = 2.0
+WRAP_BAND_SHARE = 0.5
+WRAP_EDGE_TOL = 15.0
+
 # Language profiles live in exegesis/lang.py — `convert(lang=...)`/`--lang`
 # select the pattern set stamped into the EPUB; defaults to English.
