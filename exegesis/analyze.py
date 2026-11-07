@@ -16,7 +16,13 @@ from .const import (
     BOILERPLATE_COVERAGE,
     BOILERPLATE_MAX_CHARS,
     BOILERPLATE_MAX_LINES,
+    DRAWING_PAD,
     EDGE_ZONE,
+    FIGURE_AREA_MERGE,
+    FIGURE_CLIP_PAD,
+    FIGURE_LABEL_CHARS,
+    FIGURE_LABEL_PAD,
+    FIGURE_MIN_LABELS,
     INFO_ADJ_GAP,
     INFO_ATTACH_GAP,
     INFO_ATTACH_MAX,
@@ -24,9 +30,11 @@ from .const import (
     INFO_MEMBER_MAX_LINES,
     INFO_RUN_MAX_LINES,
     MAX_HEADING_CHARS,
+    MIN_IMAGE_BYTES,
     OUTDENT_BAND_FILL,
     OUTDENT_HEADING_SHARE,
     OUTDENT_MIN_BLOCKS,
+    PAGE_FRAME_RATIO,
     SIGNATURE_PREFIX_MAX_LINES,
 )
 from .lang import EN, LangProfile
@@ -909,6 +917,11 @@ class _RasterRegion:
     rect: fitz.Rect
     ids: frozenset = field(default_factory=frozenset)
     kind: str = "table"
+    # the validated raster crop when it differs from ``rect`` (figure
+    # claims rasterize an exact clip; tables pad inside _rasterize)
+    clip: fitz.Rect | None = None
+    # a figure's anchor caption block — stays in body flow, donates alt
+    caption: dict | None = None
 
 
 def _upright_lines(blocks):
@@ -1568,7 +1581,13 @@ def _sup_marker(block, body_size):
 
 
 def _footnote_tops(
-    blocks, edges, body_size, page_height, line_h, lang: LangProfile = EN
+    blocks,
+    edges,
+    body_size,
+    page_height,
+    line_h,
+    lang: LangProfile = EN,
+    seeds=None,
 ):
     """Map each column index to the y where its footnote region starts.
 
@@ -1576,6 +1595,13 @@ def _footnote_tops(
     lower half of the page, and (b) unnumbered footnote zones — a smaller-than
     -body block in the bottom 40% separated from the text above by a gap much
     larger than the line height (author notes sit under a rule or whitespace).
+
+    ``seeds``, when given a dict, collects per-column seed provenance as
+    tuples of evidence block ids — ``(block,)`` for the marker and
+    note-start arms, ``(prev, cur)`` for a gap seed, whose neighbor is
+    half the evidence. The figure pass's label mask compares the
+    provenance of masked and unmasked views to tell a label-induced
+    zone from a genuine one.
     """
     tops = {}
     cols = {}
@@ -1586,6 +1612,8 @@ def _footnote_tops(
         cols.setdefault(col, []).append(b)
         if b["bbox"][1] >= page_height * 0.45 and _sup_marker(b, body_size) is not None:
             tops[col] = min(tops.get(col, b["bbox"][1]), b["bbox"][1])
+            if seeds is not None:
+                seeds.setdefault(col, []).append((id(b),))
     for col, cblocks in cols.items():
         cblocks.sort(key=lambda b: b["bbox"][1])
         for prev, cur in zip(cblocks, cblocks[1:]):
@@ -1595,6 +1623,8 @@ def _footnote_tops(
                 and _block_median_size(cur) < body_size * 0.95
             ):
                 tops[col] = min(tops.get(col, cur["bbox"][1]), cur["bbox"][1])
+                if seeds is not None:
+                    seeds.setdefault(col, []).append((id(prev), id(cur)))
                 break
     for col, cblocks in cols.items():
         for b in cblocks:
@@ -1604,4 +1634,557 @@ def _footnote_tops(
                 and lang.note_start.match(_block_text(b, lang))
             ):
                 tops[col] = min(tops.get(col, b["bbox"][1]), b["bbox"][1])
+                if seeds is not None:
+                    seeds.setdefault(col, []).append((id(b),))
     return tops
+
+
+def _is_body_block(block, page, boilerplate, lang: LangProfile = EN,
+                   clip=None):
+    """True for blocks that reach the body flow — the predicate
+    ``_ordered_blocks`` applies: no aside mark, nonempty text or media,
+    not signature or pattern furniture. ``clip`` is the strip exemption
+    ``_strip_clip`` computes once per page. The figure pass claims only
+    body blocks; eval replays the same partition for parity."""
+    if block.get("aside") is not None:
+        return False
+    if block["type"] != 0:
+        return True
+    text = _block_text(block, lang)
+    if not text:
+        return False
+    return not (
+        _is_signature_furniture(block, page.rect.height, boilerplate)
+        or _is_furniture(block, page, text, lang, clip)
+    )
+
+
+def _vector_areas(page):
+    """Connected vector-drawing regions — drawn artwork without pixels.
+
+    Bound ``page.get_cdrawings()`` rects padded by ``DRAWING_PAD`` so thin
+    or touching strokes connect (gaps <2pt join); near-page-size paths
+    (width AND height >= ``PAGE_FRAME_RATIO`` of the unrotated page) are
+    frames, not artwork, and never seed an area. Connectivity follows the
+    padded rects themselves, not the union bbox, so empty space between
+    paths can't absorb unrelated text. The compact-drawings call skips
+    ``get_drawings``' per-item dict building — only rects matter here,
+    and the probe stays on the expensive path long after the cheap
+    evidence gates. Shared with ``dev/diagnose_layouts.py`` — one
+    clustering feeds the figure pass and the survey's location buckets.
+    """
+    page_rect = page.rect * page.derotation_matrix
+    remaining = []
+    for drawing in page.get_cdrawings():
+        rect = fitz.Rect(drawing["rect"])
+        if not rect.is_valid or (
+            rect.width >= PAGE_FRAME_RATIO * page_rect.width
+            and rect.height >= PAGE_FRAME_RATIO * page_rect.height
+        ):
+            continue
+        remaining.append(
+            rect + (-DRAWING_PAD, -DRAWING_PAD, DRAWING_PAD, DRAWING_PAD)
+        )
+    regions = []
+    while remaining:
+        pending = [remaining.pop()]
+        region = fitz.Rect(pending[0])
+        while pending:
+            current = pending.pop()
+            for i in range(len(remaining) - 1, -1, -1):
+                if current.intersects(remaining[i]):
+                    neighbor = remaining.pop(i)
+                    pending.append(neighbor)
+                    region |= neighbor
+        regions.append(region)
+    return regions
+
+
+# sentence-final punctuation with a boundary after it — decimals like
+# "4.2 Å" don't read as prose, so in-artwork text carrying this is
+# foreign prose, not a label
+_SENTENCE_RE = re.compile(r"[.!?…]['\"”’)\]]?(?:\s|$)")
+
+
+@dataclass
+class _FigureCandidate:
+    """A geometric figure candidate awaiting claim validation.
+
+    ``rect`` unions the member bboxes — artwork rects and claimed label
+    blocks — and is the figure extent the note-zone and table-conflict
+    checks read. ``ids`` claims every member block, images included;
+    ``text_ids`` is the text-only subset the provisional note mask
+    removes. ``caption`` is the adjoining ``figure_caption`` block — it
+    stays in the body flow, donates the raster's alt, and is a crop
+    barrier like any foreign block. ``clip`` starts as the padded
+    member bbox; ``_figure_crop`` validates it against the page's
+    barriers before commit. ``short`` counts label members at or under
+    ``FIGURE_LABEL_CHARS`` — the density signal.
+    """
+
+    rect: fitz.Rect
+    ids: frozenset
+    text_ids: frozenset
+    caption: dict
+    clip: fitz.Rect
+    short: int
+
+
+def _figure_caption_near(area, blocks, member_ids, edges, page_width,
+                         lang: LangProfile = EN, texts=None):
+    """The nearest ``figure_caption`` block adjoining the area.
+
+    The legend below wins (journals set it under the figure), then the
+    one above, inside the alt scan's 120pt window and sharing a column
+    band via ``_overlap_cols`` — the same geometry ``_figure_alt``
+    adopts under. A caption member is never eligible (a caption/label
+    mix already rejected the candidate), and ``Table N`` can't anchor:
+    ``figure_caption`` excludes table labels by construction.
+    """
+    area_cols = _overlap_cols(area, edges, page_width)
+    best = None
+    for b in blocks:
+        if b["type"] != 0 or id(b) in member_ids:
+            continue
+        if not lang.figure_caption.match(
+            (texts or {}).get(id(b)) or _block_text(b, lang)
+        ):
+            continue
+        if not area_cols & _overlap_cols(b["bbox"], edges, page_width):
+            continue
+        below = b["bbox"][1] - area[3]
+        above = area[1] - b["bbox"][3]
+        if below >= -10:
+            side, gap = 0, below
+        elif above >= -10:
+            side, gap = 1, above
+        else:
+            continue
+        if gap > 120:
+            continue
+        if best is None or (side, gap) < best[0]:
+            best = ((side, gap), b)
+    return best[1] if best else None
+
+
+def _figure_candidates(page, blocks, edges, page_width, line_h,
+                       lang: LangProfile = EN):
+    """Geometric figure candidates on a page.
+
+    All three signals must hold — a figure area (a raster image block
+    or a merged vector-drawing region), at least ``FIGURE_MIN_LABELS``
+    short fragments over it or within ``FIGURE_LABEL_PAD``, and an
+    adjoining ``figure_caption``. A line lying over the area or
+    touching the pad ring is a member line; a block claims only when
+    every line is one (pad-ring members must additionally be short —
+    panel letters, not wrapped body prose), while a block mixing
+    member lines with foreign lines is a straddler and rejects the
+    candidate outright. ``blocks`` is the page's body-flow view —
+    aside members, furniture, and empty text never reach it, and their
+    absence is exactly what keeps them out of figure claims.
+
+    ``get_cdrawings()`` runs only when enough short fragments survive
+    unexplained by the image blocks' own pads AND a figure caption
+    exists to anchor a candidate — cheap image evidence first, the
+    expensive vector probe only when all three signals can still meet.
+    """
+    pad = FIGURE_LABEL_PAD
+    # per-block text/geometry computed once — every group and gate
+    # reuses it; on label-heavy pages this is the difference between
+    # the pass costing its gates and costing every rect it touches.
+    # Line rects/texts stay lazy: only blocks reaching the pad ring
+    # ever pay for them
+    brects = {id(b): fitz.Rect(b["bbox"]) for b in blocks}
+    btexts = {
+        id(b): _block_text(b, lang) for b in blocks if b["type"] == 0
+    }
+    blinfo = {}
+
+    def _lines_of(b):
+        info = blinfo.get(id(b))
+        if info is None:
+            lines = b.get("lines") or []
+            info = blinfo[id(b)] = (
+                [fitz.Rect(l["bbox"]) for l in lines],
+                [_line_text(l).strip() for l in lines],
+            )
+        return info
+
+    shorts = [
+        b
+        for b in blocks
+        if b["type"] == 0 and len(btexts[id(b)]) <= FIGURE_LABEL_CHARS
+    ]
+    if len(shorts) < FIGURE_MIN_LABELS:
+        return []
+    images = [
+        b
+        for b in blocks
+        if b["type"] == 1 and len(b.get("image") or b"") >= MIN_IMAGE_BYTES
+    ]
+    padded_imgs = [
+        brects[id(b)] + (-pad, -pad, pad, pad) for b in images
+    ]
+    areas = [(fitz.Rect(b["bbox"]), {id(b)}) for b in images]
+    # short fragments outside every image pad need the vector pass to
+    # explain them — but only when a figure caption exists to anchor a
+    # candidate; without all three signals nearby the expensive
+    # get_cdrawings probe can never commit
+    if any(
+        not any(
+            p.intersects(brects[id(b)] + (-pad, -pad, pad, pad))
+            for p in padded_imgs
+        )
+        for b in shorts
+    ) and any(
+        b["type"] == 0
+        and lang.figure_caption.match(btexts[id(b)])
+        for b in blocks
+    ):
+        areas += [(r, set()) for r in _vector_areas(page)]
+
+    # merge areas a small gap apart — adjacent panels and images inside
+    # a drawn frame read as one figure. Each new area absorbs every
+    # existing group its growing union touches, transitively — a vector
+    # area must fold all the image panels inside it, not just the first
+    # it hits. The gap stays tighter than the label pad so edge
+    # decoration (logos, rule marks) can't bridge into the artwork
+    merged = []
+    mgap = FIGURE_AREA_MERGE
+    for rect, img_ids in areas:
+        rect_u, ids_u = fitz.Rect(rect), set(img_ids)
+        hits = [
+            m
+            for m in merged
+            if (rect_u + (-mgap, -mgap, mgap, mgap)).intersects(m[0])
+        ]
+        while hits:
+            m = hits.pop()
+            rect_u |= m[0]
+            ids_u |= m[1]
+            merged.remove(m)
+            hits = [
+                m
+                for m in merged
+                if (rect_u + (-mgap, -mgap, mgap, mgap)).intersects(m[0])
+            ]
+        merged.append([rect_u, ids_u])
+
+    candidates = []
+    for area, img_ids in merged:
+        label_pad = area + (-pad, -pad, pad, pad)
+        members, short_n, straddler = [], 0, False
+        for b in blocks:
+            if b["type"] != 0 or id(b) in img_ids:
+                continue
+            br = brects[id(b)]
+            if not label_pad.intersects(br):
+                continue  # no line of it can reach the area or the ring
+            text = btexts[id(b)]
+            short_b = len(text) <= FIGURE_LABEL_CHARS
+            lrects, ltexts = _lines_of(b)
+            # a member line lies over the area; for a short block the
+            # pad ring counts too — panel letters hang just outside the
+            # artwork, but a long pad-ring block is prose, not a label
+            mline = [
+                area.intersects(lr)
+                or (short_b and label_pad.intersects(lr))
+                for lr in lrects
+            ]
+            if mline and all(mline):
+                if lang.caption.match(text):
+                    straddler = True  # caption/label mix — ambiguous
+                    break
+                # fully enclosed by the artwork → figure text outright
+                # (stacked legends, abbreviations); at the edge or in
+                # the pad ring, only label-like text joins — sentence-
+                # bearing blocks stay foreign barriers
+                if area.contains(br) or not _SENTENCE_RE.search(
+                    text
+                ):
+                    members.append(b)
+                    short_n += short_b
+            elif mline and any(
+                m and len(lt) <= FIGURE_LABEL_CHARS
+                for lt, m in zip(ltexts, mline)
+            ):
+                # a label-shaped line fused to foreign lines — the
+                # ambiguous mix the claim rule rejects; a pure-prose
+                # block grazing the pad (a wrapped legend) is only a
+                # barrier, which the crop stage can shrink around
+                straddler = True
+                break
+        if straddler or short_n < FIGURE_MIN_LABELS:
+            continue
+        member_ids = img_ids | {id(b) for b in members}
+        caption = _figure_caption_near(
+            area, blocks, member_ids, edges, page_width, lang, btexts
+        )
+        if caption is None:
+            continue
+        union = fitz.Rect(area)
+        for b in members:
+            union |= brects[id(b)]
+        mb = page.mediabox
+        clip = union + (
+            -FIGURE_CLIP_PAD, -FIGURE_CLIP_PAD,
+            FIGURE_CLIP_PAD, FIGURE_CLIP_PAD,
+        )
+        clip = fitz.Rect(
+            max(0, clip[0]),
+            max(0, clip[1]),
+            min(mb.width, clip[2]),
+            min(mb.height, clip[3]),
+        )
+        candidates.append(
+            _FigureCandidate(
+                rect=union,
+                ids=frozenset(member_ids),
+                text_ids=frozenset(id(b) for b in members),
+                caption=caption,
+                clip=clip,
+                short=short_n,
+            )
+        )
+    return candidates
+
+
+def _figure_crop(union, clip, barriers):
+    """Shrink ``clip`` past ``barriers``, or return None to reject.
+
+    A barrier crossing the member union can't be excluded without
+    cutting artwork or a label — reject. One inside only the padded
+    margin yields on the axis where it clears the union, keeping every
+    member inside. Shrinks are monotone, so a single pass leaves a clip
+    that still contains the union and touches no barrier — foreign
+    prose, the anchor caption, kept furniture, lifted asides, note
+    blocks, accepted tables, and unclaimed images all stay out of the
+    pixels as they stay in the text flow.
+    """
+    clip = fitz.Rect(clip)
+    for r in barriers:
+        if r.intersects(union):
+            return None
+        if not clip.intersects(r):
+            continue
+        if r[2] <= union[0]:
+            clip[0] = max(clip[0], r[2])
+        elif r[0] >= union[2]:
+            clip[2] = min(clip[2], r[0])
+        elif r[3] <= union[1]:
+            clip[1] = max(clip[1], r[3])
+        elif r[1] >= union[3]:
+            clip[3] = min(clip[3], r[1])
+        else:
+            return None
+    if clip.is_empty or not clip.contains(union):
+        return None
+    return clip
+
+
+def _seeds_consistent(full, masked, mask_ids):
+    """True when masking label blocks explains every note-seed change.
+
+    A removed seed is legitimate when any of its evidence blocks is a
+    figure member — a marker/note-start seed whose source was a label,
+    or a gap seed whose neighbor was: the gap that made it was
+    label-induced and collapses honestly once labels claim. A seed
+    surviving on non-member evidence keeps its zone even when its gap
+    neighbor changes (seeds compare by source block, the tuple's last
+    id). A masked-only seed is always suspect — the mask itself carved
+    the gap that made it, which is ambiguity, not a new note.
+    """
+    for col, seeds in full.items():
+        keep = {s[-1] for s in masked.get(col, [])}
+        for s in seeds:
+            if s[-1] not in keep and not any(e in mask_ids for e in s):
+                return False
+    for col, seeds in masked.items():
+        have = {s[-1] for s in full.get(col, [])}
+        for s in seeds:
+            if s[-1] not in have:
+                return False
+    return True
+
+
+@dataclass
+class _PageClaims:
+    """A page's claim composition: note zones, raster regions, grids.
+
+    ``foot_tops``/``foot_ids`` are the operative note view — the masked
+    one when figure claims committed, the unmasked one otherwise.
+    ``rasters`` holds ``_RasterRegion``s in no particular order — the
+    render loop anchors each at its first member in reading order.
+    ``grids`` are the accepted ``_TableRegion``s.
+    """
+
+    foot_tops: dict
+    foot_ids: set
+    rasters: list
+    grids: list
+
+
+def _page_claims(page, body_blocks, all_blocks, edges, page_width, line_h,
+                 body_size, lang: LangProfile = EN):
+    """Compose figure candidates with the page's note/table analysis.
+
+    Figure candidates are detected on geometry alone, then validated
+    against everything they could distort: provisional label members
+    mask out of ``_footnote_tops`` only when every dismissed seed
+    traces to a member and no masked-only seed appears; the surviving
+    tops sweep *all* body blocks (labels included) into note zones the
+    candidates must clear; the rotated-table and grid passes run on the
+    provisional note view with figure members still visible, so an
+    established table always wins the overlap. Crop barriers are every
+    non-member source block — furniture and aside bboxes included even
+    when they never reached the body flow — plus the accepted table
+    regions and the sibling candidates themselves, so committed regions
+    can't overlap. Any post-mask rejection discards the page's figure
+    claims wholesale: note and table analysis recompute once with all
+    blocks restored and figures are not retried on the page.
+    """
+    page_height = page.rect.height
+    candidates = _figure_candidates(
+        page, body_blocks, edges, page_width, line_h, lang
+    )
+    seeds_full: dict = {}
+    tops_full = _footnote_tops(
+        body_blocks, edges, body_size, page_height, line_h,
+        lang=lang, seeds=seeds_full,
+    )
+    foot_tops = tops_full
+    if candidates:
+        mask = set().union(*(c.text_ids for c in candidates))
+        masked = [b for b in body_blocks if id(b) not in mask]
+        seeds_masked: dict = {}
+        tops_masked = _footnote_tops(
+            masked, edges, body_size, page_height, line_h,
+            lang=lang, seeds=seeds_masked,
+        )
+        if _seeds_consistent(seeds_full, seeds_masked, mask):
+            foot_tops = tops_masked
+        else:
+            candidates = []
+
+    def _foot_ids(tops):
+        return {
+            id(b)
+            for b in body_blocks
+            if b["type"] == 0
+            and (fc := _assign_column(b, edges)) in tops
+            and b["bbox"][1] >= tops[fc] - 5
+        }
+
+    foot_ids = _foot_ids(foot_tops)
+    # rotated tables keep their existing precedence over note zones —
+    # a cell inside a zone still rasterizes with the table
+    rasters = []
+    if (tbl := _rotated_table_region(body_blocks)) is not None:
+        rasters.append(
+            _RasterRegion(
+                rect=tbl,
+                kind="table",
+                ids=frozenset(
+                    id(b)
+                    for b in body_blocks
+                    if fitz.Rect(b["bbox"]).intersects(tbl)
+                ),
+            )
+        )
+    raster_ids = set().union(*(r.ids for r in rasters)) if rasters else set()
+
+    def _grids(fids):
+        return _table_regions(
+            [b for b in body_blocks if id(b) not in raster_ids | fids],
+            line_h,
+            edges,
+            page_width,
+            lang,
+        )
+
+    grids = _grids(foot_ids)
+    if candidates:
+        # genuine note zones: a horizontal band per column from its
+        # surviving top down — physical edges, not reading columns
+        zones = [
+            (
+                edges[c],
+                top,
+                edges[c + 1] if c + 1 < len(edges) else page_width,
+                page_height,
+            )
+            for c, top in foot_tops.items()
+        ]
+        # barriers are blocks that produce foreign output: text blocks
+        # (prose, captions, furniture, notes, asides — all still in
+        # all_blocks) and images big enough to emit. Sub-threshold
+        # images never emit, so painting them into the raster is the
+        # point, not a leak
+        foreign = {
+            id(b): fitz.Rect(b["bbox"])
+            for b in all_blocks
+            if b["type"] == 0
+            or len(b.get("image") or b"") >= MIN_IMAGE_BYTES
+        }
+        committed = []
+        rejected = False
+        for cand in candidates:
+            if (
+                any(
+                    z[0] < cand.rect[2]
+                    and cand.rect[0] < z[2]
+                    and z[1] < cand.rect[3]
+                    and cand.rect[1] < z[3]
+                    for z in zones
+                )
+                or any(
+                    r.rect.intersects(cand.rect)
+                    or cand.ids & set(r.ids)
+                    for r in rasters
+                )
+                or any(
+                    g.rect.intersects(cand.rect) or cand.ids & g.claimed
+                    for g in grids
+                )
+            ):
+                rejected = True
+                break
+            barriers = (
+                [
+                    rect
+                    for bid, rect in foreign.items()
+                    if bid not in cand.ids
+                ]
+                + [r.rect for r in rasters]
+                + [g.rect for g in grids]
+                + [c.rect for c in candidates if c is not cand]
+            )
+            clip = _figure_crop(cand.rect, cand.clip, barriers)
+            if clip is None:
+                rejected = True
+                break
+            cand.clip = clip
+            committed.append(cand)
+        if rejected:
+            # discard every provisional claim on the page — notes and
+            # tables recompute once with all blocks restored
+            foot_tops = tops_full
+            foot_ids = _foot_ids(foot_tops)
+            grids = _grids(foot_ids)
+        else:
+            for cand in committed:
+                rasters.append(
+                    _RasterRegion(
+                        rect=cand.rect,
+                        ids=cand.ids,
+                        kind="figure",
+                        clip=cand.clip,
+                        caption=cand.caption,
+                    )
+                )
+    return _PageClaims(
+        foot_tops=foot_tops,
+        foot_ids=foot_ids,
+        rasters=rasters,
+        grids=grids,
+    )

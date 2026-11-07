@@ -506,6 +506,106 @@ def rasterized_blocks(ctxs, boilerplate: set[str],
     return words, frozenset(legends), frozenset(fig_legends), regions, claimed
 
 
+def figure_rasterized_blocks(ctxs, boilerplate: set[str],
+                             lang: LangProfile):
+    """Words validated figure regions carry only as pixels.
+
+    Replays the pipeline's own preparation — signature splits, aside
+    detection, document column edges — then calls
+    `analyze._page_claims` per page, so the committed regions are the
+    converter's own rather than a mirror that could drift: the
+    provisional-label note mask, table precedence, and crop validation
+    all come along for free. Returns the counted words of claimed text
+    members (labels that emit only inside an `images/fig_*.png`), the
+    figure legends opening inside claimed members, the region count,
+    the claimed blocks' (page, index) positions for the text-window
+    masks, the set of pages carrying a committed figure — a
+    capturable vector page mustn't still flag "not capturable" — and
+    the sha1 digests of claimed source images, which emit inside the
+    region's raster rather than as their own `images/img_*` member.
+    """
+    import fitz  # lazy like main(): an ImportError must reach the exit-2 net
+
+    from exegesis.analyze import (
+        _body_font_size,
+        _detect_asides,
+        _doc_column_edges,
+        _is_body_block,
+        _page_claims,
+        _split_signature_prefixes,
+        _strip_clip,
+    )
+
+    pages = [(ctx.page, {"blocks": ctx.page.get_text("dict")["blocks"]})
+             for ctx in ctxs]
+    body_size, line_h = _body_font_size(pages)
+    for p, d in pages:
+        d["blocks"] = _split_signature_prefixes(
+            d["blocks"], p.rect.height, boilerplate, lang)
+    _detect_asides(pages, line_h, boilerplate, lang=lang)
+    edges = _doc_column_edges(pages, boilerplate, lang)
+
+    words: Counter = Counter()
+    fig_legends: set[str] = set()
+    claimed: set[tuple[int, int]] = set()
+    claimed_digests: set[bytes] = set()
+    regions = 0
+    fig_pages: set[int] = set()
+    for pi, (ctx, (page, pdict)) in enumerate(zip(ctxs, pages)):
+        blocks = pdict["blocks"]
+        clip = _strip_clip(
+            page, [b for b in blocks if b.get("aside") is None],
+            boilerplate, lang)
+        body = [b for b in blocks
+                if _is_body_block(b, page, boilerplate, lang, clip)]
+        claims = _page_claims(
+            page, body, blocks, edges, page.rect.width, line_h,
+            body_size, lang)
+        fig_regions = [r for r in claims.rasters if r.kind == "figure"]
+        if not fig_regions:
+            continue
+        regions += len(fig_regions)
+        fig_pages.add(pi)
+        raw = page.get_text("blocks")
+        pos = {tuple(b[:4]): bi for bi, b in enumerate(raw)}
+        raw_rects = [fitz.Rect(b[:4]) for b in raw]
+
+        def _pos_of(db, pos=pos, raw_rects=raw_rects):
+            t = tuple(db["bbox"])
+            if t in pos:
+                return pos[t]
+            r = fitz.Rect(t)
+            # a post-split remainder has no exact tuple — it lies inside
+            # the fused source block it was split out of
+            for bi, rr in enumerate(raw_rects):
+                if rr.contains(r):
+                    return bi
+            return None
+
+        idmap = {id(b): b for b in blocks}
+        for r in fig_regions:
+            for mid in r.ids:
+                b = idmap.get(mid)
+                if b is None:
+                    continue
+                bi = _pos_of(b)
+                if bi is not None:
+                    claimed.add((pi, bi))
+                if b["type"] != 0:
+                    data = b.get("image") or b""
+                    if len(data) >= 2048:
+                        claimed_digests.add(
+                            hashlib.sha1(data).digest())
+                    continue
+                text = _block_text(b, lang)
+                words.update(WORD_RE.findall(text.lower()))
+                fig_legends.update(
+                    n.upper() for n in _fig_legend_re(lang).findall(
+                        _flatten(text)))
+    return (words, frozenset(fig_legends), regions, claimed, fig_pages,
+            claimed_digests)
+
+
 def classify_missing(missing: Counter, extra: Counter, furniture: Counter,
                      epub_text: str = "", pdf_text: str = ""):
     """Sort missing words into stripped furniture, rejoined-hyphenation
@@ -1126,6 +1226,15 @@ def main() -> int:
     ctxs = [_page_ctx(p, boilerplate, lang) for p in pdf]
     raster_vocab, raster_legends, fig_raster_legends, n_regions, \
         raster_claimed = rasterized_blocks(ctxs, boilerplate, lang)
+    # validated figure regions get the same accounting as the rotated
+    # path: label words leave the expected side only when an emitted
+    # `images/fig_` raster exists, and their blocks mask out of the
+    # text windows — the replayed _page_claims results are the
+    # converter's own, so the mask can't disagree with conversion
+    fig_vocab, fig_fig_legends, n_fig_regions, fig_claimed, fig_pages, \
+        fig_img_digests = figure_rasterized_blocks(
+            ctxs, boilerplate, lang)
+    raster_claimed = raster_claimed | fig_claimed
     # Table and figure legends collect on block-joined text: each
     # extracted block flattens to one line, so `\n` anchors mean block
     # starts — a real caption opens its own block, while a sentence
@@ -1191,7 +1300,20 @@ def main() -> int:
                                       "EPUB — rasterized-cell excuse withheld")))
         raster_vocab, raster_legends = Counter(), frozenset()
         fig_raster_legends = frozenset()
-    expected = pw - raster_vocab
+    # same evidence rule for figure regions: a label word only stops
+    # being expected when its `images/fig_` raster actually emitted —
+    # otherwise the region silently vanished and its words count as
+    # loss like any deleted paragraph
+    n_fig_refs = sum(len(re.findall(r'<img\b[^>]*src="[^"]*images/fig_', c))
+                     for c in chapters.values())
+    if n_fig_refs < n_fig_regions:
+        findings.append(("Med", "C", (f"figure regions: {n_fig_regions} in PDF vs "
+                                      f"{n_fig_refs} figure rasters referenced in "
+                                      "EPUB — figure-label excuse withheld")))
+        fig_vocab, fig_fig_legends = Counter(), frozenset()
+        fig_pages = set()
+        fig_img_digests = set()
+    expected = pw - raster_vocab - fig_vocab
     missing, extra = expected - ew, ew - expected
     rejoined, furn, supers, genuine = classify_missing(
         missing, extra, furn_vocab, epub_text, pdf_text)
@@ -1290,7 +1412,10 @@ def main() -> int:
                 data = b.get("image") or b""
                 if len(data) >= 2048:
                     raster_digests.add(hashlib.sha1(data).digest())
-    pdf_rasters = len(raster_digests)
+    # images claimed into a figure region emit inside its `images/fig_`
+    # raster, not as their own `img_*` member — holding them to the
+    # embedded count would flag intentional rasterization as a drop
+    pdf_rasters = len(raster_digests - fig_img_digests)
     # Figure embeds only — `images/table_<digest>.png` members are
     # pipeline-rendered tables, not source rasters; counting them here
     # would let a dropped figure hide behind a rasterized grid.
@@ -1320,6 +1445,11 @@ def main() -> int:
                 # it (same disposition the table side reports)
                 findings.append(("Low", "G", (f"Fig. {num}: legend rasterized "
                                               "with rotated-table region")))
+            elif num in fig_fig_legends:
+                # legend text claimed inside a validated figure region —
+                # intentional rasterization, not a lost caption
+                findings.append(("Low", "G", (f"Fig. {num}: legend rasterized "
+                                              "with figure region")))
             else:
                 findings.append(("Med", "G",
                                  f"Fig. {num}: legend absent from EPUB"))
@@ -1345,7 +1475,11 @@ def main() -> int:
         toks = WORD_RE.findall(t)
         return bool(toks) and sum(x.isdigit() for x in toks) / len(toks) > 0.5
     grid_pages = [i for i in vec_pages if _is_grid_page(i)]
-    fig_vec = [i for i in vec_pages if i not in grid_pages]
+    # a page whose vector graphics committed to a figure region IS
+    # capturable — the drawings emit inside `images/fig_` rasters, so
+    # the page mustn't still flag on vector geometry alone
+    fig_vec = [i for i in vec_pages
+               if i not in grid_pages and i not in fig_pages]
     if grid_pages:
         findings.append(("Low", "G", (f"vector-ruled table grids on pages "
                                       f"{[i + 1 for i in grid_pages]} — "

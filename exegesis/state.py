@@ -46,6 +46,9 @@ class PipelineState:
     # emit real <table> markup, raster tables are region-clipped PNGs
     grid_tables: int = 0
     raster_tables: int = 0
+    # validated figure regions rasterized so far — artwork and labels
+    # emit as one image instead of the labels leaking into prose
+    raster_figures: int = 0
     # aside regions emitted so far (stats dict) plus the <aside>
     # fragments queued while a paragraph is still open — the queue
     # drains into par_page's frags right behind the closing paragraph

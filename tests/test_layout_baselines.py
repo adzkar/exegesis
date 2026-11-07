@@ -747,8 +747,6 @@ SEMANTICS = {
 SYMPTOMS = {
     "mixed_1col_plus_2col": "#37 right-upper minority text interrupts the left column",
     "magazine_wrap": "#38 far-side wrap lines follow resumed full-width body",
-    "vector_figure": "#35 vector axis labels leak into chapter body flow",
-    "raster_figure": "#35 raster overlays and panel letters leak into chapter body flow",
 }
 SEMANTIC_CASES = [
     pytest.param(name, marks=pytest.mark.xfail(
