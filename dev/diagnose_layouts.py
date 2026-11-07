@@ -498,7 +498,7 @@ def _print_report(stats, pages, fold_evidence):
     print(
         f"  conversion: grid_tables={stats['grid_tables']} "
         f"raster_tables={stats['raster_tables']} notes={stats['footnotes']} "
-        f"images={stats['images']}"
+        f"images={stats['images']} asides={stats['asides']}"
     )
 
 

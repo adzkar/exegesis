@@ -14,6 +14,7 @@ from ebooklib import epub
 from .analyze import (
     _body_font_size,
     _boilerplate_signatures,
+    _detect_asides,
     _doc_column_edges,
     _reading_columns,
     _split_signature_prefixes,
@@ -75,6 +76,9 @@ def convert(
         pdict["blocks"] = _split_signature_prefixes(
             pdict["blocks"], page.rect.height, boilerplate, profile
         )
+    # front-matter info boxes are claimed before column-edge voting so
+    # their field column can never seed a phantom document edge
+    _detect_asides(pages, line_h, boilerplate, lang=profile)
     edges = _doc_column_edges(pages, boilerplate, profile)
     state = PipelineState(
         body_size=body_size,

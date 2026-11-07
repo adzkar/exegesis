@@ -272,6 +272,31 @@ chapters.
   paragraph they append to their own page's frags after body flow
   (aside order follows member y). `stats["asides"]` counts emitted
   regions; `dev/diagnose_layouts.py` reports the lifted count per page.
+- **Front-matter info boxes** — the machinery's first detector
+  (`analyze._detect_asides`, called in `convert()` after the
+  signature-prefix split, before `_doc_column_edges`, so a claimed
+  field column can't vote a phantom edge). Pages 0–1 only, and only
+  grid-independent evidence: a field block opens with a profile
+  `info_labels` label — `Label:` any casing (multi-word labels and
+  `*` markers included) or an all-caps label with no colon
+  (`EDITED BY`, `RECEIVED  #35 April 2024`) — a mid-sentence
+  `Received:` never reaches the anchor. Aligned wrap continuations
+  (same left edge ±8pt, ≤2× line-height gap, ≤8-line run cap) extend
+  a field — an MDPI `Citation:` wraps narrow lines while a body
+  paragraph, living on a different left edge, can't follow. Runs
+  chain while adjacent (≤2× line height, x-overlap) — ordinary body
+  text or unclaimed signature furniture intersecting the open gap
+  inside the pair's x-union is a barrier — and a box needs ≥2
+  distinct labels, so a single `Received:`, a repeated label, or a
+  top-edge `TYPE / PUBLISHED / DOI` stack with one known label stays
+  in flow. The frozen core is the run-members' union: inside it
+  admits only media or short non-sentence text (Frontiers' email
+  line); a straddler stays whole in body flow; outside, a bounded
+  media-anchored group within a hop of a field edge may attach
+  (natcomm's badge image + `Check for updates` text) — a nearby
+  text-only paragraph never can. Every member gets a shared
+  `block["aside"]` region key; `lang` profiles without
+  `info_labels` (hand-built profiles) detect nothing.
 - **Abstract** — first small-font inset block in the top half of pages 0–1
   injects an `Abstract` h2 (title from the language profile's
   `abstract_title`).
@@ -282,7 +307,8 @@ chapters.
   (`caption` union, `figure_caption` no-tables, `table_caption`
   tables-only), plus the localized `abstract_title`, `notes_title`,
   byline `name_joiner`, the `affiliation` tail-split for author
-  metadata, the `section_fallback` untitled-chapter name, the
+  metadata, the `info_labels` front-matter box vocabulary, the
+  `section_fallback` untitled-chapter name, the
   fallback literals `table_alt`/`unknown_author`/`start_title`, and
   the `single_letter_words` drop-cap exclusion set (lone letters that
   are words when sentence-initial — DE's is empty so every lone

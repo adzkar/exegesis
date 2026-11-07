@@ -70,6 +70,11 @@ class LangProfile:
     than re-listing the labels; ``None`` on a hand-built profile means
     the language's caption vocabulary was never declared, and such
     tools must degrade rather than match against English labels.
+    ``info_labels`` is the front-matter info-box field vocabulary —
+    the ``Received:``/``EDITED BY``/``Data Availability Statement:``
+    label alternation the aside detector anchors on; ``None`` on a
+    hand-built profile means no info-box detection (the detector
+    degrades rather than borrow English labels).
     """
 
     code: str
@@ -90,6 +95,7 @@ class LangProfile:
     single_letter_words: str
     figure_labels: str | None = None
     table_labels: str | None = None
+    info_labels: str | None = None
 
 
 def _profile(
@@ -109,6 +115,7 @@ def _profile(
     unknown_author,
     start_title,
     letters,
+    info_labels,
 ):
     """Assemble a frozen profile from per-language pattern strings.
 
@@ -136,6 +143,7 @@ def _profile(
         single_letter_words=letters,
         figure_labels=fig_labels,
         table_labels=table_label,
+        info_labels=info_labels,
     )
 
 
@@ -168,6 +176,14 @@ EN = _profile(
     unknown_author="Unknown",
     start_title="Start",
     letters="IA",
+    # Frontiers' caps stack, natcomm's colon fields, MDPI's citation and
+    # PLOS' metadata box — multi-word labels ride the same alternation
+    info_labels=(
+        r"data availability statement|academic editor|edited by|"
+        r"reviewed by|received|accepted|revised|published|citation|"
+        r"editor|correspondence|copyright|funding|data availability|"
+        r"article history|open access"
+    ),
 )
 
 DE = _profile(
@@ -206,6 +222,11 @@ DE = _profile(
     unknown_author="Unbekannt",
     start_title="Anfang",
     letters="",
+    info_labels=(
+        r"eingegangen|angenommen|veröffentlicht|zitieren|"
+        r"herausgegeben von|begutachtet von|korrespondenz|urheberrecht|"
+        r"förderung|datenverfügbarkeit|open access"
+    ),
 )
 
 FR = _profile(
@@ -242,6 +263,11 @@ FR = _profile(
     unknown_author="Inconnu",
     start_title="Début",
     letters="AÀY",
+    info_labels=(
+        r"reçu|accepté|publié|citation|édité par|relu par|"
+        r"correspondance|droits|financement|"
+        r"disponibilité des données|accès libre|open access"
+    ),
 )
 
 ES = _profile(
@@ -276,6 +302,11 @@ ES = _profile(
     unknown_author="Desconocido",
     start_title="Inicio",
     letters="AYO",
+    info_labels=(
+        r"recibido|aceptado|publicado|citación|editado por|revisado por|"
+        r"correspondencia|financiación|disponibilidad de datos|"
+        r"acceso abierto|open access"
+    ),
 )
 
 LANGS = {p.code: p for p in (EN, DE, FR, ES)}
