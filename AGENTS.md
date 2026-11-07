@@ -230,8 +230,11 @@ chapters.
   union or touching it with label-like (non-sentence) lines joins —
   panel letters in the `FIGURE_LABEL_PAD` ring qualify only for
   already-short blocks — while a block mixing a member line with
-  foreign lines (a straddler, including any caption) rejects the
-  whole candidate. Validation runs inside `_page_claims`: note zones
+  foreign lines (a straddler) rejects the whole candidate. A caption
+  counts as that straddler only when it touches the artwork itself —
+  a short caption grazing only the pad ring is the claim's own
+  anchor or a crop barrier, never a label member. Validation runs
+  inside `_page_claims`: note zones
   are computed once unmasked and once with the provisional label set
   masked out of seeds and gap neighbors (`_footnote_tops` records
   per-column seed provenance; `_seeds_consistent` allows a dismissed
