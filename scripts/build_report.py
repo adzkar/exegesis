@@ -135,7 +135,8 @@ def _render_html(rows: list[dict], generated: str) -> str:
 <p class="meta">Cols = detected reading columns — an outdented head
 strip folds into the column on its right and is not counted as its
 own; Grid = upright tables emitted as &lt;table&gt;; Raster = rotated
-tables embedded as images.</p>
+tables embedded as images; Fig = captioned figure regions embedded
+as images.</p>
 </body></html>
 """
 
