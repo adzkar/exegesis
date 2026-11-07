@@ -529,6 +529,7 @@ def figure_rasterized_blocks(ctxs, boilerplate: set[str],
     from exegesis.analyze import (
         _body_font_size,
         _detect_asides,
+        _detect_margins,
         _doc_column_edges,
         _is_body_block,
         _page_claims,
@@ -544,6 +545,8 @@ def figure_rasterized_blocks(ctxs, boilerplate: set[str],
             d["blocks"], p.rect.height, boilerplate, lang)
     _detect_asides(pages, line_h, boilerplate, lang=lang)
     edges = _doc_column_edges(pages, boilerplate, lang)
+    if _detect_margins(pages, edges, boilerplate, lang=lang):
+        edges = _doc_column_edges(pages, boilerplate, lang)
 
     words: Counter = Counter()
     fig_legends: set[str] = set()

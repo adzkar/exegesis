@@ -336,6 +336,49 @@ chapters.
   text-only paragraph never can. Every member gets a shared
   `block["aside"]` region key; `lang` profiles without
   `info_labels` (hand-built profiles) detect nothing.
+- **Margin marginalia** — the machinery's second detector
+  (`analyze._detect_margins`, called in `convert()` right after the
+  `_doc_column_edges` vote, before the reading-column map; a marked
+  *voted* margin edge triggers exactly one grid re-vote). Each page's
+  body bands (`_margin_bands`) derive from the grid's occupied
+  x-ranges: per column edge, the right bound is the deepest x-extent
+  among blocks starting in the left 75% (`MARGIN_RIGHT_START`) of the
+  nominal band — a margin strip can't stretch the band that would
+  exclude it — capped by the next edge, widened by `MARGIN_BAND_TOL`
+  for slight bleed. Text or media wholly outside every band is a
+  *candidate* (`_margin_candidates`): furniture, signatures,
+  already-claimed asides, rotated strips, and `Figure N` legends are
+  excluded up front (figure-domain content belongs to the figure
+  machinery). Candidates group by margin zone (left of the first
+  band, right of the last, inside a gutter) and split at
+  `table_caption` openers (`_margin_groups`) so a legend binds its
+  own trailing notes. A group lifts only with sidebar evidence
+  (`_margin_group_evidence`): a `Table N`/`Label:` opener member, an
+  `info_labels` field inside a multi-member group, or a
+  punctuation-structured fragment recurring across doc pages or
+  within the group; serial-numbered fragments (`Aim 01`, digit
+  strips) carry no evidence, and margin images ride an evidenced
+  group but never justify one — figure artwork spilling past the
+  band is not marginalia. A margin strip dense enough to vote its
+  own edge is handled by the voted-edge arm (`_margin_voted_edge`):
+  the edge must be outermost, narrow against the widest band
+  (`MARGIN_EDGE_MAX_FILL`), and ≥`MARGIN_EDGE_SHARE` of its
+  non-spanning non-furniture members must carry evidence (counted
+  on pages ≥1 like the outdent read; then every page's members
+  mark, since a margin column's page-0 content is marginalia too).
+  Region keys are `("margin", page, group)` /
+  `("margin-edge", page, edge)` — emission rides the shared
+  `<aside>` path unchanged. Table-legend anchoring: when a page
+  holds exactly one table region and exactly one legend aside
+  group, the legend's `Table N` member binds into the table's
+  `<caption>` (or becomes a raster region's alt donor) and the
+  remaining legend material emits as an aside immediately after
+  `</table>` rather than at page end; an ambiguous pairing (two
+  tables, two legends) degrades to the whole page-end aside, and a
+  legend whose table never emits falls back to the plain aside
+  rather than dropping. `scripts/eval_epub.py` replays the same
+  pass (and re-vote) before partitioning body vs furniture so the
+  evaluator sees the same claims conversion saw.
 - **Abstract** — first small-font inset block in the top half of pages 0–1
   injects an `Abstract` h2 (title from the language profile's
   `abstract_title`).

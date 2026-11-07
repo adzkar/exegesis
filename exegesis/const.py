@@ -46,6 +46,26 @@ INFO_MEMBER_MAX_LINES = 3
 INFO_ATTACH_MAX = 4
 INFO_ATTACH_GAP = 1.5
 
+# marginalia detection (#36): a block fully outside the doc grid's body
+# bands is only a *candidate* — lifting it to an aside needs spatial
+# coherence plus sidebar evidence (a table legend, a ``Label:`` opener,
+# a grouped info-label field, or a punctuation-structured fragment
+# recurring across pages); serial-numbered strips are manuscript line
+# numbering and never qualify, and margin images ride an evidenced
+# group but never justify one — a figure fragment spilling past the
+# band is not marginalia on its own. The band tolerance keeps a block
+# bleeding a few points past an edge in-band. Occupancy for a column's
+# right bound counts only blocks starting inside the band's own left
+# fraction — a margin strip can't stretch the band that would exclude
+# it. A strip that reached the column-edge quorum is a *voted* margin
+# column — an outermost edge is one only when its band is narrow
+# against the widest band and nearly all its non-spanning members
+# carry sidebar evidence.
+MARGIN_BAND_TOL = 6.0
+MARGIN_RIGHT_START = 0.75
+MARGIN_EDGE_MAX_FILL = 0.5
+MARGIN_EDGE_SHARE = 0.8
+
 # figure-region detection (#35): a raster image block or a merged
 # vector-drawing area earns a raster claim only with short label
 # density over it and an adjoining figure caption — all three signals.

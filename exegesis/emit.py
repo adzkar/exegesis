@@ -15,6 +15,7 @@ from .analyze import (
     _body_font_size,
     _boilerplate_signatures,
     _detect_asides,
+    _detect_margins,
     _doc_column_edges,
     _reading_columns,
     _split_signature_prefixes,
@@ -80,6 +81,11 @@ def convert(
     # their field column can never seed a phantom document edge
     _detect_asides(pages, line_h, boilerplate, lang=profile)
     edges = _doc_column_edges(pages, boilerplate, profile)
+    # marginalia classify on the grid's own bands; when an outermost
+    # edge was itself a voted margin column, one bounded re-vote lets
+    # its lifted members surrender the edge before columns map
+    if _detect_margins(pages, edges, boilerplate, lang=profile):
+        edges = _doc_column_edges(pages, boilerplate, profile)
     state = PipelineState(
         body_size=body_size,
         line_h=line_h,
