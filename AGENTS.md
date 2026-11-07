@@ -66,10 +66,14 @@ chapters.
   lines fails the band-fill clause; a strip needs ≥3 evidence blocks;
   the last edge can never fold. Non-spanning assignments and every
   span's covered columns pass through the map in `_ordered_blocks`, and
-  footnote-zone membership, the heading follower scan, caption column
-  matching, and blockquote same-column checks all compare the mapped
-  reading identity — geometric distances/indents still read
-  `edges[physical col]`. `stats["columns"]`
+  the heading follower scan, caption column matching, and blockquote
+  same-column checks all compare the mapped reading identity. Footnote
+  zones stay physical: a zone is a horizontal band at a column's foot,
+  not column identity — merging tops by min across a folded edge lets a
+  note-shaped strip block widen the swept region and misfile body text
+  as notes (a strip's own top still files its notes; it just can't
+  claim the body column's blocks). Geometric distances/indents still
+  read `edges[physical col]`. `stats["columns"]`
   counts distinct reading columns; `dev/diagnose_layouts.py` prints
   each physical edge's mapped column (`edge=… -> rcolN (outdent)`)
   plus the deciding share.

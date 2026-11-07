@@ -369,16 +369,16 @@ def _render_page(page, page_index: int, state: PipelineState):
     # kept furniture is render-only: it never feeds footnote-zone detection
     # or rotated-table candidate sets
     body_blocks = [b for b in ordered if not b.get("is_furniture")]
-    # note zones key on the reading column too: notes under an outdent
-    # edge belong to the body column the edge folds into, never to a
-    # standalone note column — geometry (``edges[col]``) stays physical
-    foot_tops = {}
-    for fc, top in _footnote_tops(
+    # note zones stay physical even though their membership feeds the
+    # mapped reading column below: a zone is page geometry (a horizontal
+    # band at a column's foot), not column identity — merging tops by min
+    # across a folded edge lets a note-shaped strip block widen the swept
+    # region and misfile body text as notes (a strip's own top still files
+    # its notes; they just can't claim the body column's blocks)
+    foot_tops = _footnote_tops(
         body_blocks, edges, body_size, page.rect.height, state.line_h,
         lang=state.lang,
-    ).items():
-        rc = col_map[fc]
-        foot_tops[rc] = min(foot_tops.get(rc, top), top)
+    )
     frags = state.page_frags[page_index]
 
     tbl = _rotated_table_region(body_blocks)
@@ -398,7 +398,7 @@ def _render_page(page, page_index: int, state: PipelineState):
         id(b)
         for b in body_blocks
         if b["type"] == 0
-        and (fc := col_map[_assign_column(b, edges)]) in foot_tops
+        and (fc := _assign_column(b, edges)) in foot_tops
         and b["bbox"][1] >= foot_tops[fc] - 5
     }
     # horizontal tables claim their cell blocks like the rotated path
@@ -543,7 +543,7 @@ def _render_page(page, page_index: int, state: PipelineState):
 
         col = _assign_column(block, edges)
         rcol = col_map[col]
-        if rcol in foot_tops and block["bbox"][1] >= foot_tops[rcol] - 5:
+        if col in foot_tops and block["bbox"][1] >= foot_tops[col] - 5:
             state.footnotes.append(
                 _footnote_text(block, body_size, state.lang)
             )
