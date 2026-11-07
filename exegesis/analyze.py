@@ -17,6 +17,10 @@ from .const import (
     BOILERPLATE_MAX_CHARS,
     BOILERPLATE_MAX_LINES,
     EDGE_ZONE,
+    MAX_HEADING_CHARS,
+    OUTDENT_BAND_FILL,
+    OUTDENT_HEADING_SHARE,
+    OUTDENT_MIN_BLOCKS,
     SIGNATURE_PREFIX_MAX_LINES,
 )
 from .lang import EN, LangProfile
@@ -187,6 +191,131 @@ def _overlap_cols(bbox, edges, page_width, tol=12):
         if min(x1, bounds[i + 1]) - max(x0, bounds[i]) >= tol:
             cols.add(i)
     return cols
+
+
+def _heading_like(block, text):
+    """Heading-shaped: one nonempty line of ≤MAX_HEADING_CHARS chars that
+    does not end in sentence punctuation.
+
+    The layout survey's per-edge heading-like probe — a single short
+    line without a terminal ``.!?…`` is what a section head looks like,
+    while body prose either wraps to several lines or terminates its
+    sentence. ``_outdent_like`` relaxes it to two lines plus a band-fill
+    bound for the actual fold decision. Closing quotes/brackets after
+    the punctuation don't disqualify it.
+    """
+    nonempty = sum(bool(_line_text(line).strip()) for line in _block_lines(block))
+    return (
+        nonempty == 1
+        and 0 < len(text) <= MAX_HEADING_CHARS
+        and not text.rstrip("\"'”’»)]} \t\r\n").endswith((".", "!", "?", "…"))
+    )
+
+
+def _outdent_like(block, text, band_end):
+    """Strip-shaped: a short unpunctuated fragment too narrow for its band.
+
+    The evidence shape behind `_reading_columns`'s outdent share — what
+    the layout survey's per-edge report must match. A strip block is
+    ``_heading_like``-adjacent but weaker about lines: two nonempty
+    lines still count, because a head squeezed into a narrow outdent
+    gutter wraps (MDPI's 'Emotion regulation' emits as two bold lines).
+    The price of admitting wrapped fragments is the ``band_end`` clause:
+    the block's x-extent must stop well short of the band the edge
+    shares with its right column. Wrapped column text — including PDFs
+    that emit one block per line, like the Wiley corpus file — reaches
+    the band's far edge; an outdented fragment never does.
+    """
+    nonempty = sum(bool(_line_text(line).strip()) for line in _block_lines(block))
+    return (
+        0 < nonempty <= 2
+        and 0 < len(text) <= MAX_HEADING_CHARS
+        and not text.rstrip("\"'”’»)]} \t\r\n").endswith((".", "!", "?", "…"))
+        and block["bbox"][2] <= band_end
+    )
+
+
+def _reading_columns(
+    pages,
+    edges,
+    boilerplate: Container[str] = frozenset(),
+    lang: LangProfile = EN,
+):
+    """Edge index → reading-column index, collapsing outdent edges.
+
+    Some templates outdent section heads to the left of the body edge;
+    when the outdent x recurs on enough pages to reach the column
+    quorum, it yields a real *physical* edge — full-width elements
+    genuinely start there — that must not be treated as a reading
+    column: column-major order would emit its handful of heads ahead of
+    the whole body instead of before their own sections (#43's MDPI
+    case). An edge is an outdent edge when, across the document, almost
+    all (≥``OUTDENT_HEADING_SHARE``) of the non-spanning blocks assigned
+    to it are ``_outdent_like`` — short fragments that stay narrow in
+    the band the edge shares with its right column, so PDFs that emit
+    wrapped column lines as lone blocks can't masquerade as a strip.
+    Spans never count either way — they cover the edge legitimately —
+    and an edge with less than ``OUTDENT_MIN_BLOCKS`` of non-spanning
+    evidence, or with no reading column to its right, is not an outdent
+    edge.
+
+    Evidence comes only from pages ≥1: page 0's front matter (title,
+    bylines, disclaimers) clusters at wide left edges and cannot be told
+    from outdented heads until #41's aside path exists to claim it.
+    Eligibility mirrors ``_doc_column_edges`` — furniture-shaped blocks
+    contribute no evidence, just as they cast no votes.
+
+    Non-outdent edges keep their own reading column, renumbered left to
+    right; an outdent edge maps to the first non-outdent edge on its
+    right — transitively, when several outdent edges chain (the last
+    edge can never be an outdent, so the chain always lands). Keep this
+    mapping separate from ``edges``: geometry (``edges[col]`` indents,
+    coverage bands, span tests) stays physical; only ordering and
+    column-identity tests read the mapped index.
+    """
+    if len(edges) < 2:
+        return list(range(len(edges)))
+    evidence = [[] for _ in edges]
+    for pi, (page, pdict) in enumerate(pages):
+        if pi == 0:
+            continue
+        for b in pdict["blocks"]:
+            if b["type"] != 0 or _is_spanning(b, edges):
+                continue
+            text = _block_text(b, lang)
+            if (
+                text
+                and not _is_furniture(b, page, text, lang)
+                and not _is_signature_furniture(
+                    b, page.rect.height, boilerplate
+                )
+            ):
+                evidence[_assign_column(b, edges)].append((b, text))
+    outdent = [
+        i + 1 < len(edges)
+        and len(ev) >= OUTDENT_MIN_BLOCKS
+        and sum(
+            _outdent_like(
+                b,
+                t,
+                edges[i] + (edges[i + 1] - edges[i]) * OUTDENT_BAND_FILL,
+            )
+            for b, t in ev
+        ) / len(ev)
+        >= OUTDENT_HEADING_SHARE
+        for i, ev in enumerate(evidence)
+    ]
+    outdent[-1] = False
+    own = {}
+    for i, is_outdent in enumerate(outdent):
+        if not is_outdent:
+            own[i] = len(own)
+    return [
+        own[i]
+        if not outdent[i]
+        else own[next(j for j in range(i + 1, len(edges)) if not outdent[j])]
+        for i in range(len(edges))
+    ]
 
 
 def _line_dir(line):

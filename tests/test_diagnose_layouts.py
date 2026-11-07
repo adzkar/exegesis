@@ -73,13 +73,23 @@ def test_diagnostic_reports_rotated_direction_and_bounds(reports):
 
 
 def test_diagnostic_reports_nonspanning_outdent_shares(reports):
-    """The heading-like edge metric is separate from the <=12-character location metric."""
+    """The outdent-strip edge metric is separate from the <=12-char location metric."""
     spans = _report(reports, "outdented_two_spans")
     heads = _report(reports, "heads_only_phantom")
     assert "edge=36.0" in spans and "INPUT 4/4 (100.0%)" in spans
     assert "edge=90.0" in heads and "INPUT 6/6 (100.0%)" in heads
-    assert "heading-like single-line share (<=120 chars)" in spans
+    assert "outdent-strip-like share" in spans
     assert "total=6 non-spanning=6 spanning=0" in heads
+
+
+def test_diagnostic_reports_physical_edges_and_reading_map(reports):
+    """Each physical edge prints its mapped reading column and the fold reason."""
+    spans = _report(reports, "outdented_two_spans")
+    heads = _report(reports, "heads_only_phantom")
+    assert "reading_cols=1" in spans
+    assert "edge=36.0 -> rcol0 (outdent)" in spans
+    assert "edge=166.0 -> rcol0" in spans
+    assert "edge=90.0 -> rcol0 (outdent)" in heads
 
 
 def test_diagnostic_flags_twoup_whitespace(reports):

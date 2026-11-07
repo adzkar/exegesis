@@ -54,6 +54,23 @@ chapters.
   shaped blocks don't vote). Blocks crossing a gutter are spans; each
   column emits its own sequence of non-spans + covering spans in y order,
   columns left to right. Works for 1/2/3-column layouts.
+  Physical edges stay the geometry grid; reading identity flows through
+  `state.col_map` (`_reading_columns`): an edge whose non-spanning
+  evidence on pages ≥1 is ≥80% (`OUTDENT_HEADING_SHARE`) outdented-strip
+  fragments — `analyze._outdent_like`: ≤2 short unpunctuated lines whose
+  x-extent stops inside `OUTDENT_BAND_FILL` of the band the edge shares
+  with its right column — is an outdent edge and folds into the nearest
+  non-outdent column on its right rather than ordering as its own
+  column (MDPI's outdented section heads). A column of wrapped text
+  lines fails the band-fill clause; a strip needs ≥3 evidence blocks;
+  the last edge can never fold. Non-spanning assignments and every
+  span's covered columns pass through the map in `_ordered_blocks`, and
+  footnote-zone membership, the heading follower scan, caption column
+  matching, and blockquote same-column checks all compare the mapped
+  reading identity — geometric distances/indents still read
+  `edges[physical col]`. `stats["columns"]` counts distinct reading
+  columns; `dev/diagnose_layouts.py` prints each physical edge's mapped
+  column (`edge=… -> rcolN (outdent)`) plus the deciding share.
 - **Paragraphs** — blocks merge into the open paragraph unless the first line
   is indented (>4pt) or the previous line ends with terminal punctuation.
   Open paragraphs carry across columns and page breaks; a lone drop-cap

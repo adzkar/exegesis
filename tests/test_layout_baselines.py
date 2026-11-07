@@ -25,6 +25,7 @@ from exegesis.analyze import (
     _is_furniture,
     _is_signature_furniture,
     _is_spanning,
+    _reading_columns,
 )
 from exegesis.text import _block_text
 
@@ -47,6 +48,35 @@ REQUIRED_CONTENT = {
     ],
     "outdented_two_spans": [f"{part} {number}" for number in range(4)
                             for part in ("First span", "Between spans", "Between body", "Last span", "Final body")],
+    "outdented_consumers": [
+        *(f"Consumer span {number} at {y}" for number in range(2) for y in (190, 450)),
+        *(f"Consumer span-body {number} at {y}" for number in range(2) for y in (290, 550)),
+        *(f"Head {number} {part}" for number in range(2, 6)
+          for part in ("alpha", "beta")),
+        *(f"Consumer body {number} {part}" for number in range(2, 6)
+          for part in ("alpha", "beta")),
+        *(f"Figure {number}. View" for number in range(2, 6)),
+        *(f"Quoted consumer passage {number} one" for number in range(2, 6)),
+        *(f"quoted consumer passage {number} two" for number in range(2, 6)),
+    ],
+    "two_col_heading_run": [
+        *(f"Left head {number}" for number in range(4)),
+        *(f"Left prose {number} {part}" for number in range(4)
+          for part in ("upper", "middle", "lower", "closing")),
+        *(f"Right prose {number} {part}" for number in range(4)
+          for part in ("upper", "lower")),
+    ],
+    "two_col_label_list": [
+        *(f"Label {number} {i}" for number in range(4) for i in range(7) if i not in (2, 5)),
+        *(f"Wrapped label {number} {i} line one" for number in range(4) for i in (2, 5)),
+        *(f"wrapped label {number} {i} line two" for number in range(4) for i in (2, 5)),
+        *(f"wrapped label {number} {i} line three" for number in range(4) for i in (2, 5)),
+        *(f"List body {number} {part}" for number in range(4) for part in ("upper", "lower")),
+    ],
+    "span_only_edge": [
+        *(f"Wide band {number} {part}" for number in range(4) for part in ("upper", "lower")),
+        *(f"Span-only body {number} {part}" for number in range(4) for part in ("first", "second")),
+    ],
     "signature_outdent_margin": [
         *(f"Manuscript body {number} {part}" for number in range(29)
           for part in ("opening", "middle", "closing")),
@@ -256,6 +286,71 @@ def _contract_two_spans(pages):
         assert len(head["lines"]) == 1
 
 
+def _contract_consumers(pages):
+    """x36-span and x42-head votes merge; consumer shapes stay physically distinct."""
+    assert len(pages) == 6
+    votes = _votes(pages)
+    assert votes[36] == 2 and votes[42] == 4 and votes[166] == 6
+    edges = _doc_column_edges(pages)
+    assert edges == [36, 166]
+    for number, (page, pdict) in enumerate(pages[2:], start=2):
+        heads = [b for b in _texts(pdict)
+                 if _block_text(b).startswith(f"Head {number}")]
+        assert len(heads) == 2
+        for head in heads:
+            assert head["bbox"][0] == 42 and len(head["lines"]) == 1
+            assert not _is_spanning(head, edges)
+            assert not _is_furniture(head, page, _block_text(head))
+        caption = _find(pdict, f"Figure {number}. View")
+        assert caption["bbox"][0] == 42 and caption["bbox"][2] < edges[1] - 12
+        image_blocks = [b for b in pdict["blocks"] if b["type"] == 1]
+        assert len(image_blocks) == 1
+        assert _assign_column(image_blocks[0], edges) == 1
+        quote = _find(pdict, f"Quoted consumer passage {number} one")
+        assert quote["bbox"][0] == 200 and _assign_column(quote, edges) == 1
+        assert len(quote["lines"]) == 2 and not _is_spanning(quote, edges)
+        note = _find(pdict, f"Consumer footnote {number}")
+        assert note["bbox"][0] == 166
+        assert note["bbox"][1] > page.rect.height * 0.6
+
+
+def _contract_heading_run(pages):
+    """Four wrapped paragraphs under one head keep the left column's share low."""
+    assert len(pages) == 4
+    edges = _doc_column_edges(pages)
+    assert edges == [72, 360]
+    for page, pdict in pages:
+        left = [b for b in _texts(pdict) if _assign_column(b, edges) == 0]
+        assert len(left) == 5
+        assert sum(len(b["lines"]) == 1 for b in left) == 1
+        assert all(not _is_spanning(b, edges) for b in left)
+
+
+def _contract_label_list(pages):
+    """Five heading-like labels in seven blocks keeps the edge under the share."""
+    assert len(pages) == 4
+    edges = _doc_column_edges(pages)
+    assert edges == [72, 360]
+    for page, pdict in pages:
+        left = [b for b in _texts(pdict) if _assign_column(b, edges) == 0]
+        assert len(left) == 7
+        assert sum(len(b["lines"]) == 1 for b in left) == 5
+        assert sum(len(b["lines"]) >= 3 for b in left) == 2
+
+
+def _contract_span_only(pages):
+    """Spans alone vote the left edge: no non-spanning evidence exists for it."""
+    assert len(pages) == 4
+    edges = _doc_column_edges(pages)
+    assert edges == [36, 166]
+    for page, pdict in pages:
+        col0 = [b for b in _texts(pdict)
+                if not _is_spanning(b, edges) and _assign_column(b, edges) == 0]
+        assert col0 == []
+        spans = [b for b in _texts(pdict) if _is_spanning(b, edges)]
+        assert len(spans) == 2
+
+
 def _contract_signature_margin(pages):
     """Boilerplate exclusion alone changes 17 phantom-edge votes to 13, below 14."""
     assert len(pages) == 29 and len(pages) // 2 == 14
@@ -319,6 +414,10 @@ CONTRACTS = {
     "raster_figure": _contract_raster,
     "outdented_heads": _contract_outdent,
     "outdented_two_spans": _contract_two_spans,
+    "outdented_consumers": _contract_consumers,
+    "two_col_heading_run": _contract_heading_run,
+    "two_col_label_list": _contract_label_list,
+    "span_only_edge": _contract_span_only,
     "signature_outdent_margin": _contract_signature_margin,
     "heads_only_phantom": _contract_heads_only,
     "retained_content": _contract_retained,
@@ -427,6 +526,67 @@ def _semantic_two_spans(result):
             require(result[3].count(label) == 1, f"#43 duplicate/dropped full-width span: {label}")
 
 
+def _semantic_consumers(result):
+    """#43: audited consumers resolve on the shared reading column."""
+    _, _, stats, body, htmls = result
+    require(stats["columns"] == 1,
+            f"outdent consumer doc must fold to one reading column: {stats['columns']}")
+    require(stats["footnotes"] == 4,
+            f"body-column notes must stay notes: {stats['footnotes']}")
+    for number in range(2, 6):
+        require_order(body, f"Head {number} alpha", f"Consumer body {number} alpha",
+                      f"Figure {number}. View", f"Head {number} beta",
+                      f"Consumer body {number} beta", f"Quoted consumer passage {number} one",
+                      issue="#43 shared reading column")
+    require_absent(body, "Consumer footnote", issue="#43 note swept to notes")
+    notes = htmls.get("notes.xhtml", "")
+    require("Consumer footnote 2" in notes and "Consumer footnote 5" in notes,
+            "#43 body-column note must reach notes.xhtml")
+    chaps = "".join(h for n, h in htmls.items() if n.startswith("chap_"))
+    require(chaps.count("<h2") == 8,
+            "#43 bold outdented heads must emit as headings through the shared column")
+    require(chaps.count("<blockquote>") == 4,
+            "#43 only the genuinely indented isolated block may quote — "
+            "edge-flush prose must not see a collapsed-index offset")
+    require(chaps.count('alt="Figure') == 4,
+            "#43 outdented caption must adopt through the shared column band")
+    require("<p>Consumer body 2 beta" in chaps,
+            "#43 edge-flush body prose must not become a quotation")
+
+
+def _semantic_heading_run(result):
+    """A genuine 2-col page keeps its columns when the left share stays low."""
+    require(result[2]["columns"] == 2,
+            f"a heading among real prose is not an outdent edge: {result[2]['columns']}")
+    for number in range(4):
+        require_order(result[3], f"Left head {number}", f"Left prose {number} upper",
+                      f"Left prose {number} middle", f"Left prose {number} lower",
+                      f"Left prose {number} closing", f"Right prose {number} upper",
+                      f"Right prose {number} lower", issue="#43 two-column negative")
+
+
+def _semantic_label_list(result):
+    """A label column under the outdent share keeps its own column."""
+    require(result[2]["columns"] == 2,
+            f"labels under the outdent share keep their column: {result[2]['columns']}")
+    for number in range(4):
+        require_order(result[3], f"Label {number} 0", f"Label {number} 1",
+                      f"Wrapped label {number} 2", f"Label {number} 3",
+                      f"Label {number} 4", f"wrapped label {number} 5 line three",
+                      f"Label {number} 6", f"List body {number} upper",
+                      f"List body {number} lower", issue="#43 label-list negative")
+
+
+def _semantic_span_only(result):
+    """A span-voted edge without non-spanning evidence keeps its own sequence."""
+    require(result[2]["columns"] == 2,
+            f"spans alone cannot mark an outdent edge: {result[2]['columns']}")
+    for number in range(4):
+        require_order(result[3], f"Wide band {number} upper", f"Wide band {number} lower",
+                      f"Span-only body {number} first", f"Span-only body {number} second",
+                      issue="#43 span-only edge")
+
+
 def _semantic_signature_margin(result):
     """The one-vote exclusion margin must preserve single-column order on all 29 pages."""
     require(result[2]["columns"] == 1, "signature exclusion must retain one reading column")
@@ -467,6 +627,10 @@ SEMANTICS = {
     "raster_figure": _semantic_raster,
     "outdented_heads": _semantic_outdent,
     "outdented_two_spans": _semantic_two_spans,
+    "outdented_consumers": _semantic_consumers,
+    "two_col_heading_run": _semantic_heading_run,
+    "two_col_label_list": _semantic_label_list,
+    "span_only_edge": _semantic_span_only,
     "signature_outdent_margin": _semantic_signature_margin,
     "heads_only_phantom": _semantic_heads_only,
     "retained_content": _semantic_retained,
@@ -476,9 +640,6 @@ SYMPTOMS = {
     "magazine_wrap": "#38 far-side wrap lines follow resumed full-width body",
     "vector_figure": "#35 vector axis labels leak into chapter body flow",
     "raster_figure": "#35 raster overlays and panel letters leak into chapter body flow",
-    "outdented_heads": "#43 outdented heads precede the entire page's body",
-    "outdented_two_spans": "#43 last span precedes the body physically between spans",
-    "heads_only_phantom": "#43 quorum-reaching heads create a phantom reading column",
 }
 SEMANTIC_CASES = [
     pytest.param(name, marks=pytest.mark.xfail(
@@ -486,6 +647,31 @@ SEMANTIC_CASES = [
     )) if name in SYMPTOMS else name
     for name in GENERATORS
 ]
+
+# Expected physical edge index -> reading-column index per fixture: outdent
+# edges fold into the reading column on their right ([0, 0]); genuine
+# columns and evidence-free edges keep their own identity.
+READING_MAPS = {
+    "outdented_heads": [0, 0],
+    "outdented_two_spans": [0, 0],
+    "outdented_consumers": [0, 0],
+    "heads_only_phantom": [0, 0],
+    "signature_outdent_margin": [0],
+    "two_col_heading_run": [0, 1],
+    "two_col_label_list": [0, 1],
+    "span_only_edge": [0, 1],
+}
+
+
+@pytest.mark.parametrize("source", READING_MAPS, indirect=True)
+def test_reading_column_mapping(source):
+    """The edge->reading-column map matches each fixture's intended fold."""
+    name, path = source
+    with fitz.open(path) as doc:
+        pages = [(page, page.get_text("dict")) for page in doc]
+        boilerplate = _boilerplate_signatures(pages)
+        edges = _doc_column_edges(pages, boilerplate)
+        assert _reading_columns(pages, edges, boilerplate) == READING_MAPS[name]
 
 
 @pytest.mark.parametrize("source", SEMANTIC_CASES, indirect=True)

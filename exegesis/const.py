@@ -19,6 +19,18 @@ SIGNATURE_PREFIX_MAX_LINES = BOILERPLATE_MAX_LINES
 MIN_IMAGE_BYTES = 2048
 MIN_HEADING_CHARS = 4
 MAX_HEADING_CHARS = 120
+# An outdent edge is a physical column edge whose non-spanning blocks are
+# almost all short unpunctuated fragments floating in a narrow strip —
+# a real edge (full-width elements start there) that must not order as
+# its own reading column. The share is deliberately high: a genuine
+# column carries prose, so 0.8 fires only when a column is *dominated*
+# by strip-shaped blocks, not merely contains some. The floor keeps a
+# couple of stray blocks from rebranding an edge, and the band-fill
+# bound separates strip fragments from wrapped column lines: wrapped
+# text hugs the band's far edge, an outdented fragment stops early.
+OUTDENT_HEADING_SHARE = 0.8
+OUTDENT_MIN_BLOCKS = 3
+OUTDENT_BAND_FILL = 0.85
 PAGES_PER_FALLBACK_CHAPTER = 10
 
 # Language profiles live in exegesis/lang.py — `convert(lang=...)`/`--lang`

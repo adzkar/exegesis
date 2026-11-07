@@ -24,6 +24,10 @@ class PipelineState:
     line_h: float
     page_items: list[list[dict[str, Any]]]
     edges: list[float]
+    # physical edge index -> reading-column index (``_reading_columns``):
+    # outdent edges fold into the reading column on their right while
+    # ``edges`` keeps the physical lookup for geometry
+    col_map: list[int]
     drop_edges: bool
     boilerplate: set[str]
     page_frags: list[list[str]]

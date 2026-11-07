@@ -131,8 +131,10 @@ def _render_html(rows: list[dict], generated: str) -> str:
 {ok}/{len(rows)} converted</p>
 <div class="scroll"><table><thead><tr>{cells}</tr></thead>
 <tbody>{"".join(body)}</tbody></table></div>
-<p class="meta">Cols = detected text columns; Grid = upright tables
-emitted as &lt;table&gt;; Raster = rotated tables embedded as images.</p>
+<p class="meta">Cols = detected reading columns — an outdented head
+strip folds into the column on its right and is not counted as its
+own; Grid = upright tables emitted as &lt;table&gt;; Raster = rotated
+tables embedded as images.</p>
 </body></html>
 """
 
