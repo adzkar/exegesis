@@ -1024,9 +1024,9 @@ def _strong_grid(cand, items, line_h, body_size):
             return False
         if i + 1 < len(cand):
             grazers = sum(
-                b["bbox"][2] > cand[i + 1] - ZONE_GUTTER_TOL for b in sup
+                b["bbox"][2] > cand[i + 1] - ZONE_GUTTER_TOL for b in col
             )
-            if grazers > ZONE_GUTTER_GRAZE * len(sup):
+            if grazers > ZONE_GUTTER_GRAZE * len(col):
                 return False
     return True
 
@@ -1055,7 +1055,8 @@ def _page_grids(pages, doc_edges, boilerplate, line_h, body_size,
     page's active grid; ``sources[pi]`` records *why* — ``"page"`` for
     a strong local candidate, ``"doc"`` when the local cluster already
     agreed with the prior, ``"doc-weak"`` when a differing candidate
-    failed the strength gate; ``zones`` maps each distinct active grid
+    failed the strength gate, ``"doc-none"`` when local clustering
+    found no quorum at all; ``zones`` maps each distinct active grid
     (``tuple``) to its member page indices — adjacency not required,
     since mirrored margins alternate parity.
     """
@@ -1085,7 +1086,11 @@ def _page_grids(pages, doc_edges, boilerplate, line_h, body_size,
             sources.append("page")
         else:
             page_edges.append(doc_edges)
-            sources.append("doc-weak")
+            # "doc-none" (no cluster quorum at all) reads differently in
+            # the survey than "doc-weak" (a differing candidate failed
+            # the strength gate) — only the latter means the page had
+            # real but insufficient local evidence
+            sources.append("doc-weak" if cand != [0.0] else "doc-none")
     zones: dict[tuple, list[int]] = {}
     for pi, edges in enumerate(page_edges):
         for key, members in zones.items():

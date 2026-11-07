@@ -529,7 +529,8 @@ def _print_report(stats, pages, fold_calls):
         body = [f for f in raw if f.survives]
         # the page's committed grid vs the doc prior (#37): "page"
         # adopted its own strong candidate, "doc-weak" tried and
-        # failed the strength gate, "doc" already agreed
+        # failed the strength gate, "doc-none" found no quorum at
+        # all, "doc" already agreed
         grid_tag = (
             "doc" if _grids_agree(p["edges"], edges) else _bbox(p["edges"])
         )

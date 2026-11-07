@@ -33,7 +33,8 @@ class PipelineState:
     # per-page active grids from ``_page_grids`` — the doc grid unless a
     # page's own strong candidate overrode it — plus their per-zone
     # ``_reading_columns`` maps and each page's grid provenance
-    # ("page" / "doc" / "doc-weak"), for the layout survey's reporting
+    # ("page" / "doc" / "doc-weak" / "doc-none"), for the layout
+    # survey's reporting
     page_edges: list[list[float]]
     page_col_map: list[list[int]]
     grid_sources: list[str]
