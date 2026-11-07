@@ -93,6 +93,19 @@ chapters.
   ≈265 letters fits inside; long continued-table headers and multi-
   paragraph blocks stay body text), and pattern furniture (`VOL`, `www.`,
   `ISSN`, `doi`, `©`, dates) in the outer 7% edge (works on 1-page docs).
+  A pre-pass before ordering (`_split_signature_prefixes`, run once per
+  page right after the boilerplate set is built) rescues heads fused to
+  the block below them — a whole-block signature can never match a fused
+  block, so when a block's first line lies in an edge zone its leading
+  lines join incrementally (≤`SIGNATURE_PREFIX_MAX_LINES` = 3, never the
+  whole block) and the first joined signature found in the boilerplate
+  set splits off into its own signature-furniture block while the
+  remainder continues as a normal block with a recomputed bbox. The
+  matched prefix's union must stay inside the zone or nothing splits: a
+  head straddling the boundary would leak as a paragraph — the same
+  failure the split fixes. Column-edge voting, the strip clip, and
+  render all see the post-split blocks, so a recurring fused head can't
+  vote a phantom column edge either.
   Rotated margin strips (tall+narrow blocks in the outer 10% margins,
   measured in `page.mediabox` space so /Rotate pages compare correctly)
   qualify by *line direction*, not width: every line with reliable
