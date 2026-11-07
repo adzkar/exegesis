@@ -14,25 +14,27 @@ LIST_ITEM_RE = re.compile(r"^\d{1,2}[.)]\s+\S")
 FN_LINK_RE = re.compile(
     r'<sup><a href="notes\.xhtml#fn(\d+)">(\d+)</a></sup>'
 )
-# XML 1.0 allows only \t \n \r below U+0020; born-digital files still
-# carry other C0 characters as layout artifacts — pull-quote and
-# crossword-grid marks like New Scientist's BELs (#56)
-_CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+# the XML 1.0 Char production excludes C0 other than \t \n \r, lone
+# surrogates, and U+FFFE/U+FFFF; born-digital files still carry them as
+# layout artifacts (New Scientist's BELs, #56) or broken ToUnicode maps
+_XML_INVALID = re.compile(
+    r"[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff\ufffe\uffff]"
+)
 
 
 def _sanitize_text(text):
-    """Drop XML-invalid control characters from a text fragment.
+    """Drop characters the XML 1.0 Char production excludes.
 
-    Characters like ``\x07`` are invisible layout marks, not content;
+    Marks like ``\x07`` are invisible layout artifacts, not content;
     leaving them in crashes ``ebooklib``/``lxml`` ("no NULL bytes or
     control characters") when a string reaches an ``epub`` item title
     and silently corrupts signatures and pattern matches elsewhere.
     """
-    return _CONTROL_CHARS.sub("", text)
+    return _XML_INVALID.sub("", text)
 
 
 def _sanitize_spans(pdict):
-    """Strip control characters from every span's text in a page dict.
+    """Strip XML-invalid characters from every span's text in a page dict.
 
     Runs once at extraction (``emit._extract_pages``) so every
     downstream consumer — fragment HTML, headings, ``dc:title``,

@@ -51,6 +51,18 @@ def test_join_lines_merges_lowercase_hyphen_tail():
     assert text._join_lines(["Section A-", "1"]) == "Section A- 1"
 
 
+# --- _sanitize_text -------------------------------------------------------
+
+def test_sanitize_text_strips_full_xml_invalid_set():
+    """Not just C0: lone surrogates and U+FFFE/U+FFFF are outside the
+    XML 1.0 Char production too (broken ToUnicode maps can emit them),
+    while XML-legal DEL and \\t\\n\\r survive."""
+    assert (
+        text._sanitize_text("x\x07\ud800\udfff\ufffe\uffffy") == "xy"
+    )
+    assert text._sanitize_text("keep\x7f me\t\n\r") == "keep\x7f me\t\n\r"
+
+
 # --- heading shape ------------------------------------------------------
 
 def test_heading_rejects_short_long_and_sentences():
