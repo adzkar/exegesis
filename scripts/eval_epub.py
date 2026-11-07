@@ -274,12 +274,15 @@ def _page_ctx(page, boilerplate: set[str], lang: LangProfile):
     iterated like the pre-pass itself so stacked heads split one at a
     time: for each fused-head block, the split-off head lines' words
     (the furniture side) and the remainder's text/bbox (the kept
-    side)."""
+    side). The strip clip reads the same post-split block stream
+    `_ordered_blocks` does — a fused block's head lines can't inflate
+    the clip's tall-seed shape or stretch its region union."""
     from types import SimpleNamespace
 
     # lazy like main(): pulling analyze pulls fitz — an ImportError must
     # reach the exit-2 net, so it can't sit at module top
     from exegesis.analyze import (
+        _lines_bbox,
         _signature_prefix_len,
         _strip_clip,
         _upright_dir,
@@ -289,32 +292,38 @@ def _page_ctx(page, boilerplate: set[str], lang: LangProfile):
     pdict = page.get_text("dict")
     dmap = {tuple(b["bbox"]): b for b in pdict["blocks"]}
     splits = {}
+    post = []
     for b in pdict["blocks"]:
         if b["type"] != 0:
+            post.append(b)
             continue
-        head, rest = [], b["lines"]
+        heads, rest = [], b["lines"]
         while len(rest) >= 2:
             k = _signature_prefix_len(
                 dict(b, lines=rest), page.rect.height, boilerplate, lang)
             if not k:
                 break
-            head += rest[:k]
+            heads.append(rest[:k])
             rest = rest[k:]
-        if not head:
+        if not heads:
+            post.append(b)
             continue
-        kept_bbox = (min(l["bbox"][0] for l in rest),
-                     min(l["bbox"][1] for l in rest),
-                     max(l["bbox"][2] for l in rest),
-                     max(l["bbox"][3] for l in rest))
+        kept_bbox = _lines_bbox(rest)
         splits[tuple(b["bbox"])] = SimpleNamespace(
             head_words=WORD_RE.findall(
-                " ".join(_line_text(l) for l in head).lower()),
+                " ".join(
+                    _line_text(l) for group in heads for l in group
+                ).lower()),
             kept_text="".join(_line_text(l) + "\n" for l in rest),
             kept_bbox=kept_bbox,
         )
         # the remainder is a synthetic block — give `_strip` its real
         # line dirs like a dict hit, not a miss that falls back to <25pt
         dmap[kept_bbox] = {"lines": rest}
+        # and keep the same post-split stream ordering sees — each
+        # matched head its own block, then the remainder
+        post.extend(dict(b, lines=g, bbox=_lines_bbox(g)) for g in heads)
+        post.append(dict(b, lines=rest, bbox=kept_bbox))
     return SimpleNamespace(
         page=page,
         rect=page.rect,
@@ -322,7 +331,7 @@ def _page_ctx(page, boilerplate: set[str], lang: LangProfile):
         upright=_upright_dir(page),
         dmap=dmap,
         splits=splits,
-        rtbl=_strip_clip(page, pdict["blocks"], boilerplate, lang),
+        rtbl=_strip_clip(page, post, boilerplate, lang),
     )
 
 
