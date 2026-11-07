@@ -305,15 +305,22 @@ def _signature_prefix_len(block, height, boilerplate, lang: LangProfile = EN):
     zone. The prefix test fires only when the block's *first* line lies
     in an edge zone — the line-level version of the signature arm's zone
     test — then joins leading lines incrementally, bounded by
-    ``SIGNATURE_PREFIX_MAX_LINES`` (a match needing more lines is a
-    title that merely resembles the head) and never consuming the whole
-    block (a full match is the arm's own case — no remainder exists to
-    rescue). The matched prefix's union bbox must stay inside the zone:
-    the split head classifies as signature furniture organically
-    downstream, while a prefix straddling the zone boundary would leak
-    into body flow as a paragraph — the same leak the split exists to
-    fix. The union only grows with each added line, so leaving the zone
-    is monotone and ends the scan.
+    ``SIGNATURE_PREFIX_MAX_LINES`` (the boilerplate set's own line
+    bound — a matched join is already a verified recurring signature)
+    and never consuming the whole block: a block whose whole signature
+    is already boilerplate is the arm's own case and returns 0 outright
+    — splitting it would drop the head lines but leak the remainder,
+    which is not independently boilerplate, into body flow. The scan
+    keeps the *longest* in-zone match, not the first: alternating heads
+    nest as prefixes of each other (verso `JournalX`, recto `JournalX /
+    Vol Twelve`), and a longer verified signature is always at least as
+    correct — stopping at k=1 would leave the real head's tail fused to
+    the body block, the same leak the split exists to fix. The matched
+    prefix's union bbox must stay inside the zone: the split head
+    classifies as signature furniture organically downstream, while a
+    prefix straddling the zone boundary would leak into body flow as a
+    paragraph. The union only grows with each added line, so leaving
+    the zone is monotone and ends the scan.
     """
     lines = _block_lines(block)
     if len(lines) < 2 or not boilerplate:
@@ -324,7 +331,10 @@ def _signature_prefix_len(block, height, boilerplate, lang: LangProfile = EN):
         or first[1] > height * (1 - EDGE_ZONE)
     ):
         return 0
+    if _signature(_block_text(block, lang)) in boilerplate:
+        return 0
     texts = [_line_text(line).strip() for line in lines]
+    best = 0
     for k in range(
         1, min(SIGNATURE_PREFIX_MAX_LINES, len(lines) - 1) + 1
     ):
@@ -334,8 +344,8 @@ def _signature_prefix_len(block, height, boilerplate, lang: LangProfile = EN):
         ):
             break
         if _signature(_join_lines(texts[:k], lang)) in boilerplate:
-            return k
-    return 0
+            best = k
+    return best
 
 
 def _split_signature_prefixes(blocks, height, boilerplate, lang: LangProfile = EN):
@@ -345,7 +355,10 @@ def _split_signature_prefixes(blocks, height, boilerplate, lang: LangProfile = E
     (see ``_signature_prefix_len``) becomes two blocks: the matched
     prefix — signature furniture everywhere downstream, dropped by
     default and kept verbatim at the page edge under ``--keep-headers``
-    — and the remainder, an ordinary block with a recomputed bbox. Runs
+    — and the remainder, an ordinary block with a recomputed bbox. The
+    remainder re-enters the scan, so stacked heads each independently
+    recurring (two running heads fused ahead of one title) split off one
+    at a time instead of the second leaking into the body block. Runs
     once per page after the boilerplate set is built and before
     ordering, so column-edge voting, the strip clip, and render all see
     the split blocks — a recurring fused head can no longer vote a
@@ -353,20 +366,17 @@ def _split_signature_prefixes(blocks, height, boilerplate, lang: LangProfile = E
     """
     out = []
     for block in blocks:
-        k = (
-            block["type"] == 0
-            and _signature_prefix_len(block, height, boilerplate, lang)
-        )
-        if not k:
-            out.append(block)
-            continue
-        lines = _block_lines(block)
-        out.append(
-            dict(block, lines=lines[:k], bbox=_lines_bbox(lines[:k]))
-        )
-        out.append(
-            dict(block, lines=lines[k:], bbox=_lines_bbox(lines[k:]))
-        )
+        rest = block
+        while rest["type"] == 0:
+            k = _signature_prefix_len(rest, height, boilerplate, lang)
+            if not k:
+                break
+            lines = _block_lines(rest)
+            out.append(
+                dict(rest, lines=lines[:k], bbox=_lines_bbox(lines[:k]))
+            )
+            rest = dict(rest, lines=lines[k:], bbox=_lines_bbox(lines[k:]))
+        out.append(rest)
     return out
 
 
