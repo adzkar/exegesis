@@ -12,6 +12,7 @@ import fitz
 from furniture_fixtures import (
     NORMAL_MARGIN_TEXT,
     dual_margin_strips,
+    fused_running_head_title,
     long_repeated_running_head,
     repeated_bottom_foot,
     rotated_margin_stamp,
@@ -234,6 +235,18 @@ def test_eval_margin_cells_rasterize_excused(tmp_path):
     pdf = tmp_path / "cells.pdf"
     rotated_table_margin_cells(pdf)
     epub = tmp_path / "cells.epub"
+    convert(pdf, epub)
+    r = _run(pdf, epub)
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_eval_fused_head_is_excused(tmp_path):
+    """The split-off running head is furniture by design — the eval
+    mirrors the prefix split so its words excuse while the freed title
+    and body still count toward coverage (#40)."""
+    pdf = tmp_path / "fused.pdf"
+    fused_running_head_title(pdf)
+    epub = tmp_path / "fused.epub"
     convert(pdf, epub)
     r = _run(pdf, epub)
     assert r.returncode == 0, r.stdout + r.stderr
