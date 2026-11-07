@@ -57,6 +57,32 @@ def test_furniture_and_page_number_stripped(tmp_path):
     assert "7" not in text
 
 
+def test_control_characters_stripped(tmp_path):
+    """XML-invalid control chars in extracted text must not reach the EPUB
+    (#56): a newsstand magazine's BELs crashed lxml at item-title setting."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_text((72, 180), "Section \x07one", fontsize=18)
+    p.insert_textbox(
+        fitz.Rect(72, 240, 540, 420),
+        "Body text \x07with an embedded bell and a sentence.",
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "ctrl.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "ctrl.epub"
+    convert(pdf, out)
+    assert lint_epub(out) == []
+    text = chapter_text(out)
+    assert "\x07" not in text
+    assert "Section one" in text and "embedded bell" in text
+    # the heading-derived chapter title is the lxml crash path: the raw
+    # control char must be gone from every emitted document, head included
+    htmls = doc_html(out)
+    assert any("<title>Section one" in h for h in htmls.values())
+    assert not any("\x07" in h for h in htmls.values())
+
+
 def test_keep_headers_preserves_furniture(tmp_path):
     doc = fitz.open()
     p = _page(doc)

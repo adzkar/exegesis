@@ -14,6 +14,36 @@ LIST_ITEM_RE = re.compile(r"^\d{1,2}[.)]\s+\S")
 FN_LINK_RE = re.compile(
     r'<sup><a href="notes\.xhtml#fn(\d+)">(\d+)</a></sup>'
 )
+# XML 1.0 allows only \t \n \r below U+0020; born-digital files still
+# carry other C0 characters as layout artifacts — pull-quote and
+# crossword-grid marks like New Scientist's BELs (#56)
+_CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+
+
+def _sanitize_text(text):
+    """Drop XML-invalid control characters from a text fragment.
+
+    Characters like ``\x07`` are invisible layout marks, not content;
+    leaving them in crashes ``ebooklib``/``lxml`` ("no NULL bytes or
+    control characters") when a string reaches an ``epub`` item title
+    and silently corrupts signatures and pattern matches elsewhere.
+    """
+    return _CONTROL_CHARS.sub("", text)
+
+
+def _sanitize_spans(pdict):
+    """Strip control characters from every span's text in a page dict.
+
+    Runs once at extraction (``emit._extract_pages``) so every
+    downstream consumer — fragment HTML, headings, ``dc:title``,
+    signatures, pattern matching — reads clean text; sanitizing on
+    each read instead would still leak the raw chars through the
+    span-level ``html.escape`` path in render.
+    """
+    for block in pdict["blocks"]:
+        for line in block.get("lines", []):
+            for span in line["spans"]:
+                span["text"] = _sanitize_text(span["text"])
 
 
 def _block_lines(block):
