@@ -90,8 +90,10 @@ stats payload all read the clean values (#58).
   (`BAND_MIN_DEPTH`×line_h — page-top running heads and page-bottom
   colophons are thin strips, not bands) and its boundary carries at
   most one *marked* block — a ≥1.3×-body head, a named section label
-  (mirroring `render._section_label`'s rest check — a label word
-  opening lowercase prose can't mark), or an all-bold heading-shaped
+  (`render._section_label`'s rest check mirrored on both the first
+  line and the joined text — a label word opening lowercase prose
+  can't mark, but a fused label-over-prose head or a wrapped
+  two-line label can), or an all-bold heading-shaped
   block, deduped across the columns a span touches. Competing marks
   mean parallel sections, not a band, and unmarked strips — figure
   whitespace, ragged column tails — keep ordinary column flow.
