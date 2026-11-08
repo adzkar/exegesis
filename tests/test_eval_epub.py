@@ -545,6 +545,44 @@ def test_drop_arms_grade_post_drop_text():
     assert "real" not in furn and "content" not in furn
 
 
+def test_furniture_words_ignores_vanished_ghost_blocks():
+    """A fully-invisible furniture-shaped block drops on its raw tuple
+    (a true `dmap` miss — it is gone from the post-drop dict stream)
+    but must not recount its ghost tokens: `inv_words` already excused
+    them, and a recount could mask a same-token genuine loss elsewhere
+    (#63)."""
+    import importlib.util
+
+    from exegesis.lang import EN
+
+    spec = importlib.util.spec_from_file_location("eval_epub", EVAL)
+    eval_epub = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(eval_epub)
+
+    page = _stub_page([
+        # an invisible page-number stamp in the bottom 7% zone
+        {"type": 0, "bbox": (72, 750, 200, 762),
+         "lines": [{"bbox": (72, 750, 200, 762), "dir": (1, 0),
+                    "spans": [{"text": "42", "size": 9,
+                               "color": 0xFFFFFF,
+                               "bbox": (72, 750, 200, 762)}]}]},
+        # an invisible `www.` foot in the top 7% zone
+        {"type": 0, "bbox": (72, 30, 200, 42),
+         "lines": [{"bbox": (72, 30, 200, 42), "dir": (1, 0),
+                    "spans": [{"text": "www.mark.org", "size": 9,
+                               "color": 0xFFFFFF,
+                               "bbox": (72, 30, 200, 42)}]}]},
+    ])
+    ctx = eval_epub._page_ctx(page, set(), EN)
+    raw = page.get_text("blocks")
+    # the ghost shapes still read as furniture on the raw tuples —
+    # `_dropped` stays True so `_kept` keeps them out of kept streams
+    assert eval_epub._dropped(raw[0], ctx, set(), EN)
+    assert eval_epub._dropped(raw[1], ctx, set(), EN)
+    furn = eval_epub.furniture_words([ctx], set(), EN)
+    assert furn["42"] == 1 and furn["www"] == 1  # inv_words only
+
+
 def test_eval_bottom_footer_is_excused(tmp_path):
     """A repeated bottom running foot and a varying © line drop as
     furniture — the signature arm's `y0 > 0.80` and the pattern arm's

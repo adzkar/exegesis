@@ -518,7 +518,9 @@ def furniture_words(ctxs, boilerplate: set[str],
     unjoined fragments. A fused-head block contributes its split-off
     head's words, plus the remainder's when the drop arms hold for the
     remainder too (stacked heads whose own signatures recur — convert
-    strips both halves, so both excuse)."""
+    strips both halves, so both excuse). A fully-invisible block drops
+    on its raw tuple but contributes nothing — every word it had
+    already rides `inv_words`."""
     furn: Counter = Counter()
     for ctx in ctxs:
         # invisible-span words excuse the same way furniture does —
@@ -534,11 +536,15 @@ def furniture_words(ctxs, boilerplate: set[str],
                             ctx, boilerplate, lang):
                     furn.update(WORD_RE.findall(s.kept_text.lower()))
             elif _dropped(b, ctx, boilerplate, lang):
-                # the excuse counts the words convert stripped — the
-                # ghost tokens already ride `inv_words`; counting them
-                # again from the raw tuple would double-excuse
-                furn.update(WORD_RE.findall(
-                    _post_drop_view(b, ctx)[1].lower()))
+                # count only the words convert stripped: a true `dmap`
+                # miss is a vanished (fully-invisible) block whose
+                # ghost tokens already ride `inv_words` — recounting
+                # the raw text would double-excuse them and could mask
+                # a same-token genuine loss elsewhere
+                db = ctx.dmap.get(tuple(b[:4]))
+                if db is not None and "bbox" in db:
+                    furn.update(WORD_RE.findall(
+                        _post_drop_view(b, ctx)[1].lower()))
     return furn
 
 
