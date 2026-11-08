@@ -78,6 +78,28 @@ stats payload all read the clean values (#58).
   Blocks crossing a gutter are spans; each
   column emits its own sequence of non-spans + covering spans in y order,
   columns left to right. Works for 1/2/3-column layouts.
+  The page header zone — non-spans above the first span — front-loads
+  only when the region is sparse front matter (one reading column's
+  worth, or lone blocks); when it fills two+ columns with multiple
+  members each it is columnar body and stays in column flow, so a
+  mid-page span (a wide table band, a full-width figure) can't
+  y-interleave the columns above it (#60). A horizontal whitespace
+  strip no column's items intersect — taller than `BAND_MIN_GAP`×line_h
+  — can be a section band boundary (#61): the page emits band-major
+  (band, then column) instead of column-major, so a section banded
+  across the columns (declarations over references, front matter over
+  an abstract) stays sequential rather than splitting around the other
+  column. A strip commits only when each side is a real band
+  (`BAND_MIN_DEPTH`×line_h — page-top running heads and page-bottom
+  colophons are thin strips, not bands) and its boundary carries at
+  most one *marked* block — a ≥1.3×-body head, a named section label
+  (`render._section_label`'s rest check mirrored on both the first
+  line and the joined text — a label word opening lowercase prose
+  can't mark, but a fused label-over-prose head or a wrapped
+  two-line label can), or an all-bold heading-shaped
+  block, deduped across the columns a span touches. Competing marks
+  mean parallel sections, not a band, and unmarked strips — figure
+  whitespace, ragged column tails — keep ordinary column flow.
   The committed doc grid is only the *prior*: `analyze._page_grids`
   reruns the same clustering per page on the same eligible items and
   a page orders on its own grid when the candidate clears the

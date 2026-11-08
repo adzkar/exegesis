@@ -738,6 +738,8 @@ def _render_page(page, page_index: int, state: PipelineState):
         state.drop_edges,
         lang=state.lang,
         col_map=col_map,
+        line_h=state.line_h,
+        body_size=state.body_size,
     )
     # aside members never reach ``ordered`` — collect them from the
     # page's own items for the shared aside path at page end

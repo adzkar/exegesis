@@ -79,6 +79,19 @@ ZONE_COL_MIN_COVER = 0.15
 ZONE_GUTTER_TOL = 4.0
 ZONE_GUTTER_GRAZE = 0.2
 
+# a page-wide whitespace strip — no column's items intersect it — marks
+# a band seam: a section that occupies a horizontal band across the
+# columns (declarations over references, front matter over an abstract)
+# reads band-major instead of splitting around the other column (#61).
+# The bound is in line heights: paragraph spacing stays under it while
+# a real band break (Frontiers' ~1.7x, Bundesgesundheitsblatt's ~4x)
+# clears it.
+BAND_MIN_GAP = 1.5  # x line_h
+# the regions on both sides of a candidate strip must each hold real
+# content — a page-top running-head strip or a page-bottom colophon is
+# the same whitespace but not a band boundary
+BAND_MIN_DEPTH = 3.0  # x line_h
+
 # marginalia detection (#36): a block fully outside the doc grid's body
 # bands is only a *candidate* — lifting it to an aside needs spatial
 # coherence plus sidebar evidence (a table legend, a ``Label:`` opener,
