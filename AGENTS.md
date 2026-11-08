@@ -140,7 +140,10 @@ stats payload all read the clean values (#58).
   ≥1.6×, or the first page-0 heading ≥1.3× (promoted so title → byline
   position detection fires); the first page-0 multi-line block of ≥1.6×
   lines also promotes past the generic length bound — titles run long —
-  and one leading label line (MDPI's `Article`) splits off as `p.label`.
+  and one leading label line (MDPI's `Article`) splits off as `p.label`;
+  the rescue never re-promotes a veto-demoted block, and its candidate
+  still faces the name-list test (a marked list past the generic bound
+  never classified, so the veto never ran on it).
   h2: standalone ≥1.08× OR all-bold line/block
   ≥0.9× outside edge zones (papers whose headings share the body font) that
   also precedes body-flow text in its column — footnote-zone, rasterized
@@ -154,7 +157,9 @@ stats payload all read the clean values (#58).
   still emit; only its bold-band lines are silenced). Lines opening
   with footnote markers (`*†‡§`) are never headings.
   Sentence-like text with periods is rejected, and so is text opening
-  lowercase — a mid-sentence fragment at heading size is prose. A
+  lowercase — a mid-sentence fragment at heading size is prose, though
+  bio-paper heads opening on a non-ASCII lowercase (`β-blockers`) or a
+  letter fused to a digit (`p53-mediated apoptosis`) stay eligible. A
   marker-anchored name list (`Jane Doe 1, John Roe 2*` — ≥2 comma/joiner
   segments closing on affiliation digits or `*†‡§`) is never a heading
   at block or line level; it emits through the byline path instead —
@@ -178,7 +183,11 @@ stats payload all read the clean values (#58).
   document seeds one entry at chapter one so nav/NCX are never empty.
 - **Bylines** — blocks ≥1.15× body, or the block right after an h1 when it
   looks like a name list, or a marker-anchored name list (the same
-  affiliation-digit/`*†‡§` test that vetoes headings); merge into one `<p
+  affiliation-digit/`*†‡§` test that vetoes headings) inside the
+  front-matter window — the title spread (pages 0–1) before the first
+  heading or in the first h1's wake; a mid-document marked list is a
+  citation or gene list, not authors, and never overwrites the real
+  byline behind `dc:creator`. Merge into one `<p
   class="byline">` with short single-line followers. A trailing drop-cap
   letter (one not in the profile's `single_letter_words`) moves into the
   body paragraph. The merged text feeds the author metadata fallback.
