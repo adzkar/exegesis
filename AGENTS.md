@@ -75,7 +75,8 @@ genuine word loss, and ghost geometry can't vote in the mirror. On a
 well as its extent (`_post_drop_view`), so a ghost's words can't fail
 the page-number fullmatch, break a signature match, or carry furniture
 vocabulary into an excuse — nor double-count in `furniture_words`
-beside `inv_words`.
+beside `inv_words` (a vanished all-ghost block drops on its raw tuple
+but contributes nothing there).
 
 - **Column order** — column edges are x0 clusters found on ≥50% of pages
   (doc-wide voting kills phantom edges from bylines/headings; a page
