@@ -66,13 +66,17 @@ def test_sanitize_text_strips_full_xml_invalid_set():
 def test_span_is_near_white_channel_floor():
     """The invisible-text trigger is per-channel: saturated colors whose
     numeric value exceeds the floor (a dark blue channel) still count as
-    visible, and the 1.25+ alpha-packed int normalizes the same."""
+    visible, and the 1.25.0–1.25.2 alpha-high ``0xAARRGGBB`` int —
+    possibly signed — normalizes the same (its alpha must not read as
+    the red channel and promote a saturated fill to near-white)."""
     assert text._span_is_near_white(0xFFFFFF)
-    assert text._span_is_near_white(-1)  # signed RGBA white
+    assert text._span_is_near_white(-1)  # signed 0xAARRGGBB white
     assert text._span_is_near_white(0xF2F5F7)
+    assert text._span_is_near_white(0xFFF5F5F5)  # opaque 0xAARRGGBB white
     assert not text._span_is_near_white(0xFEFF00)
     assert not text._span_is_near_white(0xEFEFEF)
     assert not text._span_is_near_white(0)
+    assert not text._span_is_near_white(0xFFF0F000)  # opaque AARRGGBB yellow
 
 
 # --- heading shape ------------------------------------------------------

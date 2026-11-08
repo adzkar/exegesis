@@ -52,15 +52,15 @@ def _sanitize_spans(pdict):
 def _span_is_near_white(color):
     """True when a span fill is white or near-white on every channel.
 
-    ``span["color"]`` is an sRGB int — 24-bit ``0xRRGGBB`` on older
-    PyMuPDF, alpha-packed ``0xRRGGBBAA`` (possibly signed) since 1.25 —
-    normalized by masking, then dropping a populated high byte. The
-    per-channel floor is deliberate: a numeric compare would pass
-    saturated colors like ``0xFEFF00`` whose blue channel is dark.
+    ``span["color"]`` is an sRGB int — plain 24-bit ``0xRRGGBB`` on
+    PyMuPDF ≥1.25.3 (alpha rides a separate ``alpha`` key), alpha-high
+    ``0xAARRGGBB``, possibly signed, on 1.25.0–1.25.2 — normalized by
+    masking to the low 24 bits, which strips the alpha byte and the
+    sign in either packing. The per-channel floor is deliberate: a
+    numeric compare would pass saturated colors like ``0xFEFF00``
+    whose blue channel is dark.
     """
-    c = color & 0xFFFFFFFF
-    if c > 0xFFFFFF:
-        c >>= 8
+    c = color & 0xFFFFFF
     return min(
         (c >> 16) & 0xFF, (c >> 8) & 0xFF, c & 0xFF
     ) >= INVISIBLE_TEXT_MIN
