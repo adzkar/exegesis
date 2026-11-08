@@ -84,7 +84,7 @@ def _author_line(text, joiner=" and ", max_len=170):
     longer title-band text must still face the test — the page-0 title
     rescue measures candidates at 2× the generic heading bound."""
     t = " ".join(text.split())
-    if not (3 < len(t) < max_len) or ":" in t:
+    if not (3 < len(t) <= max_len) or ":" in t:
         return False
     segs = [
         s.strip()
@@ -104,13 +104,15 @@ def _looks_like_heading(text, max_chars=MAX_HEADING_CHARS):
     no footnote-marker opener — headings never start with *†‡§, and a
     lowercase opener marks a mid-sentence fragment. Bio-paper heads
     that legitimately open lowercase survive the veto: a non-ASCII
-    lowercase (``β-blockers``) or an ASCII letter fused to a digit
-    (``p53-mediated apoptosis``)."""
+    lowercase (``β-blockers``), an ASCII letter fused to a digit
+    (``p53-mediated apoptosis``), or a camelCase gene name whose
+    lowercase prefix closes on a capital (``mTOR``, ``siRNA``)."""
     first = text[:1]
     lower_prose = (
         first.islower()
         and first.isascii()
         and not text[1:2].isdigit()
+        and not re.match(r"[a-z]+[A-Z]", text)
     )
     return (
         MIN_HEADING_CHARS <= len(text) <= max_chars

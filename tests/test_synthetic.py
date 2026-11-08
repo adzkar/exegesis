@@ -1482,18 +1482,26 @@ def test_marked_lists_never_steal_page0_h1(tmp_path):
         fontsize=18,
         fontname="hebo",
     )
-    # past the byline bound too — the rescue's relaxed max_len still
-    # recognizes the marked-list shape and keeps it out of h1
+    # exactly 240 chars — the 2x rescue bound — and past the byline
+    # bound too; the inclusive len(t) <= max_len pairing must keep a
+    # marked list off h1 at the one length a strict < would miss
+    names = ["Zoe Venn 1"] + [
+        f"Author{i} Surname{i} {i}" for i in range(2, 30)
+    ]
+    while len(", ".join(names)) > 240:
+        names.pop()
+    gap = 240 - len(", ".join(names))
+    names[-1] = names[-1].replace(" ", "x" * gap + " ", 1)
+    list240 = ", ".join(names)
+    assert len(list240) == 240
     p.insert_textbox(
-        fitz.Rect(72, 310, 540, 430),
-        "Jane Cole 1, John Dunn 2, Jill Earp 3, Max Farr 4, Ann Goss "
-        "5, Bob Hess 6, Sam Irma 7, Kim Jill 8, Rob Knut 9, Mia Lott "
-        "10, Jan Moss 11, Len Nash 12, Tom Orix 13, Amy Pyne 14",
+        fitz.Rect(72, 310, 540, 450),
+        list240,
         fontsize=18,
         fontname="hebo",
     )
     p.insert_textbox(
-        fitz.Rect(72, 450, 540, 580),
+        fitz.Rect(72, 470, 540, 590),
         "An Explainable Deep Learning Framework for Detecting and "
         "Validating Early Stage Biomarkers Across Large Multi-Site "
         "Cohort Studies Worldwide",
@@ -1503,8 +1511,8 @@ def test_marked_lists_never_steal_page0_h1(tmp_path):
     # the modal body size must stay 10pt — the large-text blocks above
     # are the exception, not the document's dominant size
     p.insert_textbox(
-        fitz.Rect(72, 600, 540, 760),
-        "Body text under the rescued title keeps going and going. " * 10,
+        fitz.Rect(72, 610, 540, 770),
+        "Body text under the rescued title keeps going and going. " * 11,
         fontsize=BODY,
     )
     pdf = tmp_path / "lists.pdf"
@@ -1515,7 +1523,7 @@ def test_marked_lists_never_steal_page0_h1(tmp_path):
     assert re.search(r"<h1[^>]*>An Explainable Deep Learning", body)
     assert not re.search(r"<h[12][^>]*>[A-Z][a-z]+ [A-Z][a-z]+ \d", body)
     assert re.search(r'<p class="byline">(<b>)?Jane Doe 1', body)
-    assert "Jane Smith 1" in body and "Jane Cole 1" in body
+    assert "Jane Smith 1" in body and "Zoe Venn 1" in body
 
 
 def test_marked_list_mid_document_stays_body(tmp_path):
@@ -1567,9 +1575,10 @@ def test_marked_list_mid_document_stays_body(tmp_path):
 
 def test_bio_heads_survive_lowercase_veto(tmp_path):
     """Bio-paper heads that legitimately open lowercase — a letter
-    fused to a digit (``p53-mediated apoptosis``) or a non-ASCII
-    lowercase (``µm-scale scaffolds``) — stay heading-eligible; the
-    lowercase veto only marks plain lowercase prose openers."""
+    fused to a digit (``p53-mediated apoptosis``), a non-ASCII
+    lowercase (``µm-scale scaffolds``), or a camelCase gene name
+    (``mTOR``, ``siRNA``) — stay heading-eligible; the lowercase veto
+    only marks plain lowercase prose openers."""
     doc = fitz.open()
     p = _page(doc)
     p.insert_textbox(
@@ -1605,6 +1614,23 @@ def test_bio_heads_survive_lowercase_veto(tmp_path):
         "Scaffold body text closes the page out. " * 4,
         fontsize=BODY,
     )
+    p.insert_textbox(
+        fitz.Rect(72, 620, 540, 650),
+        "mTOR signaling rewires growth",
+        fontsize=12,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 660, 540, 690),
+        "siRNA knockdown suppresses it",
+        fontsize=12,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 700, 540, 770),
+        "Growth signaling body text ends the page. " * 3,
+        fontsize=BODY,
+    )
     pdf = tmp_path / "bio.pdf"
     _save(doc, pdf)
     out = tmp_path / "bio.epub"
@@ -1612,6 +1638,10 @@ def test_bio_heads_survive_lowercase_veto(tmp_path):
     body = "".join(doc_html(out).values())
     assert re.search(r"<h2[^>]*>p53-mediated apoptosis</h2>", body)
     assert re.search(r"<h2[^>]*>µm-scale scaffolds</h2>", body)
+    assert re.search(r"<h2[^>]*>mTOR signaling rewires growth</h2>", body)
+    assert re.search(
+        r"<h2[^>]*>siRNA knockdown suppresses it</h2>", body
+    )
 
 
 def _noise_png(size=120):
