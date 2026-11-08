@@ -74,12 +74,36 @@ def _authorish(text, joiner=" and "):
     )
 
 
-def _looks_like_heading(text):
+def _author_line(text, joiner=" and "):
+    """True if the text is a byline-shaped name list — ≥2 comma/joiner
+    segments each closing on an affiliation marker (digits or *†‡§),
+    like ``Jane Doe 1, John Roe 2*``. Marked name lists are never
+    headings; they emit through the byline path instead. Looser comma
+    or joiner lists (``Materials and Methods``) carry no markers and
+    stay heading-eligible."""
+    t = " ".join(text.split())
+    if not (3 < len(t) < 170) or ":" in t:
+        return False
+    segs = [
+        s.strip()
+        for s in re.split(r",|" + re.escape(joiner), t)
+        if s.strip()
+    ]
+    marks = sum(
+        1
+        for s in segs
+        if re.search(r"[A-Za-zÀ-ÿ].*[\d*†‡§]+\s*$", s)
+    )
+    return marks >= 2 and marks >= len(segs) * 0.6
+
+
+def _looks_like_heading(text, max_chars=MAX_HEADING_CHARS):
     """True if the string is plausible heading text (no sentence periods,
     no footnote-marker opener — headings never start with *†‡§)."""
     return (
-        MIN_HEADING_CHARS <= len(text) <= MAX_HEADING_CHARS
+        MIN_HEADING_CHARS <= len(text) <= max_chars
         and text[:1] not in "*†‡§"
+        and not text[:1].islower()
         and not re.search(r"\.", text[:-1])
         and not text.rstrip().endswith(".")
     )
@@ -913,10 +937,23 @@ def _render_page(page, page_index: int, state: PipelineState):
             continue
 
         btext = _block_text(block, state.lang)
+        block_lines = _block_lines(block)
+        # spaced-cap badges run their inner spaces against the label
+        # length bound — normalize before measuring; a single all-caps
+        # word at title size is a badge anywhere on the page, not just
+        # in the top zone
+        label_text = " ".join(btext.split())
         if (
-            block["bbox"][1] < page.rect.height * 0.12
-            and btext.isupper()
-            and len(btext) < 30
+            label_text.isupper()
+            and len(label_text) < 30
+            and (
+                block["bbox"][1] < page.rect.height * 0.12
+                or (
+                    len(label_text.split()) == 1
+                    and _line_max_size(block_lines[0])
+                    >= body_size * 1.6
+                )
+            )
         ):
             flush_par()
             frags.append(f'<p class="label">{html.escape(btext)}</p>')
@@ -924,6 +961,50 @@ def _render_page(page, page_index: int, state: PipelineState):
 
         level = _standalone_heading_level(block, body_size)
         demoted = False
+        joined = " ".join(_line_text(l).strip() for l in block_lines)
+        # a name-list line/block is a byline, not a heading — the
+        # affiliation markers are what distinguish it from a comma or
+        # joiner inside a real head
+        if level and _author_line(joined, state.lang.name_joiner):
+            level = None
+            demoted = True
+        # the page-0 title is the first multi-line block of ≥1.6x
+        # lines — longer than the generic heading bound allows; one
+        # leading label line (MDPI's ``Article``) splits off as a label
+        if (
+            level is None
+            and page_index == 0
+            and not state.headings
+            and len(block_lines) >= 2
+        ):
+            tail = block_lines
+            lead = None
+            if (
+                _line_max_size(block_lines[0]) < body_size * 1.6
+                and len(_line_text(block_lines[0]).strip()) < 40
+                and _looks_like_heading(
+                    _line_text(block_lines[0]).strip()
+                )
+            ):
+                lead, tail = block_lines[0], block_lines[1:]
+            ttext = " ".join(_line_text(l).strip() for l in tail)
+            if (
+                len(tail) >= 2
+                and all(
+                    _line_max_size(l) >= body_size * 1.6 for l in tail
+                )
+                and _looks_like_heading(
+                    ttext, max_chars=MAX_HEADING_CHARS * 2
+                )
+            ):
+                if lead is not None:
+                    flush_par()
+                    lt = _line_text(lead).strip()
+                    frags.append(
+                        f'<p class="label">{html.escape(lt)}</p>'
+                    )
+                emit_heading(1, ttext)
+                continue
         # bold-only candidates carry no size signal: they must sit
         # outside the edge zones AND introduce following *body* text in
         # their column — a trailing bold line at a section/page end is
@@ -956,10 +1037,29 @@ def _render_page(page, page_index: int, state: PipelineState):
                     follower = b
                 break
         bold_h2_ok = follower is not None
+        # size-promoted candidates on page 0 face an edge-zone veto —
+        # but only the shapes front matter actually takes: running-head
+        # strips and journal names inside the tighter 7% furniture
+        # zone, or an all-caps-word opener (``RESEARCH``) inside the
+        # wider zone. A real page-0 h2 between the zones still emits.
+        in_edge7 = (
+            block["bbox"][1] < page.rect.height * 0.07
+            or block["bbox"][3] > page.rect.height * 0.93
+        )
+        caps_opener = bool(
+            re.match(r"[A-ZÀ-Þ]{3,}\b", joined)
+        )
         if (
             level == 2
-            and _line_max_size(_block_lines(block)[0]) < body_size * 1.08
             and not bold_h2_ok
+            and (
+                _line_max_size(block_lines[0]) < body_size * 1.08
+                or (
+                    page_index == 0
+                    and in_edge
+                    and (in_edge7 or caps_opener)
+                )
+            )
         ):
             level = None
             demoted = True
@@ -981,6 +1081,8 @@ def _render_page(page, page_index: int, state: PipelineState):
         is_byline = med >= body_size * 1.15
         if is_byline or (
             state.after_h1 and _authorish(btext, state.lang.name_joiner)
+        ) or _author_line(
+            btext, state.lang.name_joiner
         ) or (
             frags
             and frags[-1].startswith('<p class="byline">')
@@ -1097,6 +1199,12 @@ def _render_page(page, page_index: int, state: PipelineState):
                 if btext[:1] not in "*†‡§"
                 else None
             )
+            # the same name-list veto at line level — a bold author
+            # line inside a mixed-weight block is byline material too
+            if line_level and _author_line(
+                _line_text(line).strip(), state.lang.name_joiner
+            ):
+                line_level = None
             # a line-level h2 promoted by the bold-only band (size <
             # 1.08×body is unreachable via the size path) needs the same
             # edge/follower check as a block-level candidate — a bold line

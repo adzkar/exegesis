@@ -1,5 +1,6 @@
 """Synthetic-PDF integration tests: pages are built with PyMuPDF at
 controlled positions/sizes, so assertions hold without any corpus files."""
+import re
 import zipfile
 
 import fitz
@@ -1281,6 +1282,180 @@ def test_h2_before_first_h1_stays_top_level(tmp_path):
     texts = [t for _lv, t in snap["toc"]]
     assert texts == ["Early Section", "Big Mid Title", "Later Section"]
     assert [lv for lv, _t in snap["toc"]] == [1, 1, 2]
+
+
+def test_single_word_caps_badge_is_label_not_h1(tmp_path):
+    """A single all-caps word at title size (scirep's ``OPEN`` badge)
+    emits ``p.label``, not a heading."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(156, 128, 540, 220),
+        "A shape-changing haptic navigation interface",
+        fontsize=26,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(94, 125, 170, 165), "OPEN", fontsize=18, fontname="hebo"
+    )
+    p.insert_textbox(
+        fitz.Rect(156, 270, 540, 400),
+        "Body text under the title and badge. " * 4,
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "badge.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "badge.epub"
+    convert(pdf, out)
+    body = doc_html(out)["chap_1.xhtml"]
+    assert '<p class="label">OPEN</p>' in body
+    assert "<h1>OPEN" not in body and "<h2>OPEN" not in body
+
+
+def test_page0_edge_front_matter_not_headings(tmp_path):
+    """Front-matter strips on page 0 — a journal name inside the 7%
+    edge, a date strip, a spaced-cap label, and an all-caps-word
+    opener — never promote to headings."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(441, 31, 540, 46), "Journal of Big Data", fontsize=12.4
+    )
+    p.insert_textbox(
+        fitz.Rect(45, 24, 290, 40), "Received: 5 April 2025", fontsize=9.6
+    )
+    p.insert_textbox(
+        fitz.Rect(45, 46, 290, 58),
+        "R E S E A R C H  A R T I C L E",
+        fontsize=9.6,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(60, 89, 200, 104),
+        "RESEARCH Open Access",
+        fontsize=13,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(60, 130, 540, 190),
+        "The Real Paper Title Stands Here Today",
+        fontsize=18,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(60, 220, 540, 340),
+        "Body text follows the front matter and keeps going. " * 4,
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "fm.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "fm.epub"
+    convert(pdf, out)
+    body = doc_html(out)["chap_1.xhtml"]
+    for junk in (
+        "Journal of Big Data",
+        "Received: 5 April 2025",
+        "R E S E A R C H  A R T I C L E",
+        "RESEARCH Open Access",
+    ):
+        assert not re.search(r"<h[12][^>]*>" + re.escape(junk), body), junk
+    assert re.search(r"<h1[^>]*>The Real Paper Title", body)
+
+
+def test_marked_author_line_emits_byline_not_heading(tmp_path):
+    """Name lists with affiliation markers (``Jane Doe 1, John Roe
+    2*``) emit through the byline path and never head chapters —
+    while an unmarked joiner list (``Materials and Methods``) stays
+    heading-eligible."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 60, 540, 100), "Marked Names Study", fontsize=18
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 120, 540, 160),
+        "Jane Doe 1, John Roe 2",
+        fontsize=12,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 200, 540, 250),
+        "Abstract body text follows the byline.",
+        fontsize=BODY,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 400, 540, 440),
+        "Materials and Methods",
+        fontsize=12,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 450, 540, 510),
+        "Section body text under the real heading.",
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "authors.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "authors.epub"
+    convert(pdf, out)
+    body = "".join(doc_html(out).values())
+    assert "<h1>Jane Doe" not in body and "<h2>Jane Doe" not in body
+    assert "Jane Doe 1, John Roe 2" in body
+    assert re.search(r"<h2[^>]*>Materials and Methods</h2>", body)
+
+
+def test_lowercase_start_never_heading(tmp_path):
+    """A period-free line that opens lowercase (a mid-sentence
+    fragment at heading size, like wiley_ee's 9pt abstract lines) is
+    prose, not a heading."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 60, 540, 100), "Case Study", fontsize=18
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 120, 540, 160),
+        "involved in creating the initial plot",
+        fontsize=12,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 170, 540, 240),
+        "Body text continues the sentence.",
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "lower.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "lower.epub"
+    convert(pdf, out)
+    body = "".join(doc_html(out).values())
+    assert "<h2>involved" not in body
+    assert "involved in creating the initial plot" in body
+
+
+def test_page0_long_title_still_h1(tmp_path):
+    """A multi-line ≥1.6x title on page 0 stays h1 even past the
+    generic heading length bound (journal titles run long)."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(56, 100, 520, 280),
+        "An Explainable Artificial Intelligence Integrated Diagnostic "
+        "Model With Feature Engineering And Stacked Ensemble "
+        "Approaches For Detection",
+        fontsize=23,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(56, 300, 540, 420),
+        "Body text under the long title and more of it. " * 4,
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "longtitle.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "longtitle.epub"
+    convert(pdf, out)
+    body = "".join(doc_html(out).values())
+    assert re.search(r"<h1[^>]*>An Explainable Artificial", body)
 
 
 def _noise_png(size=120):
