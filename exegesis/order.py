@@ -1,17 +1,20 @@
 """Reading-order reconstruction: column-aware block ordering plus the
 header/footer furniture drops."""
 from collections import Counter
+from statistics import median
 
 from .analyze import (
     _assign_column,
     _covered_cols,
+    _heading_like,
     _is_furniture,
     _is_signature_furniture,
     _is_spanning,
     _strip_clip,
 )
+from .const import BAND_MIN_DEPTH, BAND_MIN_GAP
 from .lang import EN, LangProfile
-from .text import _block_text
+from .text import _block_lines, _block_text, _span_is_bold
 
 
 def _ordered_blocks(
@@ -22,6 +25,8 @@ def _ordered_blocks(
     drop_furniture=True,
     lang: LangProfile = EN,
     col_map=None,
+    line_h=None,
+    body_size=None,
 ):
     """Return page blocks in reading order for any column layout.
 
@@ -131,14 +136,128 @@ def _ordered_blocks(
     for seq in cols.values():
         seq.sort(key=key)
 
+    # band seams (#61): a horizontal strip no column's items intersect —
+    # page-wide whitespace taller than ``BAND_MIN_GAP`` line heights —
+    # splits every column at the same place, so a section banded across
+    # the columns (declarations over references, front matter over an
+    # abstract) keeps its bands sequential instead of splitting around
+    # the other column's content. A strip alone is not enough — figures
+    # and ragged column tails leave page-wide gaps in continuous flow —
+    # so a seam commits only when some column's block touching it marks
+    # the break: an oversized head, a named section label, or a bold
+    # heading-shaped block — the h2 gates' own vocabulary. Emission is
+    # then band-major (band, then column). A
+    # block belongs to the band below a seam once it starts past the
+    # seam's far edge; nothing can sit inside the strip itself. With no
+    # committed seam the page keeps ordinary column-major order.
+    seams = []
+    if len(cols) > 1:
+        ivs = sorted((b["bbox"][1], b["bbox"][3]) for b in items)
+        merged = []
+        for y0, y1 in ivs:
+            if merged and y0 <= merged[-1][1]:
+                merged[-1][1] = max(merged[-1][1], y1)
+            else:
+                merged.append([y0, y1])
+        if line_h is None:
+            hs = [
+                l["bbox"][3] - l["bbox"][1]
+                for b in items
+                if b["type"] == 0
+                for l in _block_lines(b)
+            ]
+            line_h = median(hs) if hs else 12.0
+        if body_size is None:
+            ss = [
+                s["size"]
+                for b in items
+                if b["type"] == 0
+                for l in _block_lines(b)
+                for s in l["spans"]
+            ]
+            body_size = median(ss) if ss else 10.0
+
+        def _mark(b):
+            """A section mark — an oversized head, a named label, or an
+            all-bold heading-shaped block (the h2 gates' vocabulary, so
+            figure tick labels, page numbers, and math fragments can't
+            mark)."""
+            if b["type"] != 0:
+                return False
+            t = _block_text(b)
+            if not t:
+                return False
+            spans = [s for l in _block_lines(b) for s in l["spans"]]
+            if max((s["size"] for s in spans), default=0) >= (
+                body_size * 1.3
+            ):
+                return True
+            if lang.section_label.match(t):
+                return True
+            return bool(spans) and all(
+                _span_is_bold(s) or not s["text"].strip() for s in spans
+            ) and _heading_like(b, t)
+
+        cands = [
+            i
+            for i in range(len(merged) - 1)
+            if merged[i + 1][0] - merged[i][1] >= BAND_MIN_GAP * line_h
+        ]
+        seams = []
+        prev_start = 0
+        for k, i in enumerate(cands):
+            hi = cands[k + 1] if k + 1 < len(cands) else len(merged) - 1
+            # each side of the strip must be a real band — a few lines
+            # deep — not a page-top head strip or a trailing colophon
+            up_depth = merged[i][1] - merged[prev_start][0]
+            lo_depth = merged[hi][1] - merged[i + 1][0]
+            # a band is one section across the columns: its boundary may
+            # carry a mark (dedup'd — a spanning head touches several
+            # column sequences) but never competing marks in different
+            # columns — parallel sections read column-major
+            g0, g1 = merged[i][1], merged[i + 1][0]
+            marked_above = set()
+            marked_below = set()
+            for seq in cols.values():
+                above = [b for b in seq if b["bbox"][3] <= g0 + 0.5]
+                below = [b for b in seq if b["bbox"][1] >= g1 - 0.5]
+                if above and _mark(above[-1]):
+                    marked_above.add(id(above[-1]))
+                if below and _mark(below[0]):
+                    marked_below.add(id(below[0]))
+            if (
+                up_depth >= BAND_MIN_DEPTH * line_h
+                and lo_depth >= BAND_MIN_DEPTH * line_h
+                and len(marked_above) <= 1
+                and len(marked_below) <= 1
+                and (marked_above or marked_below)
+            ):
+                seams.append((g0, g1))
+                # a rejected strip is whitespace inside the band, not a
+                # boundary — the next candidate's upper band still spans it
+                prev_start = i + 1
+
     ordered = list(top_zone)
     emitted = set()
-    for c in sorted(cols):
+
+    def _emit(c, band=None):
         for b in cols[c]:
             if id(b) in emitted:
                 continue
+            if band is not None and (
+                sum(1 for g in seams if b["bbox"][1] >= g[1]) != band
+            ):
+                continue
             emitted.add(id(b))
             ordered.append(b)
+
+    if seams:
+        for band in range(len(seams) + 1):
+            for c in sorted(cols):
+                _emit(c, band)
+    else:
+        for c in sorted(cols):
+            _emit(c)
     # kept furniture slots at the page edge it belongs to — running heads
     # before the content, footers/sidebars after it
     top_f = sorted(

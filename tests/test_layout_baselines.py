@@ -131,6 +131,13 @@ REQUIRED_CONTENT = {
         "Wide band", "Right lone head", "Head alpha", "Head beta",
         "Page two span", "Two left tail", "Two right tail",
     ],
+    "banded_sections": [
+        *(f"{side} {part}" for side in ("Alpha", "Beta")
+          for part in ("one", "head", "two", "three")),
+        "References",
+        *(f"Ref {name}" for name in ("alpha", "beta", "gamma", "delta", "epsilon", "zeta")),
+        "Gamma upper", "Gamma lower", "Delta upper", "Delta lower",
+    ],
 }
 
 
@@ -576,6 +583,30 @@ def _contract_mid_page_span(pages):
     assert _is_spanning(_find(page1, "Page two span"), edges)
 
 
+def _contract_banded(pages):
+    """The fixture really leaves a deep shared strip between two
+    banded sections on page 0 — the seam's trigger — and a matching
+    unmarked strip on page 1."""
+    assert len(pages) == 2
+    edges = _doc_column_edges(pages, frozenset())
+    assert len(edges) == 2
+    p0 = pages[0][1]
+    above = [b for b in _texts(p0) if b["bbox"][3] <= 480]
+    below = [b for b in _texts(p0) if b["bbox"][1] >= 560]
+    assert {round(b["bbox"][0]) for b in above} == {72, 340}
+    assert {round(b["bbox"][0]) for b in below} == {72, 340}
+    assert not [
+        b for b in _texts(p0)
+        if b["bbox"][1] < 555 and b["bbox"][3] > 485
+    ]
+    p1 = pages[1][1]
+    assert len(_texts(p1)) == 4
+    assert not [
+        b for b in _texts(p1)
+        if b["bbox"][1] < 330 and b["bbox"][3] > 265
+    ]
+
+
 CONTRACTS = {
     "mixed_1col_plus_2col": _contract_mixed,
     "mixed_parity_2col": _contract_parity,
@@ -597,6 +628,7 @@ CONTRACTS = {
     "heads_only_phantom": _contract_heads_only,
     "retained_content": _contract_retained,
     "mid_page_span": _contract_mid_page_span,
+    "banded_sections": _contract_banded,
 }
 
 
@@ -897,6 +929,20 @@ def _semantic_mid_page_span(result):
                   issue="#60 sparse header zone preserved")
 
 
+def _semantic_banded(result):
+    """#61: banded sections emit band-major — the declarations band in
+    both columns precedes the references band — while page 1's unmarked
+    shared gap keeps ordinary column-major order."""
+    require_order(result[3], "Alpha one", "Alpha head", "Alpha two",
+                  "Alpha three", "Beta one", "Beta head", "Beta two",
+                  "Beta three", "References", "Ref alpha", "Ref beta",
+                  "Ref gamma", "Ref delta", "Ref epsilon", "Ref zeta",
+                  issue="#61 banded sections")
+    require_order(result[3], "Gamma upper", "Gamma lower",
+                  "Delta upper", "Delta lower",
+                  issue="#61 unmarked shared gap")
+
+
 SEMANTICS = {
     "mixed_1col_plus_2col": _semantic_mixed,
     "mixed_parity_2col": _semantic_parity,
@@ -918,6 +964,7 @@ SEMANTICS = {
     "heads_only_phantom": _semantic_heads_only,
     "retained_content": _semantic_retained,
     "mid_page_span": _semantic_mid_page_span,
+    "banded_sections": _semantic_banded,
 }
 SYMPTOMS = {}
 SEMANTIC_CASES = [

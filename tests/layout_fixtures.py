@@ -432,6 +432,47 @@ def mid_page_span(path):
     return _save(doc, path)
 
 
+def banded_sections(path):
+    """A section banded across both columns must not split around the
+    other column (#61): page 0 bands declarations over references under
+    a named-label head (Frontiers' back matter); page 1 holds the same
+    shared gap with no section mark and keeps column-major order."""
+    doc = fitz.open()
+    page = _page(doc)
+    paragraph(page, (72, 170, 262, 235),
+              "Alpha one opens the declarations band with wrapping "
+              "prose inside its own column flow.")
+    text(page, 72, 262, "Alpha head", font="hebo")
+    paragraph(page, (72, 275, 262, 340),
+              "Alpha two continues the band under its head with "
+              "ordinary sentences in the same column.")
+    paragraph(page, (72, 388, 262, 460),
+              "Alpha three closes the declarations band inside "
+              "the same column's flow.")
+    paragraph(page, (340, 178, 530, 243),
+              "Beta one opens the declarations band with wrapping "
+              "prose inside its own column flow.")
+    text(page, 340, 272, "Beta head", font="hebo")
+    paragraph(page, (340, 285, 530, 350),
+              "Beta two continues the band under its head with "
+              "ordinary sentences in the same column.")
+    paragraph(page, (340, 398, 530, 470),
+              "Beta three closes the declarations band inside "
+              "the same column's flow.")
+    text(page, 72, 570, "References", font="hebo")
+    for y, name in ((600, "alpha"), (630, "beta"), (660, "gamma")):
+        text(page, 72, y, f"Ref {name} first entry of the list.")
+    for y, name in ((580, "delta"), (610, "epsilon"), (640, "zeta")):
+        text(page, 340, y, f"Ref {name} continues the list in col one.")
+    page = _page(doc)
+    for x, side in ((72, "Gamma"), (340, "Delta")):
+        for y, part in ((200, "upper"), (340, "lower")):
+            paragraph(page, (x, y, x + 190, y + 60),
+                      f"{side} {part} is plain column prose with no "
+                      "section mark at the shared gap.")
+    return _save(doc, path)
+
+
 GENERATORS = {
     "mixed_1col_plus_2col": mixed_1col_plus_2col,
     "mixed_parity_2col": mixed_parity_2col,
@@ -453,4 +494,5 @@ GENERATORS = {
     "heads_only_phantom": heads_only_phantom,
     "retained_content": retained_content,
     "mid_page_span": mid_page_span,
+    "banded_sections": banded_sections,
 }
