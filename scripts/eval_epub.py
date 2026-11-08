@@ -40,7 +40,12 @@ from xml.etree import ElementTree as ET
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from exegesis.const import BOILERPLATE_MAX_CHARS, BOILERPLATE_MAX_LINES
 from exegesis.lang import LangProfile, get_lang
-from exegesis.text import _block_lines, _block_text, _join_lines
+from exegesis.text import (
+    _block_lines,
+    _block_text,
+    _join_lines,
+    _line_text,
+)
 
 WORD_RE = re.compile(r"[A-Za-z0-9]+")
 TAG_RE = re.compile(r"<[^>]+>")
@@ -443,6 +448,26 @@ def _strip(block, ctx) -> bool:
     return width < 25
 
 
+def _post_drop_view(block, ctx):
+    """The ``(bbox, text)`` convert graded for a raw block tuple.
+
+    On a `dmap` hit the dict block's recomputed bbox and its post-drop
+    line text — a fused ghost keeps its extent and words in raw tuple
+    space, but convert's furniture/strip arms saw neither: ghost words
+    mustn't fail the page-number fullmatch, break a signature match,
+    or smuggle furniture vocabulary into an excuse. Falls back to the
+    tuple's own pair on a miss — a fully-emptied block, or a synthetic
+    remainder lookup whose extent/text are already post-split.
+    """
+    db = ctx.dmap.get(tuple(block[:4]))
+    if db is not None and "bbox" in db:
+        return (
+            tuple(db["bbox"]),
+            "\n".join(_line_text(l) for l in _block_lines(db)),
+        )
+    return tuple(block[:4]), block[4]
+
+
 def _dropped(block, ctx, boilerplate: set[str],
              lang: LangProfile) -> bool:
     """Does `order._ordered_blocks` drop this `get_text("blocks")` tuple?
@@ -454,14 +479,12 @@ def _dropped(block, ctx, boilerplate: set[str],
     outer 10% horizontal margins. One predicate per block, so a block
     qualifying under several arms (a content-matching head that also
     recurs — the norm on journal corpora) is dropped, and counted,
-    once. The zone gates read the extent convert graded: on a `dmap`
-    hit the dict block's recomputed bbox replaces the raw tuple's
-    fused one, so a ghost line's reach can't pull the block across a
-    threshold either way — excusing kept text or flagging a correct
-    strip as genuine loss."""
-    text = block[4]
-    db = ctx.dmap.get(tuple(block[:4]))
-    _, y0, _, y1 = db["bbox"] if db and "bbox" in db else block[:4]
+    once. Both the zone gates and the content arms read the block
+    convert saw — the recomputed bbox and post-drop text on a `dmap`
+    hit — so a ghost's reach can't pull it across a threshold or its
+    words across a content arm, excusing kept text or flagging a
+    correct strip as genuine loss."""
+    (_, y0, _, y1), text = _post_drop_view(block, ctx)
     h = ctx.rect.height
     joined = " ".join(text.split())
     # _is_furniture searches `_block_text` — `copy-`/`right` and
@@ -511,7 +534,11 @@ def furniture_words(ctxs, boilerplate: set[str],
                             ctx, boilerplate, lang):
                     furn.update(WORD_RE.findall(s.kept_text.lower()))
             elif _dropped(b, ctx, boilerplate, lang):
-                furn.update(WORD_RE.findall(b[4].lower()))
+                # the excuse counts the words convert stripped — the
+                # ghost tokens already ride `inv_words`; counting them
+                # again from the raw tuple would double-excuse
+                furn.update(WORD_RE.findall(
+                    _post_drop_view(b, ctx)[1].lower()))
     return furn
 
 

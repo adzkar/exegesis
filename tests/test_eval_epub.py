@@ -339,14 +339,29 @@ def _stub_page(blocks):
     """A stand-in `page` for `_page_ctx`: dict extraction plus the
     rect/mediabox/rotation attributes the clip and strip arms read.
     `get_pixmap` returns an all-white page raster so the invisible-span
-    drop sees a light ground under any candidate span."""
+    drop sees a light ground under any candidate span. `get_text`
+    serves tuple form for "blocks" — snapshotted at construction so it
+    keeps the pre-drop extents and ghost words the raw stream reports,
+    while the dict form shares the mutable dicts `_prepared_page`
+    drops."""
+    raw_tuples = [
+        (*b["bbox"],
+         "".join(
+             "".join(s["text"] for s in l["spans"]) + "\n"
+             for l in b.get("lines", [])),
+         i, b["type"])
+        for i, b in enumerate(blocks)
+    ]
+
     class _Page:
         rect = fitz.Rect(0, 0, W, H)
         mediabox = fitz.Rect(0, 0, W, H)
         rotation = 0
         rotation_matrix = fitz.Matrix(1, 0, 0, 1, 0, 0)
 
-        def get_text(self, _kind):
+        def get_text(self, kind):
+            if kind == "blocks":
+                return raw_tuples
             return {"blocks": blocks}
 
         def get_pixmap(self, **_kw):
@@ -471,6 +486,63 @@ def test_drop_arms_grade_post_drop_bbox():
     raw_strip = (560, 100, 612, 420, "Side Note\na222\n", 1, 0)
     assert eval_epub._dropped(raw_fused, ctx, set(), EN)
     assert eval_epub._dropped(raw_strip, ctx, set(), EN)
+
+
+def test_drop_arms_grade_post_drop_text():
+    """The content arms grade the text convert saw — ghost words in the
+    raw tuple can't fail the page-number fullmatch, break a signature
+    match, or smuggle furniture vocabulary into an excuse, and the
+    furniture counter can't double-count them next to `inv_words`
+    (#63)."""
+    import importlib.util
+
+    from exegesis.lang import EN
+
+    spec = importlib.util.spec_from_file_location("eval_epub", EVAL)
+    eval_epub = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(eval_epub)
+
+    def _line(y0, y1, *spans):
+        return {"bbox": (72, y0, 200, y1), "dir": (1, 0),
+                "spans": list(spans)}
+
+    def _span(text, y0, y1, color):
+        return {"text": text, "size": 9, "color": color,
+                "bbox": (72, y0, 200, y1)}
+
+    def _block(y0, y1, *lines):
+        return {"type": 0, "bbox": (72, y0, 200, y1),
+                "lines": list(lines)}
+
+    page = _stub_page([
+        # page number fused with a ghost — post-drop "17" fullmatches
+        # the \d{1,4} arm; the raw "17 a111" never could
+        _block(750, 775,
+               _line(750, 762, _span("17", 750, 762, 0)),
+               _line(763, 775, _span("a111", 763, 775, 0xFFFFFF))),
+        # a signature head fused with a ghost — the raw sig
+        # "weeklyjournala111" misses the post-drop boilerplate set
+        _block(100, 127,
+               _line(100, 112, _span("Weekly Journal", 100, 112, 0)),
+               _line(113, 127, _span("a111", 113, 127, 0xFFFFFF))),
+        # kept text fused with a furniture-vocab ghost — the ghost's
+        # `www.` must not excuse what convert kept
+        _block(30, 55,
+               _line(30, 42, _span("Real content sentence", 30, 42, 0)),
+               _line(43, 55, _span("www.mark.org", 43, 55, 0xFFFFFF))),
+    ])
+    boiler = {"weeklyjournal"}
+    ctx = eval_epub._page_ctx(page, boiler, EN)
+    raw = page.get_text("blocks")
+    assert eval_epub._dropped(raw[0], ctx, boiler, EN)
+    assert eval_epub._dropped(raw[1], ctx, boiler, EN)
+    assert not eval_epub._dropped(raw[2], ctx, boiler, EN)
+    furn = eval_epub.furniture_words([ctx], boiler, EN)
+    # ghost tokens excuse once — through `inv_words` — not again
+    # through the dropped block's raw text
+    assert furn["17"] == 1 and furn["weekly"] == 1
+    assert furn["a111"] == 2 and furn["www"] == 1
+    assert "real" not in furn and "content" not in furn
 
 
 def test_eval_bottom_footer_is_excused(tmp_path):
