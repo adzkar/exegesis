@@ -28,7 +28,11 @@ def _ordered_blocks(
     ``blocks`` is the page's pre-extracted ``get_text("dict")["blocks"]``;
     ``page`` supplies only geometry (rect).
 
-    Blocks above the first spanning element come first (page header zone).
+    Blocks above the first spanning element come first (page header zone)
+    unless they fill two or more reading columns with multiple members
+    each — columnar body, which stays in column flow so a mid-page span
+    (a wide table band, a full-width figure) cannot y-interleave the
+    columns above it (#60).
     Each reading column then emits its own sequence — non-spanning blocks
     plus the spanning elements that cover it, in y order — columns left to
     right. ``col_map`` translates physical edge indices into reading
