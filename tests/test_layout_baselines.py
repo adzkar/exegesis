@@ -131,6 +131,14 @@ REQUIRED_CONTENT = {
         *(f"Class Size Table {number}" for number in range(6)),
         *(f"{number} 1 1 2 2 7 14" for number in range(6)),
     ],
+    "asymmetric_indent": [
+        *(f"Left body {number} {part}" for number in range(6)
+          for part in ("alpha", "beta", "gamma")),
+        *(f"Right body {number} {part}" for number in range(6)
+          for part in ("upper", "lower")),
+        *(f"({number}.{label})" for number in range(6)
+          for label in ("a", "b", "c")),
+    ],
     "retained_content": ["Negative opening", "Normal margin prose", "continues as real content.",
                          "Full-width content", "Negative closing"],
 }
@@ -559,6 +567,23 @@ def _contract_math_indent(pages):
             assert not _is_furniture(found[0], page, _block_text(found[0]))
 
 
+def _contract_asymmetric(pages):
+    """The x480 tag cluster is a fragment edge: spanning supporters, no
+    non-spanning evidence, and anchors at 430pt left / 20pt right."""
+    assert len(pages) == 6
+    boilerplate = _boilerplate_signatures(pages)
+    edges = _doc_column_edges(pages, boilerplate)
+    assert edges == pytest.approx([50.0, 480.0, 500.0])
+    assert _reading_columns(pages, edges, boilerplate) == [0, 1, 1]
+    for page, pdict in pages:
+        tags = [b for b in _texts(pdict) if _block_text(b).startswith("(")]
+        assert len(tags) == 3
+        for tag in tags:
+            assert tag["bbox"][0] == 480
+            assert _is_spanning(tag, edges)
+            assert not _is_furniture(tag, page, _block_text(tag))
+
+
 def _contract_retained(pages):
     """The negative margin block is horizontal multiline prose, not a rotated strip."""
     assert len(pages) == 1
@@ -592,6 +617,7 @@ CONTRACTS = {
     "signature_outdent_margin": _contract_signature_margin,
     "heads_only_phantom": _contract_heads_only,
     "math_indent_phantom": _contract_math_indent,
+    "asymmetric_indent": _contract_asymmetric,
     "retained_content": _contract_retained,
 }
 
@@ -885,6 +911,22 @@ def _semantic_math_indent(result):
                       issue="#62 math indent phantom")
 
 
+def _semantic_asymmetric(result):
+    """#68: the tag cluster folds into the geometrically nearer right
+    column — an index-distance tie must not splice it into the far one."""
+    require(result[2]["columns"] == 2,
+            f"two real columns keep their edges: {result[2]['columns']}")
+    for number in range(6):
+        require_order(result[3],
+                      f"Left body {number} alpha",
+                      f"Right body {number} upper",
+                      f"Left body {number} beta",
+                      f"Left body {number} gamma",
+                      f"({number}.a)", f"({number}.b)",
+                      f"Right body {number} lower", f"({number}.c)",
+                      issue="#68 asymmetric indent anchor")
+
+
 def _semantic_retained(result):
     """Negative controls retain margin prose and wide content once, in body reading order."""
     require_order(result[3], "Negative opening", "Normal margin prose", "continues as real content.",
@@ -913,6 +955,7 @@ SEMANTICS = {
     "signature_outdent_margin": _semantic_signature_margin,
     "heads_only_phantom": _semantic_heads_only,
     "math_indent_phantom": _semantic_math_indent,
+    "asymmetric_indent": _semantic_asymmetric,
     "retained_content": _semantic_retained,
 }
 SYMPTOMS = {}
@@ -934,6 +977,7 @@ READING_MAPS = {
     "outdented_note_zone": [0, 0],
     "heads_only_phantom": [0, 0],
     "math_indent_phantom": [0, 0, 0, 0],
+    "asymmetric_indent": [0, 1, 1],
     "signature_outdent_margin": [0],
     "two_col_heading_run": [0, 1],
     "two_col_label_list": [0, 1],

@@ -1013,8 +1013,9 @@ def _reading_columns(
     ≥``VOTE_MIN_WORDS`` alphabetic words is an indent cluster (table
     rows, equation pieces, heads) that reached the quorum, not a
     reading column (#62's arxiv phantom edges). It folds into the
-    nearest anchor edge, left on ties — its content sits inside a real
-    column's flow, so column-major would split that flow around it.
+    geometrically nearest anchor edge, left on ties — its content sits
+    inside a real column's flow, so column-major would split that flow
+    around it.
     Supporters, not assigned blocks, carry the evidence: a real
     column's paragraphs are spanning once a phantom edge splits its
     band, so assignment alone sees fragments at every edge.
@@ -1130,10 +1131,13 @@ def _reading_columns(
             j = _target(i, "right")
         if j is None and fragment[i]:
             # an interior indent cluster merges into the column it
-            # interrupts — the nearer anchor wins, left on a tie
+            # interrupts — the geometrically nearer anchor wins, left on
+            # a true distance tie (edge positions, not indices: an
+            # asymmetric grid places the near anchor edges away)
             left, right = _target(i, "left"), _target(i, "right")
             if left is None or (
-                right is not None and right - i < i - left
+                right is not None
+                and edges[right] - edges[i] < edges[i] - edges[left]
             ):
                 j = right
             else:

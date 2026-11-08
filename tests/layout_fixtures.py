@@ -405,6 +405,33 @@ def math_indent_phantom(path):
     return _save(doc, path)
 
 
+def asymmetric_indent(path):
+    """A fragment cluster sits 20pt left of the real right column but an
+    edge-*index* tie away from both anchors — equation tags beside a
+    right-hand column (#68): geometric distance must pick the anchor."""
+    doc = fitz.open()
+    variants = ("first", "second", "third", "fourth", "fifth", "sixth")
+    for number in range(6):
+        page = _page(doc)
+        for y, label in ((190, "alpha"), (350, "beta"), (510, "gamma")):
+            paragraph(page, (50, y, 300, y + 55),
+                      f"Left body {number} {label} fills the wide left "
+                      f"column with {variants[number]} wrapped prose.")
+        # equation tags cluster at x480 — gutter-straddling spans 20pt
+        # off the right column, 430pt off the left; supporters, not a
+        # reading column
+        for y, label in ((262, "a"), (422, "b"), (582, "c")):
+            text(page, 480, y, f"({number}.{label})")
+        # unique wording per page: a recurring sentence skeleton reads as
+        # margin evidence and the narrow right edge would lift as a
+        # voted margin column
+        for y, label in ((200, "upper"), (430, "lower")):
+            paragraph(page, (500, y, 596, y + 75),
+                      f"Right body {number} {label} holds the "
+                      f"{variants[number]} column prose.")
+    return _save(doc, path)
+
+
 def retained_content(path):
     """Ordinary horizontal margin prose and full-width spans are not disposable labels."""
     doc = fitz.open()
@@ -440,5 +467,6 @@ GENERATORS = {
     "signature_outdent_margin": signature_outdent_margin,
     "heads_only_phantom": heads_only_phantom,
     "math_indent_phantom": math_indent_phantom,
+    "asymmetric_indent": asymmetric_indent,
     "retained_content": retained_content,
 }
