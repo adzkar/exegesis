@@ -8,6 +8,8 @@ from builders import BODY, _page, _save
 from helpers import chapter_text, doc_html, doc_texts, lint_epub, snapshot_epub
 
 from exegesis import convert
+from exegesis.analyze import _drop_invisible_spans, _lines_bbox
+from exegesis.text import _line_text
 
 
 def test_two_column_reading_order(tmp_path):
@@ -106,6 +108,38 @@ def test_invisible_text_dropped(tmp_path):
     assert "a1111111111" not in text
     assert "Visible body prose" in text
     assert "Banner label" in text
+
+
+def test_invisible_span_drop_recomputes_geometry():
+    """A fused block must not keep the ghost's extent — PyMuPDF fuses
+    same-x0 adjacent lines into one dict block, so a dropped placeholder
+    that was the widest line would leave its x1 in the stale block bbox
+    (a phantom extent that can still vote column edges or read as
+    gutter-crossing), and a mid-line ghost would leave the line bbox
+    anchored at its x0 (#63)."""
+    doc = fitz.open()
+    p = _page(doc)
+    # same-x0 adjacent lines fuse into one block; the ghost is the
+    # widest line, so its x1 would linger in the stale block bbox
+    p.insert_text((36, 300), "a1111111111 wide ghost run",
+                  fontsize=BODY, color=(1, 1, 1))
+    p.insert_text((36, 315), "Short kept", fontsize=BODY, color=(0, 0, 0))
+    # adjacent same-baseline spans share one line — the mid-line ghost
+    # leaves the line bbox anchored at its x0
+    p.insert_text((36, 400), "a222", fontsize=BODY, color=(1, 1, 1))
+    p.insert_text((58, 400), "kept text on the line",
+                  fontsize=BODY, color=(0, 0, 0))
+    pdict = p.get_text("dict")
+    dropped = _drop_invisible_spans(p, pdict)
+    assert [s["text"] for line in dropped for s in line] == [
+        "a1111111111 wide ghost run", "a222"]
+    fused, mid = (b for b in pdict["blocks"] if b["type"] == 0)
+    assert [_line_text(l) for l in fused["lines"]] == ["Short kept"]
+    assert fused["bbox"] == _lines_bbox(fused["lines"])
+    assert len(mid["lines"]) == 1
+    line = mid["lines"][0]
+    assert line["bbox"] == line["spans"][0]["bbox"]
+    assert mid["bbox"] == _lines_bbox(mid["lines"])
 
 
 def test_dirty_metadata_sanitized_before_nav_seed(tmp_path):

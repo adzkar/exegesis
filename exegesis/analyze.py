@@ -1440,7 +1440,8 @@ def _light_ground(page, pix, rect):
 
 def _drop_invisible_spans(page, pdict):
     """Remove spans painted where the eye can't read them — near-white
-    on a light ground — and return the dropped span dicts.
+    on a light ground — and return the dropped spans grouped by the
+    line that held them.
 
     Publishers leave invisible placeholder text in front matter
     (PLOS's white ``a111…`` runs, #63): extracted like ordinary text,
@@ -1448,13 +1449,19 @@ def _drop_invisible_spans(page, pdict):
     fill is near-white *and* the rendered ground under its bbox is
     light — the page rasterizes once, lazily, and only when a
     candidate exists, so white on a dark banner survives. Emptied
-    lines and fully-emptied text blocks go with them, so the
-    placeholders leave no geometry to vote, order, or render. Runs at
-    extraction beside the XML-Char sanitize, before any classifier
-    reads the spans.
+    lines and fully-emptied text blocks go with them, and the
+    surviving containers' bboxes recompute over what remains — PyMuPDF
+    fuses same-x0 adjacent lines into one block, so a placeholder that
+    shared its container with visible text would otherwise leave its
+    extent behind to vote column edges, cross a gutter, or read as
+    first-line indent the page doesn't show. The per-line grouping
+    lets a mirror count dropped words at the raw text layer's own
+    token boundaries — two spans of one line read as one word there.
+    Runs at extraction beside the XML-Char sanitize, before any
+    classifier reads the spans.
     """
     cands = [
-        span
+        (line, span)
         for block in pdict["blocks"]
         if block["type"] == 0
         for line in block.get("lines", [])
@@ -1465,25 +1472,41 @@ def _drop_invisible_spans(page, pdict):
         return []
     pix = page.get_pixmap(colorspace=fitz.csGRAY, alpha=False)
     dropped = [
-        span
-        for span in cands
+        (line, span)
+        for line, span in cands
         if _light_ground(page, pix, fitz.Rect(span["bbox"]))
     ]
     if not dropped:
         return []
-    ids = {id(span) for span in dropped}
+    ids = {id(span) for _, span in dropped}
     for block in pdict["blocks"]:
         if block["type"] != 0:
             continue
+        lost = False
         for line in block.get("lines", []):
-            line["spans"] = [s for s in line["spans"] if id(s) not in ids]
-        block["lines"] = [
-            line for line in block.get("lines", []) if line["spans"]
-        ]
+            kept = [s for s in line["spans"] if id(s) not in ids]
+            if len(kept) == len(line["spans"]):
+                continue
+            lost = True
+            line["spans"] = kept
+            if kept:
+                line["bbox"] = (
+                    min(s["bbox"][0] for s in kept),
+                    min(s["bbox"][1] for s in kept),
+                    max(s["bbox"][2] for s in kept),
+                    max(s["bbox"][3] for s in kept),
+                )
+        if lost:
+            block["lines"] = [l for l in block["lines"] if l["spans"]]
+            if block["lines"]:
+                block["bbox"] = _lines_bbox(block["lines"])
     pdict["blocks"] = [
         b for b in pdict["blocks"] if b["type"] != 0 or b.get("lines")
     ]
-    return dropped
+    groups = {}
+    for line, span in dropped:
+        groups.setdefault(id(line), []).append(span)
+    return list(groups.values())
 
 
 def _tall_blocks(blocks):
