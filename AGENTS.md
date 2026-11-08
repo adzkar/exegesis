@@ -32,7 +32,8 @@ layout analysis over PyMuPDF blocks — no OCR, no ML dependencies.
   `--journals-dir DIR` for a corpus outside the checkout. Tests never import
   the script; `tests/test_diagnose_layouts.py` smoke-tests its CLI with
   generated PDFs. Its temporary profiling hook follows real render claims
-  and `_reading_columns`'s evidence locals; update the instrumentation
+  and `_reading_columns`'s (``edges``, ``evidence``, ``fragment``,
+  ``outdent``) locals; update the instrumentation
   contract when those locals change. The script
   runs on `requirements.txt` alone — test helpers it borrows (e.g.
   `tests/helpers.py`) keep test-only imports like `pytest` call-time, not
@@ -57,7 +58,9 @@ item boundary, so the seeded nav `Link`, the `dc:` metadata, and the
 stats payload all read the clean values (#58).
 
 - **Column order** — column edges are x0 clusters found on ≥50% of pages
-  (doc-wide voting kills phantom edges from bylines/headings; furniture-
+  (doc-wide voting kills phantom edges from bylines/headings; a page
+  with no cluster quorum abstains rather than voting the empty-list
+  sentinel; furniture-
   shaped blocks don't vote). Wrap strips beside an in-column image don't
   vote either: `analyze._wrap_fragments` claims eligible blocks that sit
   on both sides of a non-trivial image inside a band some eligible block
@@ -117,7 +120,20 @@ stats payload all read the clean values (#58).
   non-outdent column on its right rather than ordering as its own
   column (MDPI's outdented section heads). A column of wrapped text
   lines fails the band-fill clause; a strip needs ≥3 evidence blocks;
-  the last edge can never fold. Non-spanning assignments and every
+  the last edge can never fold, and any member proving column flow —
+  ≥3 lines or an x-extent past the band bound — vetoes the fold
+  outright, so a fragment-dense paper's real body edge can't collapse
+  (#62: arxiv_revtex's true edge measured 87.5% strips because math
+  papers write in fragments). A second arm folds fragment-dominated
+  edges the strip shape can't reach: an edge whose *voters* — the
+  blocks clustering within `ZONE_EDGE_TOL` of its x0, spanning or not —
+  hold under `FRAG_PROSE_SHARE` prose members (≥`VOTE_MIN_WORDS`
+  alphabetic words of ≥3 letters) is an indent cluster that reached the
+  quorum — table rows, equation pieces, heads — not a reading column,
+  and folds into the nearest anchor edge (left on ties). Supporters,
+  not assigned blocks, carry that evidence: a real column's paragraphs
+  are spanning once a phantom edge splits its band, so assignment sees
+  only fragments at every edge. Non-spanning assignments and every
   span's covered columns pass through the map in `_ordered_blocks`, and
   the heading follower scan, caption column matching, and blockquote
   same-column checks all compare the mapped reading identity. Footnote
@@ -129,7 +145,8 @@ stats payload all read the clean values (#58).
   read `edges[physical col]`. `stats["columns"]` reports the widest
   page's distinct reading columns (the doc prior's map alone would
   under-report a mixed-grid document); `dev/diagnose_layouts.py` prints
-  each physical edge's mapped column (`edge=… -> rcolN (outdent)`)
+  each physical edge's mapped column (`edge=… -> rcolN (outdent)` for
+  the strip arm, `(fragment)` for the prose-share arm)
   plus the deciding share, and each page line carries its active
   `grid=`/`src=` alongside the committed `doc_edges`.
 - **Paragraphs** — blocks merge into the open paragraph unless the first line

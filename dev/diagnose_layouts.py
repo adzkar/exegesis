@@ -24,7 +24,8 @@ Total/spanning heading-like counts also expose heads that cross a phantom gutter
 This is a text-shape probe — the same ``analyze._outdent_like`` shape the
 converter's outdent-edge detection uses — not the renderer's font/context
 heading classifier. Each physical edge prints its reading column (``-> rcolN``;
-``(outdent)`` when it folds into a later edge); reading-order tags use mapped
+``(outdent)`` when its strip share folds it right, ``(fragment)`` when
+its prose share folds it into the nearest anchor); reading-order tags use mapped
 ``colN`` like the converter does.
 INPUT counts precede furniture removal. SURVIVING BODY-FLOW counts use the actual
 renderer's ``ordered`` blocks minus ``nonbody_ids``: headings/bylines/labels count,
@@ -48,7 +49,8 @@ hook reads private renderer locals at return (``page``/``page_index``/``state``
 against the grid the page actually ordered on; ``state.edges`` stays the
 committed document grid), before convert
 releases each page, and each ``_reading_columns`` call's (``edges``,
-``evidence``) locals at its return — one call per zone grid now, so the
+``evidence``, ``fragment``, ``outdent``) locals at its return — one call per zone
+grid now, so the
 doc zone's evidence is selected by matching edges. Keep that
 small instrumentation contract in sync if those locals change. This
 manual corpus tool is not a test helper and must never be imported by tests.
@@ -480,8 +482,17 @@ def _convert_with_reports(pdf, out, lang, drop_edges):
         elif frame.f_code is reading_code and "evidence" in frame.f_locals:
             loc = frame.f_locals
             # one call per zone grid (#37) — retain each call's own
-            # edges so the doc zone's evidence can be selected below
-            fold["calls"].append((list(loc["edges"]), loc["evidence"]))
+            # edges so the doc zone's evidence can be selected below;
+            # the fragment flags separate #62's prose-share folds from
+            # the outdent arm's strip-share folds
+            fold["calls"].append(
+                (
+                    list(loc["edges"]),
+                    loc["evidence"],
+                    loc["fragment"],
+                    loc["outdent"],
+                )
+            )
 
     previous = sys.getprofile()
     sys.setprofile(capture)
@@ -509,13 +520,13 @@ def _print_report(stats, pages, fold_calls):
     # the doc zone's deciding evidence: ``_reading_columns`` now runs
     # once per zone grid, so pick the call whose edges match the doc
     # grid — its FOLD shares are the ones that decided the doc edges
-    fold_evidence = next(
+    fold_evidence, fold_fragment, fold_outdent = next(
         (
-            ev
-            for call_edges, ev in fold_calls
+            (ev, frag, outd)
+            for call_edges, ev, frag, outd in fold_calls
             if _grids_agree(call_edges, edges)
         ),
-        [],
+        ([], [], []),
     )
     # active grids merge into zones on the same agreement rule the
     # converter groups by — parity-shifted edges inside the tolerance
@@ -534,13 +545,20 @@ def _print_report(stats, pages, fold_calls):
         f"reading_cols={max(len(set(p['col_map'])) for p in pages)}"
     )
     for i, edge in enumerate(edges):
-        # an edge folds rightward only when its mapped id is shared with a
-        # later edge — non-outdent edges keep a unique reading column
-        folded = col_map[i] in col_map[i + 1 :]
+        # the fold flags come from _reading_columns's own frame — a
+        # shared mapped id can't tell the anchor from its folds
+        folded = i < len(fold_outdent) and (
+            fold_outdent[i] or fold_fragment[i]
+        )
+        kind = (
+            "outdent"
+            if i < len(fold_outdent) and fold_outdent[i]
+            else "fragment"
+        )
         raw, body = raw_prof[i], body_prof[i]
         print(
             f"    col{i} edge={edge:.1f} -> rcol{col_map[i]}"
-            f"{' (outdent)' if folded else ''}: INPUT text={len(raw['lens'])} "
+            f"{f' ({kind})' if folded else ''}: INPUT text={len(raw['lens'])} "
             f"img={image_cols[i]} median_len={raw['median_len']:g}; "
             f"SURVIVING BODY-FLOW text={len(body['lens'])} median_len={body['median_len']:g}"
         )

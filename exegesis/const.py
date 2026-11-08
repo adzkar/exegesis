@@ -19,6 +19,12 @@ SIGNATURE_PREFIX_MAX_LINES = BOILERPLATE_MAX_LINES
 MIN_IMAGE_BYTES = 2048
 MIN_HEADING_CHARS = 4
 MAX_HEADING_CHARS = 120
+# prose evidence for the reading-column fold (#62): a member counts as
+# prose when it holds ≥this many alphabetic words of ≥3 letters — a
+# column is a run of prose. Table rows, equation fragments, heads, and
+# caption labels recur at fixed indents on math/table papers and seed
+# phantom indent-cluster edges whose supporters stay under this bound.
+VOTE_MIN_WORDS = 4
 # An outdent edge is a physical column edge whose non-spanning blocks are
 # almost all short unpunctuated fragments floating in a narrow strip —
 # a real edge (full-width elements start there) that must not order as
@@ -31,6 +37,11 @@ MAX_HEADING_CHARS = 120
 OUTDENT_HEADING_SHARE = 0.8
 OUTDENT_MIN_BLOCKS = 3
 OUTDENT_BAND_FILL = 0.85
+# a fragment-dominated edge — almost no prose-carrying members — folds
+# into the nearest real column: the bound is the complement of the
+# outdent share, so an edge needs ~1/5 prose evidence to read as a
+# column (the arxiv indent clusters hold ~0%)
+FRAG_PROSE_SHARE = 0.2
 PAGES_PER_FALLBACK_CHAPTER = 10
 
 # info-box detection bounds (#41): run adjacency and media attachment

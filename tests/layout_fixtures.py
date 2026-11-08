@@ -382,6 +382,29 @@ def heads_only_phantom(path):
     return _save(doc, path)
 
 
+def math_indent_phantom(path):
+    """Equation/table/head indent clusters reach the doc quorum on a
+    single-column math paper — arxiv_revtex's phantom edges (#62)."""
+    doc = fitz.open()
+    for number in range(6):
+        page = _page(doc)
+        for y, label in ((190, "opening"), (390, "middle"), (570, "closing")):
+            paragraph(page, (120, y, 478, y + 60),
+                      f"Paper body {number} {label} wraps inside the true "
+                      "body column with enough prose to fill several lines "
+                      "of ordinary mathematical narrative text.")
+        # centered heads, aligned equation rows, and a table stack recur
+        # at three indents in two bands each — fragment clusters, not
+        # reading columns
+        text(page, 247, 252, f"Sec {number} Head", font="hebo")
+        text(page, 252, 360, f"Ref {number} Head", font="hebo")
+        text(page, 230, 300, f"aG{number},k = 23k + 1")
+        text(page, 230, 460, f"bH{number},k = 45k - 7")
+        text(page, 183, 330, f"Class Size Table {number}")
+        text(page, 183, 490, f"{number} 1 1 2 2 7 14")
+    return _save(doc, path)
+
+
 def retained_content(path):
     """Ordinary horizontal margin prose and full-width spans are not disposable labels."""
     doc = fitz.open()
@@ -416,5 +439,6 @@ GENERATORS = {
     "span_only_edge": span_only_edge,
     "signature_outdent_margin": signature_outdent_margin,
     "heads_only_phantom": heads_only_phantom,
+    "math_indent_phantom": math_indent_phantom,
     "retained_content": retained_content,
 }
