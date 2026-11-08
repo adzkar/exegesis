@@ -16,10 +16,13 @@ quotes/brackets, and an x-extent that stays inside ``OUTDENT_BAND_FILL`` of the
 band the edge shares with its right column. FOLD is the share that decided the
 tag — read straight from ``_reading_columns``'s own evidence locals, so only
 pages >=1, non-spanning, non-furniture blocks bound numerator and denominator
-while note/table-bound blocks still count. INPUT/SURVIVING stay broader
-all-pages probes (denominator: every non-spanning text block at the edge) and
-can legitimately differ from FOLD — page-0 and furniture blocks pollute INPUT,
-note/table-bound exits shrink SURVIVING.
+while note/table-bound blocks still count. A ``(fragment)`` tag also prints
+its own deciding share — the supporter prose share, measured over the same
+frame's ``support`` local (spanning members included: a real column's
+paragraphs go spanning once a phantom edge splits its band). INPUT/SURVIVING
+stay broader all-pages probes (denominator: every non-spanning text block at
+the edge) and can legitimately differ from FOLD — page-0 and furniture blocks
+pollute INPUT, note/table-bound exits shrink SURVIVING.
 Total/spanning heading-like counts also expose heads that cross a phantom gutter.
 This is a text-shape probe — the same ``analyze._outdent_like`` shape the
 converter's outdent-edge detection uses — not the renderer's font/context
@@ -49,8 +52,8 @@ hook reads private renderer locals at return (``page``/``page_index``/``state``
 against the grid the page actually ordered on; ``state.edges`` stays the
 committed document grid), before convert
 releases each page, and each ``_reading_columns`` call's (``edges``,
-``evidence``, ``fragment``, ``outdent``) locals at its return — one call per zone
-grid now, so the
+``evidence``, ``support``, ``fragment``, ``outdent``) locals at its return —
+one call per zone grid now, so the
 doc zone's evidence is selected by matching edges. Keep that
 small instrumentation contract in sync if those locals change. This
 manual corpus tool is not a test helper and must never be imported by tests.
@@ -80,6 +83,7 @@ from helpers import chapter_body_text, lint_epub
 
 from exegesis import convert, render
 from exegesis.analyze import (
+    _PROSE_WORD_RE,
     _assign_column,
     _column_edges,
     _grids_agree,
@@ -94,10 +98,12 @@ from exegesis.analyze import (
 )
 from exegesis.const import (
     DRAWING_PAD,
+    FRAG_PROSE_SHARE,
     MAX_HEADING_CHARS,
     OUTDENT_BAND_FILL,
     OUTDENT_MIN_BLOCKS,
     PAGE_FRAME_RATIO,
+    VOTE_MIN_WORDS,
 )
 from exegesis.text import _block_lines, _block_text, _line_text
 
@@ -185,6 +191,25 @@ def _fold_share(col, edges, width, evidence):
         else ""
     )
     return f"{n}/{len(ev)} ({100 * n / len(ev):.1f}%{floor})"
+
+
+def _frag_share(col, support):
+    """The supporter prose share that decided a ``(fragment)`` tag.
+
+    ``support`` is read from the same ``_reading_columns`` frame as the
+    strip evidence — supporters, not assigned blocks, carry this arm's
+    evidence (a real column's paragraphs go spanning once a phantom edge
+    splits its band), so the denominator includes spanning members.
+    """
+    if col >= len(support):
+        return "n/a"
+    sup = support[col]
+    if not sup:
+        return "0/0 (n/a)"
+    n = sum(
+        len(_PROSE_WORD_RE.findall(t)) >= VOTE_MIN_WORDS for _, t in sup
+    )
+    return f"{n}/{len(sup)} ({100 * n / len(sup):.1f}%)"
 
 
 def _band_end(col, edges, width):
@@ -489,6 +514,7 @@ def _convert_with_reports(pdf, out, lang, drop_edges):
                 (
                     list(loc["edges"]),
                     loc["evidence"],
+                    loc["support"],
                     loc["fragment"],
                     loc["outdent"],
                 )
@@ -520,13 +546,13 @@ def _print_report(stats, pages, fold_calls):
     # the doc zone's deciding evidence: ``_reading_columns`` now runs
     # once per zone grid, so pick the call whose edges match the doc
     # grid — its FOLD shares are the ones that decided the doc edges
-    fold_evidence, fold_fragment, fold_outdent = next(
+    fold_evidence, fold_support, fold_fragment, fold_outdent = next(
         (
-            (ev, frag, outd)
-            for call_edges, ev, frag, outd in fold_calls
+            (ev, sup, frag, outd)
+            for call_edges, ev, sup, frag, outd in fold_calls
             if _grids_agree(call_edges, edges)
         ),
-        ([], [], []),
+        ([], [], [], []),
     )
     # active grids merge into zones on the same agreement rule the
     # converter groups by — parity-shifted edges inside the tolerance
@@ -572,6 +598,13 @@ def _print_report(stats, pages, fold_calls):
             f"FOLD {_fold_share(i, edges, first['width'], fold_evidence)}; "
             f"INPUT {_share(raw)}; SURVIVING BODY-FLOW {_share(body)}"
         )
+        if i < len(fold_fragment) and fold_fragment[i]:
+            print(
+                f"      supporter prose share "
+                f"(>={VOTE_MIN_WORDS} >=3-letter words; folds below "
+                f"{FRAG_PROSE_SHARE:.0%}): "
+                f"FOLD {_frag_share(i, fold_support)}"
+            )
     print(f"  INPUT short <={SHORT_CHARS}: {_short_counts(fragments)}")
     print(f"  SURVIVING BODY-FLOW short <={SHORT_CHARS}: {_short_counts(surviving)}")
     print(
@@ -679,13 +712,15 @@ def main():
     )
     print(
         "Columns use nearest-edge home assignments for text AND images; "
-        "rcolN is the reading column (outdent edges fold right)."
+        "rcolN is the reading column (outdent edges fold right; fragment "
+        "clusters fold to the nearest anchor)."
     )
     print(
         f"Edge share = up to 2 nonempty lines, 1..{MAX_HEADING_CHARS} chars, "
         "no terminal .!?… after closing quotes/brackets — FOLD over the "
         "converter's own deciding evidence (pages>=1, non-furniture); "
-        "INPUT/SURVIVING over all non-spanning text blocks."
+        "a (fragment)-tagged edge also prints its deciding supporter prose "
+        "share. INPUT/SURVIVING over all non-spanning text blocks."
     )
     print(
         "Heading-like totals include spans; a phantom gutter can classify an outdented head as spanning."

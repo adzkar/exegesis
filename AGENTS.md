@@ -32,8 +32,8 @@ layout analysis over PyMuPDF blocks — no OCR, no ML dependencies.
   `--journals-dir DIR` for a corpus outside the checkout. Tests never import
   the script; `tests/test_diagnose_layouts.py` smoke-tests its CLI with
   generated PDFs. Its temporary profiling hook follows real render claims
-  and `_reading_columns`'s (``edges``, ``evidence``, ``fragment``,
-  ``outdent``) locals; update the instrumentation
+  and `_reading_columns`'s (``edges``, ``evidence``, ``support``,
+  ``fragment``, ``outdent``) locals; update the instrumentation
   contract when those locals change. The script
   runs on `requirements.txt` alone — test helpers it borrows (e.g.
   `tests/helpers.py`) keep test-only imports like `pytest` call-time, not
@@ -147,7 +147,9 @@ stats payload all read the clean values (#58).
   under-report a mixed-grid document); `dev/diagnose_layouts.py` prints
   each physical edge's mapped column (`edge=… -> rcolN (outdent)` for
   the strip arm, `(fragment)` for the prose-share arm)
-  plus the deciding share, and each page line carries its active
+  plus the deciding share (a `(fragment)` tag's own FOLD row reports the
+  supporter prose share, spanning members included), and each page line
+  carries its active
   `grid=`/`src=` alongside the committed `doc_edges`.
 - **Paragraphs** — blocks merge into the open paragraph unless the first line
   is indented (>4pt) or the previous line ends with terminal punctuation.
