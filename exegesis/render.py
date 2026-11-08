@@ -74,15 +74,17 @@ def _authorish(text, joiner=" and "):
     )
 
 
-def _author_line(text, joiner=" and "):
+def _author_line(text, joiner=" and ", max_len=170):
     """True if the text is a byline-shaped name list — ≥2 comma/joiner
     segments each closing on an affiliation marker (digits or *†‡§),
     like ``Jane Doe 1, John Roe 2*``. Marked name lists are never
     headings; they emit through the byline path instead. Looser comma
     or joiner lists (``Materials and Methods``) carry no markers and
-    stay heading-eligible."""
+    stay heading-eligible. ``max_len`` relaxes the total bound where a
+    longer title-band text must still face the test — the page-0 title
+    rescue measures candidates at 2× the generic heading bound."""
     t = " ".join(text.split())
-    if not (3 < len(t) < 170) or ":" in t:
+    if not (3 < len(t) < max_len) or ":" in t:
         return False
     segs = [
         s.strip()
@@ -99,11 +101,21 @@ def _author_line(text, joiner=" and "):
 
 def _looks_like_heading(text, max_chars=MAX_HEADING_CHARS):
     """True if the string is plausible heading text (no sentence periods,
-    no footnote-marker opener — headings never start with *†‡§)."""
+    no footnote-marker opener — headings never start with *†‡§, and a
+    lowercase opener marks a mid-sentence fragment. Bio-paper heads
+    that legitimately open lowercase survive the veto: a non-ASCII
+    lowercase (``β-blockers``) or an ASCII letter fused to a digit
+    (``p53-mediated apoptosis``)."""
+    first = text[:1]
+    lower_prose = (
+        first.islower()
+        and first.isascii()
+        and not text[1:2].isdigit()
+    )
     return (
         MIN_HEADING_CHARS <= len(text) <= max_chars
-        and text[:1] not in "*†‡§"
-        and not text[:1].islower()
+        and first not in "*†‡§"
+        and not lower_prose
         and not re.search(r"\.", text[:-1])
         and not text.rstrip().endswith(".")
     )
@@ -970,9 +982,14 @@ def _render_page(page, page_index: int, state: PipelineState):
             demoted = True
         # the page-0 title is the first multi-line block of ≥1.6x
         # lines — longer than the generic heading bound allows; one
-        # leading label line (MDPI's ``Article``) splits off as a label
+        # leading label line (MDPI's ``Article``) splits off as a label.
+        # The arm must not re-promote what the name-list veto demoted,
+        # and the tail still faces the name-list test itself: a marked
+        # list past the generic heading bound (the veto only runs on
+        # classified candidates) is byline material, not a title
         if (
             level is None
+            and not demoted
             and page_index == 0
             and not state.headings
             and len(block_lines) >= 2
@@ -995,6 +1012,11 @@ def _render_page(page, page_index: int, state: PipelineState):
                 )
                 and _looks_like_heading(
                     ttext, max_chars=MAX_HEADING_CHARS * 2
+                )
+                and not _author_line(
+                    ttext,
+                    state.lang.name_joiner,
+                    max_len=MAX_HEADING_CHARS * 2,
                 )
             ):
                 if lead is not None:
@@ -1079,10 +1101,21 @@ def _render_page(page, page_index: int, state: PipelineState):
 
         med = _block_median_size(block)
         is_byline = med >= body_size * 1.15
+        # a marked name list reads as a byline only inside the front-
+        # matter window — the title spread (pages 0–1) before the first
+        # heading, or in the first h1's wake; a mid-document marked
+        # list is a citation or gene list (``Smith J 2010, Jones K
+        # 2011``, ``TP53, BRCA1``), and letting it emit here would
+        # clobber the real byline behind dc:creator
+        front_matter = page_index <= 1 and (
+            not state.headings
+            or (state.after_h1 and len(state.headings) == 1)
+        )
         if is_byline or (
             state.after_h1 and _authorish(btext, state.lang.name_joiner)
-        ) or _author_line(
-            btext, state.lang.name_joiner
+        ) or (
+            front_matter
+            and _author_line(btext, state.lang.name_joiner)
         ) or (
             frags
             and frags[-1].startswith('<p class="byline">')
