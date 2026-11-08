@@ -40,7 +40,12 @@ from xml.etree import ElementTree as ET
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from exegesis.const import BOILERPLATE_MAX_CHARS, BOILERPLATE_MAX_LINES
 from exegesis.lang import LangProfile, get_lang
-from exegesis.text import _block_lines, _block_text, _join_lines
+from exegesis.text import (
+    _block_lines,
+    _block_text,
+    _join_lines,
+    _line_text,
+)
 
 WORD_RE = re.compile(r"[A-Za-z0-9]+")
 TAG_RE = re.compile(r"<[^>]+>")
@@ -233,19 +238,50 @@ def looks_like_junk_title(title: str) -> bool:
 SIG_RE = re.compile(r"[^a-z]+")
 
 
-def boilerplate_signatures(pdf_pages) -> set[str]:
+def _prepared_page(page):
+    """The page's ``get_text("dict")`` after the extraction-time
+    invisible-span drop — the one dict stream every eval replay shares.
+
+    `convert` strips near-white spans before any classifier runs, so a
+    mirror replaying the raw stream grades geometry and words the
+    converter never saw: a recurring invisible head would join the
+    boilerplate set and over-excuse, a ghost x0 would vote column
+    edges, and a fused ghost line would stretch the block's extent.
+    `raw_bbox` snapshots each block's pre-drop bbox — raw block tuples
+    still report the fused extent, so lookups from the raw
+    `get_text("blocks")` side (`dmap`, `splits`) key on it, not the
+    recomputed one. `dropped` keeps the dropped spans grouped per
+    source line for word counting."""
+    from types import SimpleNamespace
+
+    from exegesis.analyze import _drop_invisible_spans
+
+    pdict = page.get_text("dict")
+    raw_bbox = {id(b): tuple(b["bbox"]) for b in pdict["blocks"]}
+    return SimpleNamespace(
+        page=page,
+        pdict=pdict,
+        dropped=_drop_invisible_spans(page, pdict),
+        raw_bbox=raw_bbox,
+    )
+
+
+def boilerplate_signatures(pages) -> set[str]:
     """Running heads by recurrence, mirroring
     `analyze._boilerplate_signatures`: letters-only sigs of text blocks
     inside the outer 20% edge zones recurring on >= max(2, 40%*pages)
     pages — the zone restriction keeps body text repeated mid-page from
     being excused, and the 2-page floor stops a 1-page doc from calling
     every block 'repeated'. The dict pass supplies the line count the
-    bound needs — block tuples can't."""
+    bound needs — block tuples can't. ``pages`` arrives as
+    `_prepared_page` results so the set is computed on the same
+    post-drop stream the converter analyzed — an invisible head's
+    signature can't recur in a stream the converter stripped."""
     counts: Counter = Counter()
-    for page in pdf_pages:
-        h = page.rect.height
+    for prep in pages:
+        h = prep.page.rect.height
         seen = set()
-        for b in page.get_text("dict")["blocks"]:
+        for b in prep.pdict["blocks"]:
             if b["type"] != 0:
                 continue
             if (b["bbox"][3] < h * 0.20
@@ -256,10 +292,11 @@ def boilerplate_signatures(pdf_pages) -> set[str]:
                     seen.add(sig)
         counts.update(seen)
     return {s for s, n in counts.items()
-            if n >= max(2, int(len(pdf_pages) * 0.4))}
+            if n >= max(2, int(len(pages) * 0.4))}
 
 
-def _page_ctx(page, boilerplate: set[str], lang: LangProfile):
+def _page_ctx(page, boilerplate: set[str], lang: LangProfile,
+              prepared=None):
     """Per-page context `_dropped` needs to mirror
     `order._ordered_blocks` exactly: the displayed rect (edge zones),
     the mediabox width and upright reading direction the margin-strip
@@ -277,7 +314,21 @@ def _page_ctx(page, boilerplate: set[str], lang: LangProfile):
     side) and the remainder's text/bbox (the kept side). The strip clip
     reads the canonical helper's post-split stream — the same
     `_ordered_blocks` sees — so a fused block's head lines can't
-    inflate the clip's tall-seed shape or stretch its region union."""
+    inflate the clip's tall-seed shape or stretch its region union.
+
+    ``prepared`` is the page's `_prepared_page` result — the post-drop
+    dict stream shared by `boilerplate_signatures` and the
+    `_claim_pages` replay so every mirror grades the text `convert`
+    analyzed (a bare call prepares one itself). The converter drops
+    invisible spans at extraction — the mirror runs the same helper
+    before dmap/the split stream are built, or the placeholder words
+    land on the genuine-loss side — and `dmap`/`splits` key on each
+    block's *pre-drop* bbox because the raw `get_text("blocks")`
+    tuples the drop arms index by still report the fused extent.
+    `inv_words` concatenates each dropped line's spans the way the raw
+    text layer does — a ghost token split across spans counts once
+    there, so a space join would invent a word the excuse then misses.
+    """
     from types import SimpleNamespace
 
     # lazy like main(): pulling analyze pulls fitz — an ImportError must
@@ -291,8 +342,10 @@ def _page_ctx(page, boilerplate: set[str], lang: LangProfile):
     )
     from exegesis.text import _line_text
 
-    pdict = page.get_text("dict")
-    dmap = {tuple(b["bbox"]): b for b in pdict["blocks"]}
+    if prepared is None:
+        prepared = _prepared_page(page)
+    pdict = prepared.pdict
+    dmap = {prepared.raw_bbox[id(b)]: b for b in pdict["blocks"]}
     # the post-split stream ordering sees — the pipeline's own pre-pass,
     # not a re-implementation, so the clip input can never drift
     post = _split_signature_prefixes(
@@ -313,7 +366,7 @@ def _page_ctx(page, boilerplate: set[str], lang: LangProfile):
                 rest, lines=lines[k:], bbox=_lines_bbox(lines[k:]))
         if not heads:
             continue
-        splits[tuple(b["bbox"])] = SimpleNamespace(
+        splits[prepared.raw_bbox[id(b)]] = SimpleNamespace(
             head_words=WORD_RE.findall(
                 " ".join(
                     _line_text(l) for group in heads for l in group
@@ -330,9 +383,14 @@ def _page_ctx(page, boilerplate: set[str], lang: LangProfile):
         rect=page.rect,
         mb_w=page.mediabox.width,
         upright=_upright_dir(page),
+        pdict=pdict,
         dmap=dmap,
         splits=splits,
         rtbl=_strip_clip(page, post, boilerplate, lang),
+        inv_words=WORD_RE.findall(
+            " ".join(
+                "".join(s["text"] for s in line)
+                for line in prepared.dropped).lower()),
     )
 
 
@@ -357,16 +415,22 @@ def _kept(block, ctx, boilerplate: set[str], lang: LangProfile):
 
 
 def _strip(block, ctx) -> bool:
-    """Mirror of `analyze._is_margin_strip` over the tuple's bbox plus the
-    ctx's dict line data — the same mediabox-space margin test, rotated-
-    table clip exemption, upright veto, all-rotated qualifier, and <25pt
-    fallback when direction data is missing or unusable (a dict lookup
-    miss counts as missing)."""
+    """Mirror of `analyze._is_margin_strip` over the block's post-drop
+    bbox plus the ctx's dict line data — the same mediabox-space margin
+    test, rotated-table clip exemption, upright veto, all-rotated
+    qualifier, and <25pt fallback when direction data is missing or
+    unusable (a dict lookup miss counts as missing)."""
     import fitz  # lazy like main(): an ImportError must reach the exit-2 net
 
     from exegesis.analyze import _line_dir
 
-    x0, y0, x1, y1 = block[:4]
+    # convert graded the recomputed extent — on a dict hit the fused
+    # tuple's ghost reach can't stretch the tall-narrow, margin, clip,
+    # or <25pt gates either way (a synthetic remainder dict carries no
+    # bbox; its incoming extent is already post-split/post-drop)
+    dblock = ctx.dmap.get(tuple(block[:4]))
+    x0, y0, x1, y1 = (
+        dblock["bbox"] if dblock and "bbox" in dblock else block[:4])
     width = x1 - x0
     if not (y1 - y0 > 4 * width
             and (x0 > ctx.mb_w * 0.9 or x1 < ctx.mb_w * 0.1)):
@@ -375,7 +439,6 @@ def _strip(block, ctx) -> bool:
     if (clip is not None
             and fitz.Rect((x0, y0, x1, y1)).intersects(clip)):
         return False
-    dblock = ctx.dmap.get((x0, y0, x1, y1))
     dirs = ([_line_dir(l) for l in dblock.get("lines", [])]
             if dblock else [])
     if any(d == ctx.upright for d in dirs):
@@ -383,6 +446,26 @@ def _strip(block, ctx) -> bool:
     if dirs and all(d is not None for d in dirs):
         return True
     return width < 25
+
+
+def _post_drop_view(block, ctx):
+    """The ``(bbox, text)`` convert graded for a raw block tuple.
+
+    On a `dmap` hit the dict block's recomputed bbox and its post-drop
+    line text — a fused ghost keeps its extent and words in raw tuple
+    space, but convert's furniture/strip arms saw neither: ghost words
+    mustn't fail the page-number fullmatch, break a signature match,
+    or smuggle furniture vocabulary into an excuse. Falls back to the
+    tuple's own pair on a miss — a fully-emptied block, or a synthetic
+    remainder lookup whose extent/text are already post-split.
+    """
+    db = ctx.dmap.get(tuple(block[:4]))
+    if db is not None and "bbox" in db:
+        return (
+            tuple(db["bbox"]),
+            "\n".join(_line_text(l) for l in _block_lines(db)),
+        )
+    return tuple(block[:4]), block[4]
 
 
 def _dropped(block, ctx, boilerplate: set[str],
@@ -396,8 +479,12 @@ def _dropped(block, ctx, boilerplate: set[str],
     outer 10% horizontal margins. One predicate per block, so a block
     qualifying under several arms (a content-matching head that also
     recurs — the norm on journal corpora) is dropped, and counted,
-    once."""
-    _, y0, _, y1, text = block[:5]
+    once. Both the zone gates and the content arms read the block
+    convert saw — the recomputed bbox and post-drop text on a `dmap`
+    hit — so a ghost's reach can't pull it across a threshold or its
+    words across a content arm, excusing kept text or flagging a
+    correct strip as genuine loss."""
+    (_, y0, _, y1), text = _post_drop_view(block, ctx)
     h = ctx.rect.height
     joined = " ".join(text.split())
     # _is_furniture searches `_block_text` — `copy-`/`right` and
@@ -431,9 +518,15 @@ def furniture_words(ctxs, boilerplate: set[str],
     unjoined fragments. A fused-head block contributes its split-off
     head's words, plus the remainder's when the drop arms hold for the
     remainder too (stacked heads whose own signatures recur — convert
-    strips both halves, so both excuse)."""
+    strips both halves, so both excuse). A fully-invisible block drops
+    on its raw tuple but contributes nothing — every word it had
+    already rides `inv_words`."""
     furn: Counter = Counter()
     for ctx in ctxs:
+        # invisible-span words excuse the same way furniture does —
+        # the converter dropped them at extraction, so they were never
+        # expected in the EPUB
+        furn.update(ctx.inv_words)
         for b in ctx.page.get_text("blocks"):
             if b[6] != 0:
                 continue
@@ -443,7 +536,15 @@ def furniture_words(ctxs, boilerplate: set[str],
                             ctx, boilerplate, lang):
                     furn.update(WORD_RE.findall(s.kept_text.lower()))
             elif _dropped(b, ctx, boilerplate, lang):
-                furn.update(WORD_RE.findall(b[4].lower()))
+                # count only the words convert stripped: a true `dmap`
+                # miss is a vanished (fully-invisible) block whose
+                # ghost tokens already ride `inv_words` — recounting
+                # the raw text would double-excuse them and could mask
+                # a same-token genuine loss elsewhere
+                db = ctx.dmap.get(tuple(b[:4]))
+                if db is not None and "bbox" in db:
+                    furn.update(WORD_RE.findall(
+                        _post_drop_view(b, ctx)[1].lower()))
     return furn
 
 
@@ -476,7 +577,13 @@ def _claim_pages(ctxs, boilerplate: set[str], lang: LangProfile):
     render's ``body_blocks`` uses, so an aside-marked margin member can
     neither seed a region nor be claimed into one, and the committed
     regions are the converter's own rather than a hand-mirror that
-    could drift. Yields ``(ctx, page, blocks, claims)`` per page.
+    could drift. The replay consumes the same post-drop stream
+    ``_page_ctx`` mirrored — a ghost edge vote or region seed the
+    converter never had can't diverge the claims — over shallow copies
+    of the shared block dicts, so the ``aside``/``margin`` marks one
+    replay writes can't leak into the next ``_claim_pages`` call (the
+    line dicts stay shared: nothing in the replayed pipeline mutates
+    them). Yields ``(ctx, page, blocks, claims)`` per page.
     """
     from exegesis.analyze import (
         _body_font_size,
@@ -490,8 +597,10 @@ def _claim_pages(ctxs, boilerplate: set[str], lang: LangProfile):
         _strip_clip,
     )
 
-    pages = [(ctx.page, {"blocks": ctx.page.get_text("dict")["blocks"]})
-             for ctx in ctxs]
+    pages = [
+        (ctx.page, {"blocks": [dict(b) for b in ctx.pdict["blocks"]]})
+        for ctx in ctxs
+    ]
     body_size, line_h = _body_font_size(pages)
     for p, d in pages:
         d["blocks"] = _split_signature_prefixes(
@@ -1287,8 +1396,13 @@ def main() -> int:
     # at a line boundary — a space join would defeat the line-start
     # anchors used for legend collection below.
     pdf_text = "\n".join(p.get_text("text") for p in pdf)
-    boilerplate = boilerplate_signatures(pdf)
-    ctxs = [_page_ctx(p, boilerplate, lang) for p in pdf]
+    # one prepared post-drop dict stream per page feeds every replay —
+    # boilerplate recurrence, the per-page ctx mirrors, and the
+    # `_claim_pages` claim composition all grade the text convert saw
+    prepared = [_prepared_page(p) for p in pdf]
+    boilerplate = boilerplate_signatures(prepared)
+    ctxs = [_page_ctx(prep.page, boilerplate, lang, prep)
+            for prep in prepared]
     raster_vocab, raster_legends, fig_raster_legends, n_regions, \
         raster_claimed = rasterized_blocks(ctxs, boilerplate, lang)
     # validated figure regions get the same accounting as the rotated
@@ -1471,8 +1585,8 @@ def main() -> int:
     # same population: get_images() lists /Resources instead, missing
     # XObject-nested draws and counting never-rendered entries.
     raster_digests = set()
-    for p in pdf:
-        for b in p.get_text("dict")["blocks"]:
+    for prep in prepared:
+        for b in prep.pdict["blocks"]:
             if b["type"] == 1:
                 data = b.get("image") or b""
                 if len(data) >= 2048:

@@ -33,7 +33,7 @@ from exegesis.analyze import (
 )
 from exegesis.lang import DE, EN
 from exegesis.order import _ordered_blocks
-from exegesis.text import _block_text
+from exegesis.text import _block_text, _span_is_near_white
 
 REQUIRED_CONTENT = {
     "mixed_1col_plus_2col": [
@@ -157,6 +157,7 @@ REQUIRED_CONTENT = {
         *(f"Ref {name}" for name in ("alpha", "beta", "gamma", "delta", "epsilon", "zeta")),
         "Gamma upper", "Gamma lower", "Delta upper", "Delta lower",
     ],
+    "invisible_text": ["Opening prose", "Trailing prose", "Banner label"],
 }
 
 
@@ -613,6 +614,19 @@ def _contract_retained(pages):
     assert not _is_furniture(span, page, _block_text(span))
 
 
+def _contract_invisible(pages):
+    """The fixture really paints near-white spans — the drop's trigger —
+    on both the white page and the dark banner."""
+    assert len(pages) == 1
+    _, pdict = pages[0]
+    spans = [s for b in _texts(pdict) for l in b["lines"] for s in l["spans"]]
+    ghost = [s for s in spans if s["text"].startswith("a1") or s["text"].startswith("a2")]
+    assert len(ghost) == 4
+    assert all(_span_is_near_white(s["color"]) for s in ghost)
+    banner = [s for s in spans if "Banner label" in s["text"]]
+    assert len(banner) == 1 and _span_is_near_white(banner[0]["color"])
+
+
 def _contract_mid_page_span(pages):
     """The fixture really sits a mid-page span under two live columns —
     the collapse's trigger — and a lone right fragment above page 1's
@@ -681,6 +695,7 @@ CONTRACTS = {
     "retained_content": _contract_retained,
     "mid_page_span": _contract_mid_page_span,
     "banded_sections": _contract_banded,
+    "invisible_text": _contract_invisible,
 }
 
 
@@ -997,6 +1012,15 @@ def _semantic_retained(result):
         require(result[3].count(label) == 1, f"negative control dropped/duplicated: {label}")
 
 
+def _semantic_invisible(result):
+    """#63: invisible placeholders never emit; the banner's white-on-dark
+    label and surrounding prose keep their reading order."""
+    require_absent(result[3], "a1111111111", "a2222222222",
+                   issue="#63 non-rendering white spans")
+    require_order(result[3], "Opening prose", "Trailing prose",
+                  "Banner label", issue="#63 visible text keeps order")
+
+
 def _semantic_mid_page_span(result):
     """#60: columns above a mid-page span keep column-major order — the
     wide band emits at its own y inside column 0 — while page 1's
@@ -1050,6 +1074,7 @@ SEMANTICS = {
     "retained_content": _semantic_retained,
     "mid_page_span": _semantic_mid_page_span,
     "banded_sections": _semantic_banded,
+    "invisible_text": _semantic_invisible,
 }
 SYMPTOMS = {}
 SEMANTIC_CASES = [

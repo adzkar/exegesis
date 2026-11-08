@@ -55,7 +55,28 @@ every span in the same pass — a newsstand magazine's BEL layout marks
 otherwise crash `ebooklib`/`lxml` at item-title setting (#56) — and
 `convert` rebinds `title`/`author` through the same sanitize before the
 item boundary, so the seeded nav `Link`, the `dc:` metadata, and the
-stats payload all read the clean values (#58).
+stats payload all read the clean values (#58). The same pass drops
+spans painted invisibly — near-white fill (per-channel floor, so
+saturated colors survive) on a light rendered ground (`_light_ground`
+medians the page pixmap under the span bbox, so white on a dark banner
+stays) — publishers' invisible placeholders (PLOS's `a111…` runs)
+otherwise emit as prose (#63); emptied lines and blocks go with them,
+and surviving containers recompute their bboxes so no ghost extent
+votes, orders, or renders (same-x0 adjacent lines fuse into one dict
+block, so a placeholder can share its container with visible text).
+`eval_epub.py` prepares each page once (`_prepared_page`) and shares
+that post-drop dict across `boilerplate_signatures`, `_page_ctx`, and
+the `_claim_pages` replay — `dmap`/`splits` key on the pre-drop bbox
+the raw block tuples still report, and `inv_words` concatenates each
+dropped line's spans like `_line_text` so a token split across spans
+excuses once — so the dropped words excuse as expected loss, not
+genuine word loss, and ghost geometry can't vote in the mirror. On a
+`dmap` hit the drop arms grade the dict block's post-drop *text* as
+well as its extent (`_post_drop_view`), so a ghost's words can't fail
+the page-number fullmatch, break a signature match, or carry furniture
+vocabulary into an excuse — nor double-count in `furniture_words`
+beside `inv_words` (a vanished all-ghost block drops on its raw tuple
+but contributes nothing there).
 
 - **Column order** — column edges are x0 clusters found on ≥50% of pages
   (doc-wide voting kills phantom edges from bylines/headings; a page
@@ -598,7 +619,14 @@ cases deselected). Converter heuristics and golden snapshots are unchanged.
   intersecting body text; sampling membership only at the first ≥3
   point refused legit tables whose margin cells open the band earliest.
 - `scripts/eval_epub.py` mirrors via a per-page `_page_ctx` (displayed
-  rect, mediabox width, upright dir, dict blocks keyed by bbox) plus the
+  rect, mediabox width, upright dir, dict blocks keyed by pre-drop bbox —
+  the `_dropped`/`_strip` arms resolve each raw tuple through `dmap` to
+  the recomputed post-drop extent and line text, so a fused ghost's
+  reach or words can't move a zone, strip, or content arm either way)
+  built over `_prepared_page`'s single post-drop dict stream — shared
+  with `boilerplate_signatures` and the `_claim_pages` replay (which
+  shallow-copies the shared blocks per call so `aside`/`margin` marks
+  can't leak between the table and figure replays) — plus the
   same `_strip_clip`, seeded by the eval's own boilerplate set and
   resolved profile so the signature/pattern exclusions match order's.
   Block tuples carry no line dirs/counts, so the dict pass is required;

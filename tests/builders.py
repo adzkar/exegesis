@@ -19,13 +19,17 @@ def _page(doc, *, width=W, height=H):
     return doc.new_page(width=width, height=height)
 
 
-def text(page, x, y, content, *, size=BODY, font="helv", rotate=0):
+def text(page, x, y, content, *, size=BODY, font="helv", rotate=0,
+         color=None):
     """Place text at a baseline, retaining explicit rotation for direction contracts."""
-    page.insert_text((x, y), content, fontsize=size, fontname=font, rotate=rotate)
+    page.insert_text(
+        (x, y), content, fontsize=size, fontname=font, rotate=rotate,
+        color=color,
+    )
 
 
 def block(page, x, y, lines, *, size=BODY, font="helv", leading=None,
-          rotate=0):
+          rotate=0, color=None):
     """Keep adjacent lines in one text operation to reproduce fused PDF blocks."""
     if not isinstance(lines, str):
         lines = "\n".join(lines)
@@ -33,13 +37,14 @@ def block(page, x, y, lines, *, size=BODY, font="helv", leading=None,
         (x, y), lines, fontsize=size, fontname=font,
         lineheight=leading / size if leading is not None else 1.25,
         rotate=rotate,
+        color=color,
     )
 
 
-def paragraph(page, rect, content, *, size=BODY, font="helv"):
+def paragraph(page, rect, content, *, size=BODY, font="helv", color=None):
     """Reject overflowing textboxes instead of silently generating empty fixtures."""
     remaining = page.insert_textbox(
-        fitz.Rect(rect), content, fontsize=size, fontname=font,
+        fitz.Rect(rect), content, fontsize=size, fontname=font, color=color,
     )
     assert remaining >= 0, f"fixture text does not fit {rect}: {content!r}"
 

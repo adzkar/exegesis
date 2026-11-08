@@ -337,14 +337,37 @@ def test_eval_stacked_fused_heads_are_excused(tmp_path):
 
 def _stub_page(blocks):
     """A stand-in `page` for `_page_ctx`: dict extraction plus the
-    rect/mediabox/rotation attributes the clip and strip arms read."""
+    rect/mediabox/rotation attributes the clip and strip arms read.
+    `get_pixmap` returns an all-white page raster so the invisible-span
+    drop sees a light ground under any candidate span. `get_text`
+    serves tuple form for "blocks" — snapshotted at construction so it
+    keeps the pre-drop extents and ghost words the raw stream reports,
+    while the dict form shares the mutable dicts `_prepared_page`
+    drops."""
+    raw_tuples = [
+        (*b["bbox"],
+         "".join(
+             "".join(s["text"] for s in l["spans"]) + "\n"
+             for l in b.get("lines", [])),
+         i, b["type"])
+        for i, b in enumerate(blocks)
+    ]
+
     class _Page:
         rect = fitz.Rect(0, 0, W, H)
         mediabox = fitz.Rect(0, 0, W, H)
         rotation = 0
+        rotation_matrix = fitz.Matrix(1, 0, 0, 1, 0, 0)
 
-        def get_text(self, _kind):
+        def get_text(self, kind):
+            if kind == "blocks":
+                return raw_tuples
             return {"blocks": blocks}
+
+        def get_pixmap(self, **_kw):
+            pix = fitz.Pixmap(fitz.csGRAY, fitz.IRect(0, 0, W, H))
+            pix.clear_with(255)
+            return pix
 
     return _Page()
 
@@ -383,6 +406,181 @@ def test_page_ctx_strip_clip_reads_post_split_blocks():
     page = _stub_page([fused, tall(20, 40), tall(560, 580)])
     ctx = eval_epub._page_ctx(page, {_signature("Strip Journal")}, EN)
     assert ctx.rtbl == fitz.Rect(20, 300, 580, 520)
+
+
+def test_inv_words_concatenates_spans_per_line():
+    """A ghost token split across spans of one line counts once in the
+    raw text layer — `inv_words` must concatenate per line (the
+    `head_words` precedent) or the excuse misses and the joined token
+    reports as genuine loss (#63)."""
+    import importlib.util
+
+    from exegesis.lang import EN
+
+    spec = importlib.util.spec_from_file_location("eval_epub", EVAL)
+    eval_epub = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(eval_epub)
+
+    ghost = {
+        "type": 0, "bbox": (36, 300, 150, 314),
+        "lines": [{
+            "bbox": (36, 300, 150, 314), "dir": (1, 0),
+            "spans": [
+                {"text": "a111", "size": 10, "color": 0xFFFFFF,
+                 "bbox": (36, 300, 80, 314)},
+                {"text": "1111111", "size": 10, "color": 0xFFFFFF,
+                 "bbox": (80, 300, 150, 314)},
+            ],
+        }],
+    }
+    ctx = eval_epub._page_ctx(_stub_page([ghost]), set(), EN)
+    assert ctx.inv_words == ["a1111111111"]
+
+
+def test_drop_arms_grade_post_drop_bbox():
+    """The drop arms judge the extent convert saw — a fused block that
+    lost its ghost spans is graded on the recomputed bbox, not the raw
+    tuple's fused one, so the ghost's reach can't pull it across a zone
+    threshold in either direction (#63)."""
+    import importlib.util
+
+    from exegesis.lang import EN
+
+    spec = importlib.util.spec_from_file_location("eval_epub", EVAL)
+    eval_epub = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(eval_epub)
+
+    # a furniture line fused above a ghost line: the raw tuple's fused
+    # y1=200 sits mid-page where no zone arm reaches, but post-drop the
+    # block ends at y=52 — inside the top-7% pattern zone where `www.`
+    # heads drop. Convert stripped the text; grading the fused extent
+    # would keep it and flag genuine loss on a correct conversion.
+    fused = {
+        "type": 0, "bbox": (72, 40, 200, 200),
+        "lines": [
+            {"bbox": (72, 40, 200, 52), "dir": (1, 0),
+             "spans": [{"text": "www.journal.org", "size": 9,
+                        "color": 0, "bbox": (72, 40, 200, 52)}]},
+            {"bbox": (72, 188, 200, 200), "dir": (1, 0),
+             "spans": [{"text": "a111", "size": 9, "color": 0xFFFFFF,
+                        "bbox": (72, 188, 200, 200)}]},
+        ],
+    }
+    # a directionless margin strip whose ghost line widens the fused
+    # extent past the <25pt fallback: fused it measures 52pt, post-drop
+    # the kept line is 20pt — convert strips it either directionless
+    strip = {
+        "type": 0, "bbox": (560, 100, 612, 420),
+        "lines": [
+            {"bbox": (592, 100, 612, 420), "dir": (0, 0),
+             "spans": [{"text": "Side Note", "size": 9, "color": 0,
+                        "bbox": (592, 100, 612, 420)}]},
+            {"bbox": (560, 100, 592, 420), "dir": (0, 0),
+             "spans": [{"text": "a222", "size": 9, "color": 0xFFFFFF,
+                        "bbox": (560, 100, 592, 420)}]},
+        ],
+    }
+    ctx = eval_epub._page_ctx(_stub_page([fused, strip]), set(), EN)
+    # raw `get_text("blocks")` tuples still report the fused extents
+    raw_fused = (72, 40, 200, 200, "www.journal.org\na111\n", 0, 0)
+    raw_strip = (560, 100, 612, 420, "Side Note\na222\n", 1, 0)
+    assert eval_epub._dropped(raw_fused, ctx, set(), EN)
+    assert eval_epub._dropped(raw_strip, ctx, set(), EN)
+
+
+def test_drop_arms_grade_post_drop_text():
+    """The content arms grade the text convert saw — ghost words in the
+    raw tuple can't fail the page-number fullmatch, break a signature
+    match, or smuggle furniture vocabulary into an excuse, and the
+    furniture counter can't double-count them next to `inv_words`
+    (#63)."""
+    import importlib.util
+
+    from exegesis.lang import EN
+
+    spec = importlib.util.spec_from_file_location("eval_epub", EVAL)
+    eval_epub = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(eval_epub)
+
+    def _line(y0, y1, *spans):
+        return {"bbox": (72, y0, 200, y1), "dir": (1, 0),
+                "spans": list(spans)}
+
+    def _span(text, y0, y1, color):
+        return {"text": text, "size": 9, "color": color,
+                "bbox": (72, y0, 200, y1)}
+
+    def _block(y0, y1, *lines):
+        return {"type": 0, "bbox": (72, y0, 200, y1),
+                "lines": list(lines)}
+
+    page = _stub_page([
+        # page number fused with a ghost — post-drop "17" fullmatches
+        # the \d{1,4} arm; the raw "17 a111" never could
+        _block(750, 775,
+               _line(750, 762, _span("17", 750, 762, 0)),
+               _line(763, 775, _span("a111", 763, 775, 0xFFFFFF))),
+        # a signature head fused with a ghost — the raw sig
+        # "weeklyjournala111" misses the post-drop boilerplate set
+        _block(100, 127,
+               _line(100, 112, _span("Weekly Journal", 100, 112, 0)),
+               _line(113, 127, _span("a111", 113, 127, 0xFFFFFF))),
+        # kept text fused with a furniture-vocab ghost — the ghost's
+        # `www.` must not excuse what convert kept
+        _block(30, 55,
+               _line(30, 42, _span("Real content sentence", 30, 42, 0)),
+               _line(43, 55, _span("www.mark.org", 43, 55, 0xFFFFFF))),
+    ])
+    boiler = {"weeklyjournal"}
+    ctx = eval_epub._page_ctx(page, boiler, EN)
+    raw = page.get_text("blocks")
+    assert eval_epub._dropped(raw[0], ctx, boiler, EN)
+    assert eval_epub._dropped(raw[1], ctx, boiler, EN)
+    assert not eval_epub._dropped(raw[2], ctx, boiler, EN)
+    furn = eval_epub.furniture_words([ctx], boiler, EN)
+    # ghost tokens excuse once — through `inv_words` — not again
+    # through the dropped block's raw text
+    assert furn["17"] == 1 and furn["weekly"] == 1
+    assert furn["a111"] == 2 and furn["www"] == 1
+    assert "real" not in furn and "content" not in furn
+
+
+def test_furniture_words_ignores_vanished_ghost_blocks():
+    """A fully-invisible furniture-shaped block drops on its raw tuple
+    (a true `dmap` miss — it is gone from the post-drop dict stream)
+    but must not recount its ghost tokens: `inv_words` already excused
+    them, and a recount could mask a same-token genuine loss elsewhere
+    (#63)."""
+    import importlib.util
+
+    from exegesis.lang import EN
+
+    spec = importlib.util.spec_from_file_location("eval_epub", EVAL)
+    eval_epub = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(eval_epub)
+
+    page = _stub_page([
+        # an invisible page-number stamp in the bottom 7% zone
+        {"type": 0, "bbox": (72, 750, 200, 762),
+         "lines": [{"bbox": (72, 750, 200, 762), "dir": (1, 0),
+                    "spans": [{"text": "42", "size": 9,
+                               "color": 0xFFFFFF,
+                               "bbox": (72, 750, 200, 762)}]}]},
+        # an invisible `www.` foot in the top 7% zone
+        {"type": 0, "bbox": (72, 30, 200, 42),
+         "lines": [{"bbox": (72, 30, 200, 42), "dir": (1, 0),
+                    "spans": [{"text": "www.mark.org", "size": 9,
+                               "color": 0xFFFFFF,
+                               "bbox": (72, 30, 200, 42)}]}]},
+    ])
+    ctx = eval_epub._page_ctx(page, set(), EN)
+    raw = page.get_text("blocks")
+    # the ghost shapes still read as furniture on the raw tuples —
+    # `_dropped` stays True so `_kept` keeps them out of kept streams
+    assert eval_epub._dropped(raw[0], ctx, set(), EN)
+    assert eval_epub._dropped(raw[1], ctx, set(), EN)
+    furn = eval_epub.furniture_words([ctx], set(), EN)
+    assert furn["42"] == 1 and furn["www"] == 1  # inv_words only
 
 
 def test_eval_bottom_footer_is_excused(tmp_path):

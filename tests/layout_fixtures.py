@@ -447,6 +447,27 @@ def retained_content(path):
     return _save(doc, path)
 
 
+def invisible_text(path):
+    """White placeholder lines among visible prose must not emit —
+    PLOS's `a111…` front-matter runs (#63); a dark banner's white label
+    stays."""
+    doc = fitz.open()
+    page = _page(doc)
+    paragraph(page, (72, 140, 540, 220),
+              "Opening prose sits ahead of the invisible placeholders and "
+              "must keep its place at the head of the body text.")
+    for y in (260, 285, 310):
+        text(page, 36, y, "a1111111111", color=(1, 1, 1))
+    # near-white counts too — the channel floor covers off-white fills
+    text(page, 36, 335, "a2222222222", color=(0.95, 0.96, 0.97))
+    paragraph(page, (72, 380, 540, 460),
+              "Trailing prose resumes after the placeholder run with "
+              "ordinary sentences that keep the visible reading order.")
+    page.draw_rect(fitz.Rect(72, 500, 300, 540), fill=(0.1, 0.1, 0.2))
+    text(page, 90, 525, "Banner label", color=(1, 1, 1))
+    return _save(doc, path)
+
+
 def mid_page_span(path):
     """Columns above a mid-page span must keep column-major order (#60):
     page 0 bands a wide table-like span under two live columns (Wiley's
@@ -547,4 +568,5 @@ GENERATORS = {
     "retained_content": retained_content,
     "mid_page_span": mid_page_span,
     "banded_sections": banded_sections,
+    "invisible_text": invisible_text,
 }
