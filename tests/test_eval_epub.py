@@ -337,14 +337,22 @@ def test_eval_stacked_fused_heads_are_excused(tmp_path):
 
 def _stub_page(blocks):
     """A stand-in `page` for `_page_ctx`: dict extraction plus the
-    rect/mediabox/rotation attributes the clip and strip arms read."""
+    rect/mediabox/rotation attributes the clip and strip arms read.
+    `get_pixmap` returns an all-white page raster so the invisible-span
+    drop sees a light ground under any candidate span."""
     class _Page:
         rect = fitz.Rect(0, 0, W, H)
         mediabox = fitz.Rect(0, 0, W, H)
         rotation = 0
+        rotation_matrix = fitz.Matrix(1, 0, 0, 1, 0, 0)
 
         def get_text(self, _kind):
             return {"blocks": blocks}
+
+        def get_pixmap(self, **_kw):
+            pix = fitz.Pixmap(fitz.csGRAY, fitz.IRect(0, 0, W, H))
+            pix.clear_with(255)
+            return pix
 
     return _Page()
 
@@ -383,6 +391,35 @@ def test_page_ctx_strip_clip_reads_post_split_blocks():
     page = _stub_page([fused, tall(20, 40), tall(560, 580)])
     ctx = eval_epub._page_ctx(page, {_signature("Strip Journal")}, EN)
     assert ctx.rtbl == fitz.Rect(20, 300, 580, 520)
+
+
+def test_inv_words_concatenates_spans_per_line():
+    """A ghost token split across spans of one line counts once in the
+    raw text layer — `inv_words` must concatenate per line (the
+    `head_words` precedent) or the excuse misses and the joined token
+    reports as genuine loss (#63)."""
+    import importlib.util
+
+    from exegesis.lang import EN
+
+    spec = importlib.util.spec_from_file_location("eval_epub", EVAL)
+    eval_epub = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(eval_epub)
+
+    ghost = {
+        "type": 0, "bbox": (36, 300, 150, 314),
+        "lines": [{
+            "bbox": (36, 300, 150, 314), "dir": (1, 0),
+            "spans": [
+                {"text": "a111", "size": 10, "color": 0xFFFFFF,
+                 "bbox": (36, 300, 80, 314)},
+                {"text": "1111111", "size": 10, "color": 0xFFFFFF,
+                 "bbox": (80, 300, 150, 314)},
+            ],
+        }],
+    }
+    ctx = eval_epub._page_ctx(_stub_page([ghost]), set(), EN)
+    assert ctx.inv_words == ["a1111111111"]
 
 
 def test_eval_bottom_footer_is_excused(tmp_path):
