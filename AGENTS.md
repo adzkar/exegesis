@@ -59,9 +59,17 @@ spans painted invisibly — near-white fill (per-channel floor, so
 saturated colors survive) on a light rendered ground (`_light_ground`
 medians the page pixmap under the span bbox, so white on a dark banner
 stays) — publishers' invisible placeholders (PLOS's `a111…` runs)
-otherwise emit as prose (#63); emptied lines and blocks go with them.
-`eval_epub.py` runs the same helper in `_page_ctx` so the dropped words
-excuse as expected loss, not genuine word loss.
+otherwise emit as prose (#63); emptied lines and blocks go with them,
+and surviving containers recompute their bboxes so no ghost extent
+votes, orders, or renders (same-x0 adjacent lines fuse into one dict
+block, so a placeholder can share its container with visible text).
+`eval_epub.py` prepares each page once (`_prepared_page`) and shares
+that post-drop dict across `boilerplate_signatures`, `_page_ctx`, and
+the `_claim_pages` replay — `dmap`/`splits` key on the pre-drop bbox
+the raw block tuples still report, and `inv_words` concatenates each
+dropped line's spans like `_line_text` so a token split across spans
+excuses once — so the dropped words excuse as expected loss, not
+genuine word loss, and ghost geometry can't vote in the mirror.
 
 - **Column order** — column edges are x0 clusters found on ≥50% of pages
   (doc-wide voting kills phantom edges from bylines/headings; furniture-
@@ -536,7 +544,11 @@ cases deselected). Converter heuristics and golden snapshots are unchanged.
   intersecting body text; sampling membership only at the first ≥3
   point refused legit tables whose margin cells open the band earliest.
 - `scripts/eval_epub.py` mirrors via a per-page `_page_ctx` (displayed
-  rect, mediabox width, upright dir, dict blocks keyed by bbox) plus the
+  rect, mediabox width, upright dir, dict blocks keyed by pre-drop bbox)
+  built over `_prepared_page`'s single post-drop dict stream — shared
+  with `boilerplate_signatures` and the `_claim_pages` replay (which
+  shallow-copies the shared blocks per call so `aside`/`margin` marks
+  can't leak between the table and figure replays) — plus the
   same `_strip_clip`, seeded by the eval's own boilerplate set and
   resolved profile so the signature/pattern exclusions match order's.
   Block tuples carry no line dirs/counts, so the dict pass is required;
