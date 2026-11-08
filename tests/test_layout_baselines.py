@@ -26,7 +26,10 @@ from exegesis.analyze import (
     _is_signature_furniture,
     _is_spanning,
     _reading_columns,
+    _voting_texts,
+    _wrap_fragments,
 )
+from exegesis.lang import EN
 from exegesis.text import _block_text
 
 REQUIRED_CONTENT = {
@@ -48,6 +51,13 @@ REQUIRED_CONTENT = {
           for side in ("one", "two", "three") for part in ("upper", "lower")),
     ],
     "magazine_wrap": ["Wrap opening", "Near upper", "Near lower", "Far upper", "Far lower", "Resumed body"],
+    "wrap_span_cover": [
+        "Wrap-span abstract", "Left column opening", "Left strip upper",
+        "Left strip lower", "Left column closing", "Right band upper",
+        "Right band lower", "Two opening prose", "Adjacent spanning",
+        "Left mid upper", "Left mid lower", "Two closing prose",
+        "Right beside", "Right flowing",
+    ],
     "scan_2up": [f"{side} spread {part}" for side in ("Left", "Right")
                  for part in ("opening", "middle", "closing")],
     "vector_figure": ["Vector body", "Figure 1. Vector trend.", "Vector continuation"],
@@ -244,6 +254,30 @@ def _contract_wrap(pages):
     assert _is_spanning(resumed, edges)
     assert _assign_column(resumed, edges) == 0
     assert _assign_column(_find(pdict, "Far upper"), edges) == 1
+    # the far-side strip's second x0 must not seed a column edge (#38):
+    # wrap fragments don't vote, so the document grid stays single-column
+    assert _doc_column_edges(pages, _boilerplate_signatures(pages)) == [72]
+
+
+def _contract_wrap_span(pages):
+    """A full-width span must not lend the wrap claim its cover on a real
+    two-column page — page 1's span is distant (horizontal-only proof),
+    page 2's adjoins the band but the column flows past the float."""
+    assert len(pages) == 2
+    sigs = _boilerplate_signatures(pages)
+    for page, pdict in pages:
+        images = [block for block in pdict["blocks"] if block["type"] == 1]
+        assert len(images) == 1
+        assert _column_edges(_texts(pdict)) == [50, 280]
+        # no block on either page is a wrap fragment: the second column's
+        # votes survive both the distant and the adjacent cover
+        assert _wrap_fragments(
+            pdict["blocks"], _eligible(page, pdict, sigs)
+        ) == set()
+        assert _column_edges(
+            _voting_texts(page, pdict, sigs, EN)
+        ) == [50, 280]
+    assert _doc_column_edges(pages, sigs) == [50, 280]
 
 
 def _contract_twoup(pages):
@@ -521,6 +555,7 @@ CONTRACTS = {
     "mixed_parity_2col": _contract_parity,
     "mixed_2col_plus_3col": _contract_three_col,
     "magazine_wrap": _contract_wrap,
+    "wrap_span_cover": _contract_wrap_span,
     "scan_2up": _contract_twoup,
     "vector_figure": _contract_vector,
     "raster_figure": _contract_raster,
@@ -620,6 +655,23 @@ def _semantic_wrap(result):
     """#38: far-side lines currently follow the already-resumed body."""
     require_order(result[3], "Near upper", "Far upper", "Near lower", "Far lower",
                   "Resumed body", issue="#38 wrapped float")
+
+
+def _semantic_wrap_span(result):
+    """#38's wrap claim must not resurrect #37's zipper on a real 2-col page."""
+    require(result[2]["columns"] == 2,
+            f"a genuine second column survives beside the in-column float: "
+            f"{result[2]['columns']}")
+    require_order(result[3],
+                  "Wrap-span abstract", "Left column opening",
+                  "Left strip upper", "Left strip lower",
+                  "Left column closing", "Right band upper",
+                  "Right band lower", issue="#38 distant-span cover")
+    require_order(result[3],
+                  "Two opening prose", "Adjacent spanning",
+                  "Left mid upper", "Left mid lower",
+                  "Two closing prose", "Right beside", "Right flowing",
+                  issue="#38 adjacent-head cover")
 
 
 def _semantic_twoup(result):
@@ -808,6 +860,7 @@ SEMANTICS = {
     "mixed_parity_2col": _semantic_parity,
     "mixed_2col_plus_3col": _semantic_three_col,
     "magazine_wrap": _semantic_wrap,
+    "wrap_span_cover": _semantic_wrap_span,
     "scan_2up": _semantic_twoup,
     "vector_figure": _semantic_vector,
     "raster_figure": _semantic_raster,
@@ -823,9 +876,7 @@ SEMANTICS = {
     "heads_only_phantom": _semantic_heads_only,
     "retained_content": _semantic_retained,
 }
-SYMPTOMS = {
-    "magazine_wrap": "#38 far-side wrap lines follow resumed full-width body",
-}
+SYMPTOMS = {}
 SEMANTIC_CASES = [
     pytest.param(name, marks=pytest.mark.xfail(
         strict=True, raises=SemanticMismatch, reason=SYMPTOMS[name],
@@ -847,6 +898,7 @@ READING_MAPS = {
     "two_col_heading_run": [0, 1],
     "two_col_label_list": [0, 1],
     "span_only_edge": [0, 1],
+    "wrap_span_cover": [0, 1],
 }
 
 

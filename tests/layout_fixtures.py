@@ -85,6 +85,52 @@ def magazine_wrap(path):
     return _save(doc, path)
 
 
+def wrap_span_cover(path):
+    """A real 2-col page + in-column float must not lose an edge to the
+    wrap claim (#38 vs #57): page 1's distant abstract can only satisfy
+    a horizontal cover test; page 2's spanning head adjoins the band, so
+    the col-2 block flowing past the float is what keeps the edge."""
+    doc = fitz.open()
+    page = _page(doc)
+    paragraph(page, (50, 90, 540, 170),
+              "Wrap-span abstract crosses both columns well above the float "
+              "and keeps inking wide enough to reach the page's far edge, "
+              "the way a journal abstract fills the whole text width.")
+    image(page, (170, 290, 250, 430))
+    for y, label in ((310, "upper"), (400, "lower")):
+        text(page, 50, y, f"Left strip {label}")
+    paragraph(page, (50, 190, 260, 255),
+              "Left column opening keeps the first column's prose above "
+              "the in-column float.")
+    paragraph(page, (50, 520, 260, 585),
+              "Left column closing keeps the first column's prose below "
+              "the in-column float.")
+    # both second-column blocks sit inside the image band — only the
+    # cover's distance can keep their votes
+    for y, label in ((300, "upper"), (390, "lower")):
+        paragraph(page, (280, y, 505, y + 45),
+                  f"Right band {label} sits beside the float inside the "
+                  "second column.")
+    page = _page(doc)
+    paragraph(page, (50, 160, 260, 225),
+              "Two opening prose keeps the first column's flow above "
+              "the spanning head.")
+    paragraph(page, (50, 240, 540, 285),
+              "Adjacent spanning section head crosses the whole text "
+              "width above the float and inks all the way to the far edge.")
+    image(page, (170, 310, 250, 420))
+    for y, label in ((340, "upper"), (390, "lower")):
+        text(page, 50, y, f"Left mid {label}")
+    paragraph(page, (280, 320, 505, 370),
+              "Right beside sits inside the second column next to the float.")
+    paragraph(page, (280, 450, 505, 510),
+              "Right flowing keeps the second column past the float's edge.")
+    paragraph(page, (50, 560, 260, 630),
+              "Two closing prose keeps the first column's flow below "
+              "the float.")
+    return _save(doc, path)
+
+
 def scan_2up(path):
     """A symmetric two-up spread already reads left page then right page (#39)."""
     doc = fitz.open()
@@ -356,6 +402,7 @@ GENERATORS = {
     "mixed_parity_2col": mixed_parity_2col,
     "mixed_2col_plus_3col": mixed_2col_plus_3col,
     "magazine_wrap": magazine_wrap,
+    "wrap_span_cover": wrap_span_cover,
     "scan_2up": scan_2up,
     "vector_figure": vector_figure,
     "raster_figure": raster_figure,

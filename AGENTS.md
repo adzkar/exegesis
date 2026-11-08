@@ -52,7 +52,21 @@ chapters.
 
 - **Column order** — column edges are x0 clusters found on ≥50% of pages
   (doc-wide voting kills phantom edges from bylines/headings; furniture-
-  shaped blocks don't vote). Blocks crossing a gutter are spans; each
+  shaped blocks don't vote). Wrap strips beside an in-column image don't
+  vote either: `analyze._wrap_fragments` claims eligible blocks that sit
+  on both sides of a non-trivial image inside a band some eligible block
+  encloses horizontally *and* adjoins vertically — the resume/opening
+  prose that proves one logical column (a distant full-width span like a
+  title or abstract horizontally encloses any strip pair, so the cover
+  must sit within `WRAP_COVER_GAP` of the band before it proves
+  anything) — and only the side away from the enclosing x0 is
+  withheld, so the strip's second x0 can't seed a phantom column (#38;
+  an edge-flush float with text on one side is deliberately not claimed).
+  A strip whose x0 is shared by blocks flowing past the band keeps its
+  vote either way: that column continues above or below the float, the
+  genuine second-column case the cover test alone can't rule out once a
+  spanning head sits close to the band.
+  Blocks crossing a gutter are spans; each
   column emits its own sequence of non-spans + covering spans in y order,
   columns left to right. Works for 1/2/3-column layouts.
   The committed doc grid is only the *prior*: `analyze._page_grids`

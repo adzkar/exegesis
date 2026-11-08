@@ -1,7 +1,10 @@
 """Standalone layout diagnosis for gitignored ``journals/**/*.pdf``.
 
 Retains document column profiles, raw page x0 clusters/off-grid candidates,
-wrapped-float and central-whitespace probes, an actual reading-order sample,
+wrapped-float and central-whitespace probes, the converter's own
+``_wrap_fragments`` claim count per page (flagged separately on
+multi-column pages with a full-width span, the false-positive shape a
+distant cover can create), an actual reading-order sample,
 and EPUB lint/chapter body text. Adds per-page writing directions and rotated-line
 bboxes, short-fragment locations, and per-document-edge heading-like line shares.
 
@@ -79,10 +82,13 @@ from exegesis.analyze import (
     _column_edges,
     _grids_agree,
     _heading_like,
+    _is_furniture,
+    _is_signature_furniture,
     _is_spanning,
     _outdent_like,
     _reading_columns,
     _vector_areas,
+    _wrap_fragments,
 )
 from exegesis.const import (
     DRAWING_PAD,
@@ -264,6 +270,38 @@ def _wrap_flags(blocks, edges):
     return hits, home_hits
 
 
+def _wrap_claim_probe(blocks, page, edges, state):
+    """``_wrap_fragments`` claims on this page's eligible texts — the
+    survey flag for wrap-claim false positives.
+
+    Rebuilds ``_voting_texts``'s eligibility (non-furniture, non-aside,
+    non-signature) over the render-time block list — split heads and
+    pass-2 aside marks are already applied, so the count can understate
+    what analysis-time voting saw, never overstate it: ``claimed``
+    blocks had their edge votes withheld.
+    ``span_multicol`` marks the risky shape — claims on a page whose
+    active grid already has ≥2 columns *and* a full-width span that
+    could masquerade as the resume/opening cover.
+    """
+    eligible = [
+        b
+        for b in blocks
+        if b["type"] == 0
+        and b.get("aside") is None
+        and not _is_furniture(
+            b, page, _block_text(b, state.lang), state.lang
+        )
+        and not _is_signature_furniture(
+            b, page.rect.height, state.boilerplate
+        )
+    ]
+    claimed = _wrap_fragments(blocks, eligible)
+    span_multicol = bool(claimed) and len(edges) >= 2 and any(
+        b["type"] == 0 and _is_spanning(b, edges) for b in blocks
+    )
+    return len(claimed), span_multicol
+
+
 def _twoup_flag(page, blocks):
     """Probe a clear central 16% strip with content spanning >55% page height.
 
@@ -403,6 +441,7 @@ def _page_report(local):
             c for c in clusters if all(abs(c - e) >= EDGE_TOL for e in edges)
         ],
         "wrap": _wrap_flags(blocks, edges),
+        "wrap_claim": _wrap_claim_probe(blocks, page, edges, state),
         "twoup": _twoup_flag(page, blocks),
         "directions": directions,
         "rotated": rotated,
@@ -521,6 +560,8 @@ def _print_report(stats, pages, fold_calls):
         f"  INPUT geometry probes: off-grid pages={sum(bool(p['off_grid']) for p in pages)}/{len(pages)}  "
         f"wrapped-float-candidates={sum(p['wrap'][0] for p in pages)} "
         f"(single-home-column={sum(p['wrap'][1] for p in pages)})  "
+        f"wrap-claim-blocks={sum(p['wrap_claim'][0] for p in pages)} "
+        f"(on-span-multicol={sum(p['wrap_claim'][1] for p in pages)})  "
         f"2-up-whitespace-pages={sum(p['twoup'] for p in pages)}"
     )
     sample = min(2, len(pages) - 1)
@@ -538,7 +579,8 @@ def _print_report(stats, pages, fold_calls):
             f"  page {p['index']} (0-based): {p['width']:.0f}x{p['height']:.0f} "
             f"/Rotate={p['rotation']} grid={grid_tag} src={p['grid_source']} "
             f"raw_x0_clusters={_bbox(p['clusters'])} "
-            f"off-grid={_bbox(p['off_grid'])}"
+            f"off-grid={_bbox(p['off_grid'])} "
+            f"wrap-claimed={p['wrap_claim'][0]}"
         )
         print(f"    INPUT short <={SHORT_CHARS}: {_short_counts(raw)}")
         print(f"    SURVIVING BODY-FLOW short <={SHORT_CHARS}: {_short_counts(body)}")
