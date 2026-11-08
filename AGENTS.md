@@ -158,8 +158,10 @@ stats payload all read the clean values (#58).
   with footnote markers (`*†‡§`) are never headings.
   Sentence-like text with periods is rejected, and so is text opening
   lowercase — a mid-sentence fragment at heading size is prose, though
-  bio-paper heads opening on a non-ASCII lowercase (`β-blockers`) or a
-  letter fused to a digit (`p53-mediated apoptosis`) stay eligible. A
+  bio-paper heads opening on a non-ASCII lowercase (`β-blockers`), a
+  letter fused to a digit (`p53-mediated apoptosis`), or a camelCase
+  gene name whose lowercase prefix closes on a capital (`mTOR`,
+  `siRNA`) stay eligible. A
   marker-anchored name list (`Jane Doe 1, John Roe 2*` — ≥2 comma/joiner
   segments closing on affiliation digits or `*†‡§`) is never a heading
   at block or line level; it emits through the byline path instead —
