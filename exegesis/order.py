@@ -14,7 +14,7 @@ from .analyze import (
 )
 from .const import BAND_MIN_DEPTH, BAND_MIN_GAP
 from .lang import EN, LangProfile
-from .text import _block_lines, _block_text, _span_is_bold
+from .text import _block_lines, _block_text, _line_text, _span_is_bold
 
 
 def _ordered_blocks(
@@ -185,6 +185,18 @@ def _ordered_blocks(
             ]
             body_size = median(ss) if ss else 10.0
 
+        def _label_mark(s):
+            """True when s opens with a named section label that doesn't
+            run on into lowercase prose — render._section_label's rest
+            check, mirrored (render imports order, not the reverse): a
+            label word opening prose — 'Funding for this work…' — starts
+            a sentence, not a section head."""
+            m = lang.section_label.match(s)
+            if not m:
+                return False
+            rest = s[m.end():].strip()
+            return not rest or rest[0].isdigit() or rest[0].isupper()
+
         def _mark(b):
             """A section mark — an oversized head, a named label, or an
             all-bold heading-shaped block (the h2 gates' vocabulary, so
@@ -195,20 +207,21 @@ def _ordered_blocks(
             t = _block_text(b, lang)
             if not t:
                 return False
-            spans = [s for l in _block_lines(b) for s in l["spans"]]
+            lines = _block_lines(b)
+            spans = [s for l in lines for s in l["spans"]]
             if max((s["size"] for s in spans), default=0) >= (
                 body_size * 1.3
             ):
                 return True
-            m = lang.section_label.match(t)
-            if m:
-                # the h2 gate's own rest check, mirrored here (render
-                # imports order, not the reverse): a label word opening
-                # lowercase prose — 'Funding for this work…' — starts a
-                # sentence, not a section head
-                rest = t[m.end():].strip()
-                if not rest or rest[0].isdigit() or rest[0].isupper():
-                    return True
+            # the h2 gate applies the label check to the first *line* —
+            # a fused 'Data Availability'/'data are…' head still heads
+            # in render — while a wrapped head like 'References and'/
+            # 'Notes' only matches the joined text, so both surfaces
+            # are tried
+            if _label_mark(t) or (
+                lines and _label_mark(_line_text(lines[0]).strip())
+            ):
+                return True
             return bool(spans) and all(
                 _span_is_bold(s) or not s["text"].strip() for s in spans
             ) and _heading_like(b, t)

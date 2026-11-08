@@ -1076,3 +1076,62 @@ def test_drop_cap_label_marks_under_own_lang(tmp_path):
     require_order(body, "Alpha upper", "Beta upper",
                   "Alpha lower", "Anhang", "Beta lower",
                   issue="#61 drop-cap label under own profile")
+
+
+def test_fused_label_first_line_marks(tmp_path):
+    """A fused head block whose first line is a bare label over prose —
+    'Data Availability'/'data are available…' — still heads in render
+    (the h2 gate checks the first line), so it must mark the seam too:
+    the joined rest's lowercase prose can't hide it."""
+    doc = fitz.open()
+    _two_col_shared_gap(
+        doc,
+        "Alpha lower resumes the left column under the strip with "
+        "more ordinary flowing sentences.",
+        [lambda page: fused_block(
+            page, 340, 400,
+            ["Data Availability", "data are available on request."]),
+         lambda page: paragraph(
+             page, (340, 430, 530, 530),
+             "Beta lower resumes under the fused head with ordinary "
+             "flowing sentences of its own.")],
+    )
+    path = _save(doc, tmp_path / "fused_label.pdf")
+    with fitz.open(path) as saved:
+        ordered = _ordered_blocks(
+            saved[0], saved[0].get_text("dict")["blocks"],
+            frozenset(), [72.0, 340.0])
+    body = " ".join(
+        _block_text(b) for b in ordered if b["type"] == 0)
+    require_order(body, "Alpha upper", "Beta upper",
+                  "Alpha lower", "Data Availability", "Beta lower",
+                  issue="#61 fused label head marks")
+
+
+def test_wrapped_label_joined_text_marks(tmp_path):
+    """A label head wrapped across two lines — 'References and'/'Notes'
+    — only matches the joined block text (line 0's rest is the lowercase
+    'and'), so the joined-text check stays alongside the first-line
+    one."""
+    doc = fitz.open()
+    _two_col_shared_gap(
+        doc,
+        "Alpha lower resumes the left column under the strip with "
+        "more ordinary flowing sentences.",
+        [lambda page: fused_block(
+            page, 340, 400, ["References and", "Notes"]),
+         lambda page: paragraph(
+             page, (340, 430, 530, 530),
+             "Beta lower resumes under the wrapped head with ordinary "
+             "flowing sentences of its own.")],
+    )
+    path = _save(doc, tmp_path / "wrapped_label.pdf")
+    with fitz.open(path) as saved:
+        ordered = _ordered_blocks(
+            saved[0], saved[0].get_text("dict")["blocks"],
+            frozenset(), [72.0, 340.0])
+    body = " ".join(
+        _block_text(b) for b in ordered if b["type"] == 0)
+    require_order(body, "Alpha upper", "Beta upper",
+                  "Alpha lower", "References and Notes", "Beta lower",
+                  issue="#61 wrapped label joins to mark")
