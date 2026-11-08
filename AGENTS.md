@@ -89,11 +89,12 @@ stats payload all read the clean values (#58).
   column. A strip commits only when each side is a real band
   (`BAND_MIN_DEPTH`×line_h — page-top running heads and page-bottom
   colophons are thin strips, not bands) and its boundary carries at
-  most one *marked* block — a ≥1.3×-body head, a named section label,
-  or an all-bold heading-shaped block, deduped across the columns a
-  span touches. Competing marks mean parallel sections, not a band, and
-  unmarked strips — figure whitespace, ragged column tails — keep
-  ordinary column flow.
+  most one *marked* block — a ≥1.3×-body head, a named section label
+  (mirroring `render._section_label`'s rest check — a label word
+  opening lowercase prose can't mark), or an all-bold heading-shaped
+  block, deduped across the columns a span touches. Competing marks
+  mean parallel sections, not a band, and unmarked strips — figure
+  whitespace, ragged column tails — keep ordinary column flow.
   The committed doc grid is only the *prior*: `analyze._page_grids`
   reruns the same clustering per page on the same eligible items and
   a page orders on its own grid when the candidate clears the
