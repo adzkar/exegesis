@@ -544,7 +544,10 @@ cases deselected). Converter heuristics and golden snapshots are unchanged.
   intersecting body text; sampling membership only at the first ≥3
   point refused legit tables whose margin cells open the band earliest.
 - `scripts/eval_epub.py` mirrors via a per-page `_page_ctx` (displayed
-  rect, mediabox width, upright dir, dict blocks keyed by pre-drop bbox)
+  rect, mediabox width, upright dir, dict blocks keyed by pre-drop bbox —
+  the `_dropped`/`_strip` arms resolve each raw tuple through `dmap` to
+  the recomputed post-drop extent, so a fused ghost's reach can't move
+  a zone or strip threshold either way)
   built over `_prepared_page`'s single post-drop dict stream — shared
   with `boilerplate_signatures` and the `_claim_pages` replay (which
   shallow-copies the shared blocks per call so `aside`/`margin` marks
