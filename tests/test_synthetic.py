@@ -1,5 +1,6 @@
 """Synthetic-PDF integration tests: pages are built with PyMuPDF at
 controlled positions/sizes, so assertions hold without any corpus files."""
+import re
 import zipfile
 
 import fitz
@@ -1281,6 +1282,366 @@ def test_h2_before_first_h1_stays_top_level(tmp_path):
     texts = [t for _lv, t in snap["toc"]]
     assert texts == ["Early Section", "Big Mid Title", "Later Section"]
     assert [lv for lv, _t in snap["toc"]] == [1, 1, 2]
+
+
+def test_single_word_caps_badge_is_label_not_h1(tmp_path):
+    """A single all-caps word at title size (scirep's ``OPEN`` badge)
+    emits ``p.label``, not a heading."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(156, 128, 540, 220),
+        "A shape-changing haptic navigation interface",
+        fontsize=26,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(94, 125, 170, 165), "OPEN", fontsize=18, fontname="hebo"
+    )
+    p.insert_textbox(
+        fitz.Rect(156, 270, 540, 400),
+        "Body text under the title and badge. " * 4,
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "badge.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "badge.epub"
+    convert(pdf, out)
+    body = doc_html(out)["chap_1.xhtml"]
+    assert '<p class="label">OPEN</p>' in body
+    assert "<h1>OPEN" not in body and "<h2>OPEN" not in body
+
+
+def test_page0_edge_front_matter_not_headings(tmp_path):
+    """Front-matter strips on page 0 — a journal name inside the 7%
+    edge, a date strip, a spaced-cap label, and an all-caps-word
+    opener — never promote to headings."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(441, 31, 540, 46), "Journal of Big Data", fontsize=12.4
+    )
+    p.insert_textbox(
+        fitz.Rect(45, 24, 290, 40), "Received: 5 April 2025", fontsize=9.6
+    )
+    p.insert_textbox(
+        fitz.Rect(45, 46, 290, 58),
+        "R E S E A R C H  A R T I C L E",
+        fontsize=9.6,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(60, 89, 200, 104),
+        "RESEARCH Open Access",
+        fontsize=13,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(60, 130, 540, 190),
+        "The Real Paper Title Stands Here Today",
+        fontsize=18,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(60, 220, 540, 340),
+        "Body text follows the front matter and keeps going. " * 4,
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "fm.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "fm.epub"
+    convert(pdf, out)
+    body = doc_html(out)["chap_1.xhtml"]
+    for junk in (
+        "Journal of Big Data",
+        "Received: 5 April 2025",
+        "R E S E A R C H  A R T I C L E",
+        "RESEARCH Open Access",
+    ):
+        assert not re.search(r"<h[12][^>]*>" + re.escape(junk), body), junk
+    assert re.search(r"<h1[^>]*>The Real Paper Title", body)
+
+
+def test_marked_author_line_emits_byline_not_heading(tmp_path):
+    """Name lists with affiliation markers (``Jane Doe 1, John Roe
+    2*``) emit through the byline path and never head chapters —
+    while an unmarked joiner list (``Materials and Methods``) stays
+    heading-eligible."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 60, 540, 100), "Marked Names Study", fontsize=18
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 120, 540, 160),
+        "Jane Doe 1, John Roe 2",
+        fontsize=12,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 200, 540, 250),
+        "Abstract body text follows the byline.",
+        fontsize=BODY,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 400, 540, 440),
+        "Materials and Methods",
+        fontsize=12,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 450, 540, 510),
+        "Section body text under the real heading.",
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "authors.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "authors.epub"
+    convert(pdf, out)
+    body = "".join(doc_html(out).values())
+    assert "<h1>Jane Doe" not in body and "<h2>Jane Doe" not in body
+    assert "Jane Doe 1, John Roe 2" in body
+    assert re.search(r"<h2[^>]*>Materials and Methods</h2>", body)
+
+
+def test_lowercase_start_never_heading(tmp_path):
+    """A period-free line that opens lowercase (a mid-sentence
+    fragment at heading size, like wiley_ee's 9pt abstract lines) is
+    prose, not a heading."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 60, 540, 100), "Case Study", fontsize=18
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 120, 540, 160),
+        "involved in creating the initial plot",
+        fontsize=12,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 170, 540, 240),
+        "Body text continues the sentence.",
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "lower.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "lower.epub"
+    convert(pdf, out)
+    body = "".join(doc_html(out).values())
+    assert "<h2>involved" not in body
+    assert "involved in creating the initial plot" in body
+
+
+def test_page0_long_title_still_h1(tmp_path):
+    """A multi-line ≥1.6x title on page 0 stays h1 even past the
+    generic heading length bound (journal titles run long)."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(56, 100, 520, 280),
+        "An Explainable Artificial Intelligence Integrated Diagnostic "
+        "Model With Feature Engineering And Stacked Ensemble "
+        "Approaches For Detection",
+        fontsize=23,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(56, 300, 540, 420),
+        "Body text under the long title and more of it. " * 4,
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "longtitle.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "longtitle.epub"
+    convert(pdf, out)
+    body = "".join(doc_html(out).values())
+    assert re.search(r"<h1[^>]*>An Explainable Artificial", body)
+
+
+def test_marked_lists_never_steal_page0_h1(tmp_path):
+    """Marked name lists at title size never reach h1 through the
+    long-title rescue arm — neither a veto-demoted block (``Jane Doe
+    1, John Roe 2, / Jill Poe 3, Max Q 4``) nor marked lists past the
+    generic heading bound that never classified at all. A real long
+    title still wins h1."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 150),
+        "Jane Doe 1, John Roe 2,\nJill Poe 3, Max Q 4",
+        fontsize=18,
+        fontname="hebo",
+    )
+    # past MAX_HEADING_CHARS but inside the byline bound — the veto
+    # never ran, so only the rescue arm's own name-list check stops it
+    p.insert_textbox(
+        fitz.Rect(72, 170, 540, 290),
+        "Jane Smith 1, John Bloc 2, Jill Test 3, Max Data 4, Ann Beta "
+        "5, Bob Gama 6, Sam Heda 7, Kim Iota 8, Rob Juna 9, Mia Kapa "
+        "10, Len Loka 11",
+        fontsize=18,
+        fontname="hebo",
+    )
+    # exactly 240 chars — the 2x rescue bound — and past the byline
+    # bound too; the inclusive len(t) <= max_len pairing must keep a
+    # marked list off h1 at the one length a strict < would miss
+    names = ["Zoe Venn 1"] + [
+        f"Author{i} Surname{i} {i}" for i in range(2, 30)
+    ]
+    while len(", ".join(names)) > 240:
+        names.pop()
+    gap = 240 - len(", ".join(names))
+    names[-1] = names[-1].replace(" ", "x" * gap + " ", 1)
+    list240 = ", ".join(names)
+    assert len(list240) == 240
+    p.insert_textbox(
+        fitz.Rect(72, 310, 540, 450),
+        list240,
+        fontsize=18,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 470, 540, 590),
+        "An Explainable Deep Learning Framework for Detecting and "
+        "Validating Early Stage Biomarkers Across Large Multi-Site "
+        "Cohort Studies Worldwide",
+        fontsize=18,
+        fontname="hebo",
+    )
+    # the modal body size must stay 10pt — the large-text blocks above
+    # are the exception, not the document's dominant size
+    p.insert_textbox(
+        fitz.Rect(72, 610, 540, 770),
+        "Body text under the rescued title keeps going and going. " * 11,
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "lists.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "lists.epub"
+    convert(pdf, out)
+    body = "".join(doc_html(out).values())
+    assert re.search(r"<h1[^>]*>An Explainable Deep Learning", body)
+    assert not re.search(r"<h[12][^>]*>[A-Z][a-z]+ [A-Z][a-z]+ \d", body)
+    assert re.search(r'<p class="byline">(<b>)?Jane Doe 1', body)
+    assert "Jane Smith 1" in body and "Zoe Venn 1" in body
+
+
+def test_marked_list_mid_document_stays_body(tmp_path):
+    """A marked list outside the front-matter window — citation- or
+    gene-list shapes like ``Smith J 2010, Jones K 2011`` — emits as
+    body text and never overwrites the real byline behind
+    ``dc:creator``."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 120),
+        "Citation Shapes Study",
+        fontsize=18,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 140, 540, 170),
+        "Ann Real 1, Bob True 2",
+        fontsize=12,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 200, 540, 340),
+        "Body text under the byline keeps the paragraph open. " * 4,
+        fontsize=BODY,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 370, 540, 400),
+        "References",
+        fontsize=12,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 430, 540, 460),
+        "Smith J 2010, Jones K 2011",
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "midlist.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "midlist.epub"
+    convert(pdf, out)
+    body = "".join(doc_html(out).values())
+    assert "Smith J 2010, Jones K 2011" in body
+    assert not re.search(r'class="byline">[^<]*Smith', body)
+    opf = zipfile.ZipFile(out).read("EPUB/content.opf").decode()
+    creator = re.search(r"<dc:creator[^>]*>([^<]+)<", opf).group(1)
+    assert "Ann Real" in creator and "Smith" not in creator
+
+
+def test_bio_heads_survive_lowercase_veto(tmp_path):
+    """Bio-paper heads that legitimately open lowercase — a letter
+    fused to a digit (``p53-mediated apoptosis``), a non-ASCII
+    lowercase (``µm-scale scaffolds``), or a camelCase gene name
+    (``mTOR``, ``siRNA``) — stay heading-eligible; the lowercase veto
+    only marks plain lowercase prose openers."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 80, 540, 120),
+        "Bio Heads Study",
+        fontsize=18,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 140, 540, 250),
+        "Body text under the title keeps running for a while. " * 4,
+        fontsize=BODY,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 290, 540, 320),
+        "p53-mediated apoptosis",
+        fontsize=12,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 330, 540, 430),
+        "Cell death analysis body text follows the section head. " * 4,
+        fontsize=BODY,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 460, 540, 490),
+        "µm-scale scaffolds",
+        fontsize=12,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 500, 540, 600),
+        "Scaffold body text closes the page out. " * 4,
+        fontsize=BODY,
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 620, 540, 650),
+        "mTOR signaling rewires growth",
+        fontsize=12,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 660, 540, 690),
+        "siRNA knockdown suppresses it",
+        fontsize=12,
+        fontname="hebo",
+    )
+    p.insert_textbox(
+        fitz.Rect(72, 700, 540, 770),
+        "Growth signaling body text ends the page. " * 3,
+        fontsize=BODY,
+    )
+    pdf = tmp_path / "bio.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "bio.epub"
+    convert(pdf, out)
+    body = "".join(doc_html(out).values())
+    assert re.search(r"<h2[^>]*>p53-mediated apoptosis</h2>", body)
+    assert re.search(r"<h2[^>]*>µm-scale scaffolds</h2>", body)
+    assert re.search(r"<h2[^>]*>mTOR signaling rewires growth</h2>", body)
+    assert re.search(
+        r"<h2[^>]*>siRNA knockdown suppresses it</h2>", body
+    )
 
 
 def _noise_png(size=120):

@@ -56,12 +56,12 @@ flowchart TD
 | Column edges | x0 clusters found on ≥50% of pages |
 | Full-width span | block crosses a gutter between column edges |
 | Top zone | blocks fully above the first spanning element |
-| h1 | single-line ≥1.6× body, multi-line block all-lines ≥1.6×, or first p0 heading ≥1.3× (promoted) |
-| h2 | standalone ≥1.08× body, or all-bold line/block ≥0.9× body outside edge zones that precedes body-flow text in its column (a heading terminates the follower scan; demotion silences bold-band lines per line and in mixed blocks, though a demoted block's ≥1.3× lines may still emit; the scan is column- and page-local so a column- or page-final bold line stays demoted); no sentence periods, no `*†‡§` opener |
+| h1 | single-line ≥1.6× body, multi-line block all-lines ≥1.6×, or first p0 heading ≥1.3× (promoted); the first p0 multi-line block of ≥1.6× lines also promotes past the length bound (titles run long — one leading label line like `Article` splits off as `p.label`; never a veto-demoted block or a marked-list tail) |
+| h2 | standalone ≥1.08× body, or all-bold line/block ≥0.9× body outside edge zones that precedes body-flow text in its column (a heading terminates the follower scan; demotion silences bold-band lines per line and in mixed blocks, though a demoted block's ≥1.3× lines may still emit; the scan is column- and page-local so a column- or page-final bold line stays demoted); no sentence periods, no `*†‡§` opener, no lowercase opener (non-ASCII lowercase like `β-`, letter-digit openers like `p53-`, and camelCase gene names like `mTOR`/`siRNA` excepted); a marker-anchored name list (`Jane Doe 1, John Roe 2*`) is never a heading at block or line level; on page 0, size-promoted edge-zone candidates demote too — 7%-edge strips or all-caps-word openers (running heads, `RESEARCH` labels, date strips) |
 | Language profile | `--lang`/`convert(lang=)` picks a `LangProfile` (`en`/`de`/`fr`/`es`); furniture, note, section-label, and caption patterns + `abstract_title`/`notes_title`/byline joiner all come from it; unknown codes raise |
 | Section label | `References`, `Supporting Online Material`, `Methods`, … at block start → h2 (respects bold-gate demotion — `Funding …` tails are notes) |
-| Top label | all-caps short text in top 12% of page → `<p class="label">` |
-| Byline | median ≥1.15× body, or directly after h1 + name-like (` and `/`,`); short single-line followers merge; trailing drop-cap letter relocates into the paragraph |
+| Top label | all-caps short text in top 12% of page → `<p class="label">`; a single all-caps word at ≥1.6× emits `p.label` anywhere (badge strips like scirep's `OPEN`) |
+| Byline | median ≥1.15× body, or directly after h1 + name-like (` and `/`,`), or a marker-anchored name list (affiliation digits/`*†‡§` in ≥2 segments) inside the front-matter window (title spread before the first heading, or in the first h1's wake — mid-document marked lists stay body text); short single-line followers merge; trailing drop-cap letter relocates into the paragraph |
 | Abstract | median in (0.75–0.92)× body, inset margins, top half of page 0–1 |
 | Footnote | opens with superscript digit in lower 45% of page |
 | Unnumbered note | bottom 40% + gap >2× line height + <0.95× body, OR acknowledgment opener in bottom 55% |
