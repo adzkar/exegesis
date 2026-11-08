@@ -1,5 +1,7 @@
 """Reading-order reconstruction: column-aware block ordering plus the
 header/footer furniture drops."""
+from collections import Counter
+
 from .analyze import (
     _assign_column,
     _covered_cols,
@@ -93,12 +95,20 @@ def _ordered_blocks(
     spans = {id(b) for b in items if _is_spanning(b, edges)}
     nonspans = [b for b in items if id(b) not in spans]
 
+    if col_map is None:
+        col_map = list(range(len(edges)))
     cut = min((b["bbox"][1] for b in items if id(b) in spans), default=None)
-    top_zone = (
-        sorted((b for b in nonspans if b["bbox"][3] < cut), key=key)
-        if cut is not None
-        else []
-    )
+    # The page header zone is for front matter that precedes the columns,
+    # not for columnar body that happens to sit above a mid-page span.
+    # The set above the first span is columnar — and stays in column
+    # flow — when it fills at least two reading columns with multiple
+    # members each; a sparse region (one column's worth, or lone blocks)
+    # keeps the front-loaded slot it always had. A wide table band or
+    # full-width figure must not y-interleave the columns above it (#60).
+    above = [b for b in nonspans if cut is not None and b["bbox"][3] < cut]
+    occupancy = Counter(col_map[_assign_column(b, edges)] for b in above)
+    columnar = sum(1 for n in occupancy.values() if n >= 2) >= 2
+    top_zone = [] if columnar else sorted(above, key=key)
     top_ids = {id(b) for b in top_zone}
     nonspans = (
         [b for b in nonspans if id(b) not in top_ids]
@@ -106,8 +116,6 @@ def _ordered_blocks(
         else nonspans
     )
 
-    if col_map is None:
-        col_map = list(range(len(edges)))
     # key the sequences by reading column, not physical edge: mapping both
     # non-span assignments and every span's covered columns through
     # ``col_map`` merges an outdent edge's members into the body column's

@@ -125,6 +125,12 @@ REQUIRED_CONTENT = {
     ],
     "retained_content": ["Negative opening", "Normal margin prose", "continues as real content.",
                          "Full-width content", "Negative closing"],
+    "mid_page_span": [
+        *(f"{side} {part}" for side in ("Left", "Right")
+          for part in ("upper", "mid", "lower", "tail", "close")),
+        "Wide band", "Right lone head", "Head alpha", "Head beta",
+        "Page two span", "Two left tail", "Two right tail",
+    ],
 }
 
 
@@ -550,6 +556,26 @@ def _contract_retained(pages):
     assert not _is_furniture(span, page, _block_text(span))
 
 
+def _contract_mid_page_span(pages):
+    """The fixture really sits a mid-page span under two live columns —
+    the collapse's trigger — and a lone right fragment above page 1's
+    first span."""
+    assert len(pages) == 2
+    edges = _doc_column_edges(pages, frozenset())
+    assert len(edges) == 2
+    page0 = pages[0][1]
+    band = _find(page0, "Wide band")
+    assert _is_spanning(band, edges)
+    above = [
+        b for b in _texts(page0)
+        if b["bbox"][3] < band["bbox"][1] and not _is_spanning(b, edges)
+    ]
+    xs = {round(b["bbox"][0]) for b in above}
+    assert {72, 340} <= xs and len(above) == 6
+    page1 = pages[1][1]
+    assert _is_spanning(_find(page1, "Page two span"), edges)
+
+
 CONTRACTS = {
     "mixed_1col_plus_2col": _contract_mixed,
     "mixed_parity_2col": _contract_parity,
@@ -570,6 +596,7 @@ CONTRACTS = {
     "signature_outdent_margin": _contract_signature_margin,
     "heads_only_phantom": _contract_heads_only,
     "retained_content": _contract_retained,
+    "mid_page_span": _contract_mid_page_span,
 }
 
 
@@ -855,6 +882,21 @@ def _semantic_retained(result):
         require(result[3].count(label) == 1, f"negative control dropped/duplicated: {label}")
 
 
+def _semantic_mid_page_span(result):
+    """#60: columns above a mid-page span keep column-major order — the
+    wide band emits at its own y inside column 0 — while page 1's
+    sparse header region keeps its front-loaded slot."""
+    require_order(result[3],
+                  "Left upper", "Left mid", "Left lower", "Wide band",
+                  "Left tail", "Left close", "Right upper", "Right mid",
+                  "Right lower", "Right tail", "Right close",
+                  issue="#60 mid-page span column order")
+    require_order(result[3],
+                  "Right lone head", "Head alpha", "Head beta",
+                  "Page two span", "Two left tail", "Two right tail",
+                  issue="#60 sparse header zone preserved")
+
+
 SEMANTICS = {
     "mixed_1col_plus_2col": _semantic_mixed,
     "mixed_parity_2col": _semantic_parity,
@@ -875,6 +917,7 @@ SEMANTICS = {
     "signature_outdent_margin": _semantic_signature_margin,
     "heads_only_phantom": _semantic_heads_only,
     "retained_content": _semantic_retained,
+    "mid_page_span": _semantic_mid_page_span,
 }
 SYMPTOMS = {}
 SEMANTIC_CASES = [

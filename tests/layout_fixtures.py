@@ -397,6 +397,41 @@ def retained_content(path):
     return _save(doc, path)
 
 
+def mid_page_span(path):
+    """Columns above a mid-page span must keep column-major order (#60):
+    page 0 bands a wide table-like span under two live columns (Wiley's
+    TABLE 1 collapse); page 1 keeps the sparse header zone — a lone
+    right fragment above the first span still front-loads."""
+    doc = fitz.open()
+    page = _page(doc)
+    for x, side in ((72, "Left"), (340, "Right")):
+        for y, part in ((190, "upper"), (300, "mid"), (390, "lower")):
+            paragraph(page, (x, y, x + 200, y + 70),
+                      f"{side} {part} column text wraps over several lines "
+                      "the way a real journal column flows before the band.")
+        for y, part in ((600, "tail"), (690, "close")):
+            paragraph(page, (x, y, x + 200, y + 60),
+                      f"{side} {part} column text resumes under the band "
+                      "and keeps flowing inside its own column.")
+    paragraph(page, (72, 480, 540, 560),
+              "Wide band crosses the whole text width like a landscape "
+              "table or a full-width figure caption strip, forcing every "
+              "column to hold its members above and below it.")
+    page = _page(doc)
+    text(page, 340, 160, "Right lone head", size=13)
+    for y, part in ((200, "alpha"), (280, "beta")):
+        paragraph(page, (72, y, 272, y + 60),
+                  f"Head {part} belongs to the left column above the "
+                  "span with ordinary wrapping prose lines.")
+    paragraph(page, (72, 380, 540, 460),
+              "Page two span stretches the full text width under the "
+              "header region and starts the columns' body below it.")
+    for x, part in ((72, "Two left tail"), (340, "Two right tail")):
+        paragraph(page, (x, 500, x + 200, 560),
+                  f"{part} closes the page inside its own column.")
+    return _save(doc, path)
+
+
 GENERATORS = {
     "mixed_1col_plus_2col": mixed_1col_plus_2col,
     "mixed_parity_2col": mixed_parity_2col,
@@ -417,4 +452,5 @@ GENERATORS = {
     "signature_outdent_margin": signature_outdent_margin,
     "heads_only_phantom": heads_only_phantom,
     "retained_content": retained_content,
+    "mid_page_span": mid_page_span,
 }

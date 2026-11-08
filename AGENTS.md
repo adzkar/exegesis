@@ -75,6 +75,12 @@ stats payload all read the clean values (#58).
   Blocks crossing a gutter are spans; each
   column emits its own sequence of non-spans + covering spans in y order,
   columns left to right. Works for 1/2/3-column layouts.
+  The page header zone — non-spans above the first span — front-loads
+  only when the region is sparse front matter (one reading column's
+  worth, or lone blocks); when it fills two+ columns with multiple
+  members each it is columnar body and stays in column flow, so a
+  mid-page span (a wide table band, a full-width figure) can't
+  y-interleave the columns above it (#60).
   The committed doc grid is only the *prior*: `analyze._page_grids`
   reruns the same clustering per page on the same eligible items and
   a page orders on its own grid when the candidate clears the
