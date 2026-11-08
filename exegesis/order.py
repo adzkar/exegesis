@@ -36,7 +36,15 @@ def _ordered_blocks(
     Blocks above the first spanning element come first (page header zone).
     Each reading column then emits its own sequence — non-spanning blocks
     plus the spanning elements that cover it, in y order — columns left to
-    right. ``col_map`` translates physical edge indices into reading
+    right. A page-wide whitespace strip taller than ``BAND_MIN_GAP``
+    line heights whose boundary carries at most one marked block
+    (``_mark``: oversized head, named section label, or all-bold
+    heading-shaped block) commits as a section seam and switches
+    emission to band-major — each band's columns left to right, bands
+    top to bottom — so a section banded across the columns stays
+    sequential (#61); shallow sides, competing marks, and unmarked
+    strips all keep column-major order. ``col_map`` translates physical
+    edge indices into reading
     columns (``_reading_columns``; identity when omitted): an outdent
     edge's heads merge into the body column's sequence and interleave by
     y instead of front-loading the page, and a span's covered columns
@@ -184,7 +192,7 @@ def _ordered_blocks(
             mark)."""
             if b["type"] != 0:
                 return False
-            t = _block_text(b)
+            t = _block_text(b, lang)
             if not t:
                 return False
             spans = [s for l in _block_lines(b) for s in l["spans"]]
@@ -192,8 +200,15 @@ def _ordered_blocks(
                 body_size * 1.3
             ):
                 return True
-            if lang.section_label.match(t):
-                return True
+            m = lang.section_label.match(t)
+            if m:
+                # the h2 gate's own rest check, mirrored here (render
+                # imports order, not the reverse): a label word opening
+                # lowercase prose — 'Funding for this work…' — starts a
+                # sentence, not a section head
+                rest = t[m.end():].strip()
+                if not rest or rest[0].isdigit() or rest[0].isupper():
+                    return True
             return bool(spans) and all(
                 _span_is_bold(s) or not s["text"].strip() for s in spans
             ) and _heading_like(b, t)

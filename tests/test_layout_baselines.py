@@ -6,6 +6,8 @@ from collections import Counter
 
 import fitz
 import pytest
+from builders import _page, _save, paragraph
+from builders import block as fused_block
 from helpers import chapter_body_text, doc_html, lint_epub
 from layout_assertions import (
     SemanticMismatch,
@@ -29,7 +31,8 @@ from exegesis.analyze import (
     _voting_texts,
     _wrap_fragments,
 )
-from exegesis.lang import EN
+from exegesis.lang import DE, EN
+from exegesis.order import _ordered_blocks
 from exegesis.text import _block_text
 
 REQUIRED_CONTENT = {
@@ -1007,3 +1010,69 @@ def test_reading_column_mapping(source):
 def test_layout_semantic_baseline(converted):
     """Only an owned semantic check may xfail; lint and extraction are independent tests."""
     SEMANTICS[converted[0]](converted)
+
+
+def _two_col_shared_gap(doc, lower_left, lower_right):
+    """Two deep bands across two columns, split by a page-wide strip."""
+    page = _page(doc)
+    for x, side in ((72, "Alpha"), (340, "Beta")):
+        paragraph(page, (x, 170, x + 190, 300),
+                  f"{side} upper keeps plain wrapped prose inside its own "
+                  "column above the shared whitespace strip.")
+    paragraph(page, (72, 400, 262, 530), lower_left)
+    for put in lower_right:
+        put(page)
+    return page
+
+
+def test_label_word_prose_opener_never_marks(tmp_path):
+    """A boundary block that merely opens with a label word in prose —
+    'Funding for this work…' — is not a section mark, so the deep shared
+    strip stays continuous flow and the page keeps column-major order."""
+    doc = fitz.open()
+    _two_col_shared_gap(
+        doc,
+        "Alpha lower resumes the left column under the strip with "
+        "more ordinary flowing sentences.",
+        [lambda page: paragraph(
+            page, (340, 400, 530, 530),
+            "Funding for this work was provided by the institute under "
+            "an ordinary prose sentence, not a section head.")],
+    )
+    path = _save(doc, tmp_path / "label_opener.pdf")
+    with fitz.open(path) as saved:
+        ordered = _ordered_blocks(
+            saved[0], saved[0].get_text("dict")["blocks"],
+            frozenset(), [72.0, 340.0])
+    body = " ".join(
+        _block_text(b) for b in ordered if b["type"] == 0)
+    require_order(body, "Alpha upper", "Alpha lower",
+                  "Beta upper", "Funding for this work",
+                  issue="#61 label-word prose opener")
+
+
+def test_drop_cap_label_marks_under_own_lang(tmp_path):
+    """A drop-cap label head joins under the page's own profile: DE 'A' +
+    'nhang' fuses into 'Anhang' — a mark the EN join ('A nhang') misses —
+    so the shared strip commits and the page emits band-major."""
+    doc = fitz.open()
+    _two_col_shared_gap(
+        doc,
+        "Alpha lower resumes the left column under the strip with "
+        "more ordinary flowing sentences.",
+        [lambda page: fused_block(page, 340, 400, ["A", "nhang"]),
+         lambda page: paragraph(
+             page, (340, 430, 530, 530),
+             "Beta lower resumes under the drop-cap head with ordinary "
+             "flowing sentences of its own.")],
+    )
+    path = _save(doc, tmp_path / "dropcap_label.pdf")
+    with fitz.open(path) as saved:
+        ordered = _ordered_blocks(
+            saved[0], saved[0].get_text("dict")["blocks"],
+            frozenset(), [72.0, 340.0], lang=DE)
+    body = " ".join(
+        _block_text(b, DE) for b in ordered if b["type"] == 0)
+    require_order(body, "Alpha upper", "Beta upper",
+                  "Alpha lower", "Anhang", "Beta lower",
+                  issue="#61 drop-cap label under own profile")
