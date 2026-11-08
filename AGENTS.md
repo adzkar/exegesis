@@ -48,7 +48,13 @@ chunking + ebooklib packaging), with `state` (`PipelineState`), `text`,
 
 Single-pass pipeline: per page, positioned text/image blocks are extracted,
 reordered into reading order, rendered to HTML fragments, then chunked into
-chapters.
+chapters. `_extract_pages` strips every character outside the XML 1.0
+Char production (C0 minus `\t\n\r`, lone surrogates, U+FFFE/U+FFFF) from
+every span in the same pass — a newsstand magazine's BEL layout marks
+otherwise crash `ebooklib`/`lxml` at item-title setting (#56) — and
+`convert` rebinds `title`/`author` through the same sanitize before the
+item boundary, so the seeded nav `Link`, the `dc:` metadata, and the
+stats payload all read the clean values (#58).
 
 - **Column order** — column edges are x0 clusters found on ≥50% of pages
   (doc-wide voting kills phantom edges from bylines/headings; furniture-

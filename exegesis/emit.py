@@ -30,6 +30,7 @@ from .render import (
     _strip_dead_fn_links,
 )
 from .state import PipelineState
+from .text import _sanitize_spans, _sanitize_text
 
 
 def _valid_title(t):
@@ -43,9 +44,15 @@ def _extract_pages(doc) -> list[tuple[fitz.Page, dict[str, Any]]]:
     """One ``get_text("dict")`` pass over the document: (page, dict) pairs.
 
     ``get_text`` is typed as returning several shapes keyed by its mode
-    argument, so the dict variant is pinned with ``cast``.
+    argument, so the dict variant is pinned with ``cast``. Span texts
+    are sanitized in the same pass — XML-invalid control characters
+    (New Scientist's BELs, #56) would otherwise ride into item titles
+    and fragment HTML from here.
     """
-    return [(p, cast(dict[str, Any], p.get_text("dict"))) for p in doc]
+    pages = [(p, cast(dict[str, Any], p.get_text("dict"))) for p in doc]
+    for _, pdict in pages:
+        _sanitize_spans(pdict)
+    return pages
 
 
 def convert(
@@ -180,6 +187,12 @@ def convert(
 
     book = epub.EpubBook()
     book.set_identifier(hashlib.sha1(str(pdf_path).encode()).hexdigest()[:16])
+    # metadata/CLI values bypass the extraction-time span cleaning, so
+    # rebind sanitized once — the seeded nav Link and the stats payload
+    # below read the same names, and a raw control char crashes lxml
+    # through nav.xhtml just as it does through dc:title (#56)
+    title = _sanitize_text(title)
+    author = _sanitize_text(author)
     book.set_title(title)
     book.set_language(profile.code)
     book.add_author(author)
