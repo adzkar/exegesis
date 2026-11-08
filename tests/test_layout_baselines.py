@@ -6,6 +6,8 @@ from collections import Counter
 
 import fitz
 import pytest
+from builders import _page, _save, paragraph
+from builders import block as fused_block
 from helpers import chapter_body_text, doc_html, lint_epub
 from layout_assertions import (
     SemanticMismatch,
@@ -29,7 +31,8 @@ from exegesis.analyze import (
     _voting_texts,
     _wrap_fragments,
 )
-from exegesis.lang import EN
+from exegesis.lang import DE, EN
+from exegesis.order import _ordered_blocks
 from exegesis.text import _block_text
 
 REQUIRED_CONTENT = {
@@ -130,6 +133,13 @@ REQUIRED_CONTENT = {
           for part in ("upper", "mid", "lower", "tail", "close")),
         "Wide band", "Right lone head", "Head alpha", "Head beta",
         "Page two span", "Two left tail", "Two right tail",
+    ],
+    "banded_sections": [
+        *(f"{side} {part}" for side in ("Alpha", "Beta")
+          for part in ("one", "head", "two", "three")),
+        "References",
+        *(f"Ref {name}" for name in ("alpha", "beta", "gamma", "delta", "epsilon", "zeta")),
+        "Gamma upper", "Gamma lower", "Delta upper", "Delta lower",
     ],
 }
 
@@ -576,6 +586,30 @@ def _contract_mid_page_span(pages):
     assert _is_spanning(_find(page1, "Page two span"), edges)
 
 
+def _contract_banded(pages):
+    """The fixture really leaves a deep shared strip between two
+    banded sections on page 0 — the seam's trigger — and a matching
+    unmarked strip on page 1."""
+    assert len(pages) == 2
+    edges = _doc_column_edges(pages, frozenset())
+    assert len(edges) == 2
+    p0 = pages[0][1]
+    above = [b for b in _texts(p0) if b["bbox"][3] <= 480]
+    below = [b for b in _texts(p0) if b["bbox"][1] >= 560]
+    assert {round(b["bbox"][0]) for b in above} == {72, 340}
+    assert {round(b["bbox"][0]) for b in below} == {72, 340}
+    assert not [
+        b for b in _texts(p0)
+        if b["bbox"][1] < 555 and b["bbox"][3] > 485
+    ]
+    p1 = pages[1][1]
+    assert len(_texts(p1)) == 4
+    assert not [
+        b for b in _texts(p1)
+        if b["bbox"][1] < 330 and b["bbox"][3] > 265
+    ]
+
+
 CONTRACTS = {
     "mixed_1col_plus_2col": _contract_mixed,
     "mixed_parity_2col": _contract_parity,
@@ -597,6 +631,7 @@ CONTRACTS = {
     "heads_only_phantom": _contract_heads_only,
     "retained_content": _contract_retained,
     "mid_page_span": _contract_mid_page_span,
+    "banded_sections": _contract_banded,
 }
 
 
@@ -897,6 +932,20 @@ def _semantic_mid_page_span(result):
                   issue="#60 sparse header zone preserved")
 
 
+def _semantic_banded(result):
+    """#61: banded sections emit band-major — the declarations band in
+    both columns precedes the references band — while page 1's unmarked
+    shared gap keeps ordinary column-major order."""
+    require_order(result[3], "Alpha one", "Alpha head", "Alpha two",
+                  "Alpha three", "Beta one", "Beta head", "Beta two",
+                  "Beta three", "References", "Ref alpha", "Ref beta",
+                  "Ref gamma", "Ref delta", "Ref epsilon", "Ref zeta",
+                  issue="#61 banded sections")
+    require_order(result[3], "Gamma upper", "Gamma lower",
+                  "Delta upper", "Delta lower",
+                  issue="#61 unmarked shared gap")
+
+
 SEMANTICS = {
     "mixed_1col_plus_2col": _semantic_mixed,
     "mixed_parity_2col": _semantic_parity,
@@ -918,6 +967,7 @@ SEMANTICS = {
     "heads_only_phantom": _semantic_heads_only,
     "retained_content": _semantic_retained,
     "mid_page_span": _semantic_mid_page_span,
+    "banded_sections": _semantic_banded,
 }
 SYMPTOMS = {}
 SEMANTIC_CASES = [
@@ -960,3 +1010,128 @@ def test_reading_column_mapping(source):
 def test_layout_semantic_baseline(converted):
     """Only an owned semantic check may xfail; lint and extraction are independent tests."""
     SEMANTICS[converted[0]](converted)
+
+
+def _two_col_shared_gap(doc, lower_left, lower_right):
+    """Two deep bands across two columns, split by a page-wide strip."""
+    page = _page(doc)
+    for x, side in ((72, "Alpha"), (340, "Beta")):
+        paragraph(page, (x, 170, x + 190, 300),
+                  f"{side} upper keeps plain wrapped prose inside its own "
+                  "column above the shared whitespace strip.")
+    paragraph(page, (72, 400, 262, 530), lower_left)
+    for put in lower_right:
+        put(page)
+    return page
+
+
+def test_label_word_prose_opener_never_marks(tmp_path):
+    """A boundary block that merely opens with a label word in prose —
+    'Funding for this work…' — is not a section mark, so the deep shared
+    strip stays continuous flow and the page keeps column-major order."""
+    doc = fitz.open()
+    _two_col_shared_gap(
+        doc,
+        "Alpha lower resumes the left column under the strip with "
+        "more ordinary flowing sentences.",
+        [lambda page: paragraph(
+            page, (340, 400, 530, 530),
+            "Funding for this work was provided by the institute under "
+            "an ordinary prose sentence, not a section head.")],
+    )
+    path = _save(doc, tmp_path / "label_opener.pdf")
+    with fitz.open(path) as saved:
+        ordered = _ordered_blocks(
+            saved[0], saved[0].get_text("dict")["blocks"],
+            frozenset(), [72.0, 340.0])
+    body = " ".join(
+        _block_text(b) for b in ordered if b["type"] == 0)
+    require_order(body, "Alpha upper", "Alpha lower",
+                  "Beta upper", "Funding for this work",
+                  issue="#61 label-word prose opener")
+
+
+def test_drop_cap_label_marks_under_own_lang(tmp_path):
+    """A drop-cap label head joins under the page's own profile: DE 'A' +
+    'nhang' fuses into 'Anhang' — a mark the EN join ('A nhang') misses —
+    so the shared strip commits and the page emits band-major."""
+    doc = fitz.open()
+    _two_col_shared_gap(
+        doc,
+        "Alpha lower resumes the left column under the strip with "
+        "more ordinary flowing sentences.",
+        [lambda page: fused_block(page, 340, 400, ["A", "nhang"]),
+         lambda page: paragraph(
+             page, (340, 430, 530, 530),
+             "Beta lower resumes under the drop-cap head with ordinary "
+             "flowing sentences of its own.")],
+    )
+    path = _save(doc, tmp_path / "dropcap_label.pdf")
+    with fitz.open(path) as saved:
+        ordered = _ordered_blocks(
+            saved[0], saved[0].get_text("dict")["blocks"],
+            frozenset(), [72.0, 340.0], lang=DE)
+    body = " ".join(
+        _block_text(b, DE) for b in ordered if b["type"] == 0)
+    require_order(body, "Alpha upper", "Beta upper",
+                  "Alpha lower", "Anhang", "Beta lower",
+                  issue="#61 drop-cap label under own profile")
+
+
+def test_fused_label_first_line_marks(tmp_path):
+    """A fused head block whose first line is a bare label over prose —
+    'Data Availability'/'data are available…' — still heads in render
+    (the h2 gate checks the first line), so it must mark the seam too:
+    the joined rest's lowercase prose can't hide it."""
+    doc = fitz.open()
+    _two_col_shared_gap(
+        doc,
+        "Alpha lower resumes the left column under the strip with "
+        "more ordinary flowing sentences.",
+        [lambda page: fused_block(
+            page, 340, 400,
+            ["Data Availability", "data are available on request."]),
+         lambda page: paragraph(
+             page, (340, 430, 530, 530),
+             "Beta lower resumes under the fused head with ordinary "
+             "flowing sentences of its own.")],
+    )
+    path = _save(doc, tmp_path / "fused_label.pdf")
+    with fitz.open(path) as saved:
+        ordered = _ordered_blocks(
+            saved[0], saved[0].get_text("dict")["blocks"],
+            frozenset(), [72.0, 340.0])
+    body = " ".join(
+        _block_text(b) for b in ordered if b["type"] == 0)
+    require_order(body, "Alpha upper", "Beta upper",
+                  "Alpha lower", "Data Availability", "Beta lower",
+                  issue="#61 fused label head marks")
+
+
+def test_wrapped_label_joined_text_marks(tmp_path):
+    """A label head wrapped across two lines — 'References and'/'Notes'
+    — only matches the joined block text (line 0's rest is the lowercase
+    'and'), so the joined-text check stays alongside the first-line
+    one."""
+    doc = fitz.open()
+    _two_col_shared_gap(
+        doc,
+        "Alpha lower resumes the left column under the strip with "
+        "more ordinary flowing sentences.",
+        [lambda page: fused_block(
+            page, 340, 400, ["References and", "Notes"]),
+         lambda page: paragraph(
+             page, (340, 430, 530, 530),
+             "Beta lower resumes under the wrapped head with ordinary "
+             "flowing sentences of its own.")],
+    )
+    path = _save(doc, tmp_path / "wrapped_label.pdf")
+    with fitz.open(path) as saved:
+        ordered = _ordered_blocks(
+            saved[0], saved[0].get_text("dict")["blocks"],
+            frozenset(), [72.0, 340.0])
+    body = " ".join(
+        _block_text(b) for b in ordered if b["type"] == 0)
+    require_order(body, "Alpha upper", "Beta upper",
+                  "Alpha lower", "References and Notes", "Beta lower",
+                  issue="#61 wrapped label joins to mark")
