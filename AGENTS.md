@@ -54,7 +54,14 @@ every span in the same pass — a newsstand magazine's BEL layout marks
 otherwise crash `ebooklib`/`lxml` at item-title setting (#56) — and
 `convert` rebinds `title`/`author` through the same sanitize before the
 item boundary, so the seeded nav `Link`, the `dc:` metadata, and the
-stats payload all read the clean values (#58).
+stats payload all read the clean values (#58). The same pass drops
+spans painted invisibly — near-white fill (per-channel floor, so
+saturated colors survive) on a light rendered ground (`_light_ground`
+medians the page pixmap under the span bbox, so white on a dark banner
+stays) — publishers' invisible placeholders (PLOS's `a111…` runs)
+otherwise emit as prose (#63); emptied lines and blocks go with them.
+`eval_epub.py` runs the same helper in `_page_ctx` so the dropped words
+excuse as expected loss, not genuine word loss.
 
 - **Column order** — column edges are x0 clusters found on ≥50% of pages
   (doc-wide voting kills phantom edges from bylines/headings; furniture-

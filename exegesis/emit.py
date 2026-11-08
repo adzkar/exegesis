@@ -17,6 +17,7 @@ from .analyze import (
     _detect_asides,
     _detect_margins,
     _doc_column_edges,
+    _drop_invisible_spans,
     _grids_agree,
     _page_grids,
     _split_signature_prefixes,
@@ -47,11 +48,14 @@ def _extract_pages(doc) -> list[tuple[fitz.Page, dict[str, Any]]]:
     argument, so the dict variant is pinned with ``cast``. Span texts
     are sanitized in the same pass — XML-invalid control characters
     (New Scientist's BELs, #56) would otherwise ride into item titles
-    and fragment HTML from here.
+    and fragment HTML from here — and spans painted invisibly
+    (near-white on a light ground — PLOS's ``a111…`` placeholders, #63)
+    drop before any classifier can read them as prose.
     """
     pages = [(p, cast(dict[str, Any], p.get_text("dict"))) for p in doc]
-    for _, pdict in pages:
+    for page, pdict in pages:
         _sanitize_spans(pdict)
+        _drop_invisible_spans(page, pdict)
     return pages
 
 

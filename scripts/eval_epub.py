@@ -283,6 +283,7 @@ def _page_ctx(page, boilerplate: set[str], lang: LangProfile):
     # lazy like main(): pulling analyze pulls fitz — an ImportError must
     # reach the exit-2 net, so it can't sit at module top
     from exegesis.analyze import (
+        _drop_invisible_spans,
         _lines_bbox,
         _signature_prefix_len,
         _split_signature_prefixes,
@@ -292,6 +293,10 @@ def _page_ctx(page, boilerplate: set[str], lang: LangProfile):
     from exegesis.text import _line_text
 
     pdict = page.get_text("dict")
+    # the converter drops invisible spans at extraction — the mirror
+    # must run the same helper before dmap/the split stream are built,
+    # or the placeholder words land on the genuine-loss side
+    inv = _drop_invisible_spans(page, pdict)
     dmap = {tuple(b["bbox"]): b for b in pdict["blocks"]}
     # the post-split stream ordering sees — the pipeline's own pre-pass,
     # not a re-implementation, so the clip input can never drift
@@ -333,6 +338,8 @@ def _page_ctx(page, boilerplate: set[str], lang: LangProfile):
         dmap=dmap,
         splits=splits,
         rtbl=_strip_clip(page, post, boilerplate, lang),
+        inv_words=WORD_RE.findall(
+            " ".join(s["text"] for s in inv).lower()),
     )
 
 
@@ -434,6 +441,10 @@ def furniture_words(ctxs, boilerplate: set[str],
     strips both halves, so both excuse)."""
     furn: Counter = Counter()
     for ctx in ctxs:
+        # invisible-span words excuse the same way furniture does —
+        # the converter dropped them at extraction, so they were never
+        # expected in the EPUB
+        furn.update(ctx.inv_words)
         for b in ctx.page.get_text("blocks"):
             if b[6] != 0:
                 continue

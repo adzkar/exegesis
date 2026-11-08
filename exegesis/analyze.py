@@ -29,6 +29,7 @@ from .const import (
     INFO_CONT_X_TOL,
     INFO_MEMBER_MAX_LINES,
     INFO_RUN_MAX_LINES,
+    INVISIBLE_BG_MIN,
     MARGIN_BAND_TOL,
     MARGIN_EDGE_MAX_FILL,
     MARGIN_EDGE_SHARE,
@@ -61,6 +62,7 @@ from .text import (
     _join_lines,
     _line_text,
     _span_is_bold,
+    _span_is_near_white,
 )
 
 
@@ -1406,6 +1408,82 @@ def _split_signature_prefixes(blocks, height, boilerplate, lang: LangProfile = E
             rest = dict(rest, lines=lines[k:], bbox=_lines_bbox(lines[k:]))
         out.append(rest)
     return out
+
+
+def _light_ground(page, pix, rect):
+    """True when the rendered pixels under ``rect`` are mostly light.
+
+    The span's own pale glyphs cover a minority of its bbox, so the
+    median reads the painted ground — white-on-white lands ~255, white
+    on a dark banner lands dark. ``rect`` arrives in mediabox space;
+    the pixmap renders the displayed page, so the bbox maps through
+    ``page.rotation_matrix`` before sampling. Bounded to a few
+    thousand points on large regions — the median is unchanged.
+    """
+    disp = rect * page.rotation_matrix
+    ox, oy = page.rect.x0, page.rect.y0
+    x0 = max(0, int(disp.x0 - ox))
+    y0 = max(0, int(disp.y0 - oy))
+    x1 = min(pix.width, int(disp.x1 - ox + 0.5))
+    y1 = min(pix.height, int(disp.y1 - oy + 0.5))
+    if x1 <= x0 or y1 <= y0:
+        return False
+    step = max(1, round(((x1 - x0) * (y1 - y0) / 4000) ** 0.5))
+    data, stride = pix.samples, pix.stride
+    vals = [
+        data[y * stride + x]
+        for y in range(y0, y1, step)
+        for x in range(x0, x1, step)
+    ]
+    return median(vals) >= INVISIBLE_BG_MIN
+
+
+def _drop_invisible_spans(page, pdict):
+    """Remove spans painted where the eye can't read them — near-white
+    on a light ground — and return the dropped span dicts.
+
+    Publishers leave invisible placeholder text in front matter
+    (PLOS's white ``a111…`` runs, #63): extracted like ordinary text,
+    it emits as prose above the info box. A span drops only when its
+    fill is near-white *and* the rendered ground under its bbox is
+    light — the page rasterizes once, lazily, and only when a
+    candidate exists, so white on a dark banner survives. Emptied
+    lines and fully-emptied text blocks go with them, so the
+    placeholders leave no geometry to vote, order, or render. Runs at
+    extraction beside the XML-Char sanitize, before any classifier
+    reads the spans.
+    """
+    cands = [
+        span
+        for block in pdict["blocks"]
+        if block["type"] == 0
+        for line in block.get("lines", [])
+        for span in line["spans"]
+        if _span_is_near_white(span.get("color", 0))
+    ]
+    if not cands:
+        return []
+    pix = page.get_pixmap(colorspace=fitz.csGRAY, alpha=False)
+    dropped = [
+        span
+        for span in cands
+        if _light_ground(page, pix, fitz.Rect(span["bbox"]))
+    ]
+    if not dropped:
+        return []
+    ids = {id(span) for span in dropped}
+    for block in pdict["blocks"]:
+        if block["type"] != 0:
+            continue
+        for line in block.get("lines", []):
+            line["spans"] = [s for s in line["spans"] if id(s) not in ids]
+        block["lines"] = [
+            line for line in block.get("lines", []) if line["spans"]
+        ]
+    pdict["blocks"] = [
+        b for b in pdict["blocks"] if b["type"] != 0 or b.get("lines")
+    ]
+    return dropped
 
 
 def _tall_blocks(blocks):

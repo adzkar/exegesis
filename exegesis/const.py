@@ -19,6 +19,16 @@ SIGNATURE_PREFIX_MAX_LINES = BOILERPLATE_MAX_LINES
 MIN_IMAGE_BYTES = 2048
 MIN_HEADING_CHARS = 4
 MAX_HEADING_CHARS = 120
+# invisible text (#63): a span is painted invisibly when its fill is
+# near-white on a light ground — publishers leave white placeholder
+# lines (PLOS's `a111…` runs) that extract as ordinary text and emit as
+# prose. The per-channel floor keeps saturated colors (yellow, cyan)
+# reading as text; the ground floor is the median rendered brightness
+# under the span's bbox — the span's own pale glyphs cover a minority
+# of the region, so the median reads the painted background and white
+# on a dark banner stays.
+INVISIBLE_TEXT_MIN = 0xF0
+INVISIBLE_BG_MIN = 200
 # An outdent edge is a physical column edge whose non-spanning blocks are
 # almost all short unpunctuated fragments floating in a narrow strip —
 # a real edge (full-width elements start there) that must not order as

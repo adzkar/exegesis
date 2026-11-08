@@ -6,6 +6,7 @@ caption labels — live in ``lang.LangProfile``, as does the
 import re
 from statistics import median
 
+from .const import INVISIBLE_TEXT_MIN
 from .lang import EN, LangProfile
 
 BOLD_FONT_RE = re.compile(r"(?i)(bold|\.b\d*$|-b\d*$|/b\d*$)")
@@ -46,6 +47,23 @@ def _sanitize_spans(pdict):
         for line in block.get("lines", []):
             for span in line["spans"]:
                 span["text"] = _sanitize_text(span["text"])
+
+
+def _span_is_near_white(color):
+    """True when a span fill is white or near-white on every channel.
+
+    ``span["color"]`` is an sRGB int — 24-bit ``0xRRGGBB`` on older
+    PyMuPDF, alpha-packed ``0xRRGGBBAA`` (possibly signed) since 1.25 —
+    normalized by masking, then dropping a populated high byte. The
+    per-channel floor is deliberate: a numeric compare would pass
+    saturated colors like ``0xFEFF00`` whose blue channel is dark.
+    """
+    c = color & 0xFFFFFFFF
+    if c > 0xFFFFFF:
+        c >>= 8
+    return min(
+        (c >> 16) & 0xFF, (c >> 8) & 0xFF, c & 0xFF
+    ) >= INVISIBLE_TEXT_MIN
 
 
 def _block_lines(block):

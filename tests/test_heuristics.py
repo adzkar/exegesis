@@ -63,6 +63,18 @@ def test_sanitize_text_strips_full_xml_invalid_set():
     assert text._sanitize_text("keep\x7f me\t\n\r") == "keep\x7f me\t\n\r"
 
 
+def test_span_is_near_white_channel_floor():
+    """The invisible-text trigger is per-channel: saturated colors whose
+    numeric value exceeds the floor (a dark blue channel) still count as
+    visible, and the 1.25+ alpha-packed int normalizes the same."""
+    assert text._span_is_near_white(0xFFFFFF)
+    assert text._span_is_near_white(-1)  # signed RGBA white
+    assert text._span_is_near_white(0xF2F5F7)
+    assert not text._span_is_near_white(0xFEFF00)
+    assert not text._span_is_near_white(0xEFEFEF)
+    assert not text._span_is_near_white(0)
+
+
 # --- heading shape ------------------------------------------------------
 
 def test_heading_rejects_short_long_and_sentences():

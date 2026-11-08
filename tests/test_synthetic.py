@@ -83,6 +83,31 @@ def test_control_characters_stripped(tmp_path):
     assert not any("\x07" in h for h in htmls.values())
 
 
+def test_invisible_text_dropped(tmp_path):
+    """Near-white spans on a light ground emit as prose without the drop
+    (#63): publishers leave invisible placeholders — PLOS's a111… runs —
+    but white on a painted dark banner is genuinely visible and stays."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 140, 540, 260),
+        "Visible body prose frames the placeholder run with sentences.",
+        fontsize=BODY,
+    )
+    for y in (300, 325, 350):
+        p.insert_text((36, y), "a1111111111", fontsize=BODY, color=(1, 1, 1))
+    p.draw_rect(fitz.Rect(72, 420, 300, 460), fill=(0.1, 0.1, 0.2))
+    p.insert_text((90, 445), "Banner label", fontsize=BODY, color=(1, 1, 1))
+    pdf = tmp_path / "invisible.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "invisible.epub"
+    convert(pdf, out)
+    text = chapter_text(out)
+    assert "a1111111111" not in text
+    assert "Visible body prose" in text
+    assert "Banner label" in text
+
+
 def test_dirty_metadata_sanitized_before_nav_seed(tmp_path):
     """A control-char ``--title``/``--author`` bypasses span cleaning, and
     the same names feed the seeded nav Link on a headingless+noteless doc
