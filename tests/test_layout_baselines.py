@@ -6,6 +6,8 @@ from collections import Counter
 
 import fitz
 import pytest
+from builders import _page, _save, paragraph
+from builders import block as fused_block
 from helpers import chapter_body_text, doc_html, lint_epub
 from layout_assertions import (
     SemanticMismatch,
@@ -29,7 +31,8 @@ from exegesis.analyze import (
     _voting_texts,
     _wrap_fragments,
 )
-from exegesis.lang import EN
+from exegesis.lang import DE, EN
+from exegesis.order import _ordered_blocks
 from exegesis.text import _block_text, _span_is_near_white
 
 REQUIRED_CONTENT = {
@@ -123,8 +126,37 @@ REQUIRED_CONTENT = {
           for part in ("opening", "middle", "closing")),
         *(f"{part} {number:02d}" for number in range(3) for part in ("Aim", "Data")),
     ],
+    "math_indent_phantom": [
+        *(f"Paper body {number} {part}" for number in range(6)
+          for part in ("opening", "middle", "closing")),
+        *(f"{part} {number} Head" for number in range(6) for part in ("Sec", "Ref")),
+        *(f"{part}{number},k" for number in range(6) for part in ("aG", "bH")),
+        *(f"Class Size Table {number}" for number in range(6)),
+        *(f"{number} 1 1 2 2 7 14" for number in range(6)),
+    ],
+    "asymmetric_indent": [
+        *(f"Left body {number} {part}" for number in range(6)
+          for part in ("alpha", "beta", "gamma")),
+        *(f"Right body {number} {part}" for number in range(6)
+          for part in ("upper", "lower")),
+        *(f"({number}.{label})" for number in range(6)
+          for label in ("a", "b", "c")),
+    ],
     "retained_content": ["Negative opening", "Normal margin prose", "continues as real content.",
                          "Full-width content", "Negative closing"],
+    "mid_page_span": [
+        *(f"{side} {part}" for side in ("Left", "Right")
+          for part in ("upper", "mid", "lower", "tail", "close")),
+        "Wide band", "Right lone head", "Head alpha", "Head beta",
+        "Page two span", "Two left tail", "Two right tail",
+    ],
+    "banded_sections": [
+        *(f"{side} {part}" for side in ("Alpha", "Beta")
+          for part in ("one", "head", "two", "three")),
+        "References",
+        *(f"Ref {name}" for name in ("alpha", "beta", "gamma", "delta", "epsilon", "zeta")),
+        "Gamma upper", "Gamma lower", "Delta upper", "Delta lower",
+    ],
     "invisible_text": ["Opening prose", "Trailing prose", "Banner label"],
 }
 
@@ -538,6 +570,37 @@ def _contract_heads_only(pages):
             _upright(head)
 
 
+def _contract_math_indent(pages):
+    """Three fragment clusters reach the doc quorum beside the true body edge."""
+    assert len(pages) == 6
+    boilerplate = _boilerplate_signatures(pages)
+    edges = _doc_column_edges(pages, boilerplate)
+    assert len(edges) == 4 and edges[0] == pytest.approx(120, abs=2)
+    assert _reading_columns(pages, edges, boilerplate) == [0, 0, 0, 0]
+    for page, pdict in pages:
+        for needle in ("Sec", "Ref", "aG", "bH", "Class Size Table", "1 1 2"):
+            found = [block for block in _texts(pdict) if needle in _block_text(block)]
+            assert len(found) == 1, (needle, [_block_text(b) for b in found])
+            assert not _is_furniture(found[0], page, _block_text(found[0]))
+
+
+def _contract_asymmetric(pages):
+    """The x480 tag cluster is a fragment edge: spanning supporters, no
+    non-spanning evidence, and anchors at 430pt left / 20pt right."""
+    assert len(pages) == 6
+    boilerplate = _boilerplate_signatures(pages)
+    edges = _doc_column_edges(pages, boilerplate)
+    assert edges == pytest.approx([50.0, 480.0, 500.0])
+    assert _reading_columns(pages, edges, boilerplate) == [0, 1, 1]
+    for page, pdict in pages:
+        tags = [b for b in _texts(pdict) if _block_text(b).startswith("(")]
+        assert len(tags) == 3
+        for tag in tags:
+            assert tag["bbox"][0] == 480
+            assert _is_spanning(tag, edges)
+            assert not _is_furniture(tag, page, _block_text(tag))
+
+
 def _contract_retained(pages):
     """The negative margin block is horizontal multiline prose, not a rotated strip."""
     assert len(pages) == 1
@@ -564,6 +627,50 @@ def _contract_invisible(pages):
     assert len(banner) == 1 and _span_is_near_white(banner[0]["color"])
 
 
+def _contract_mid_page_span(pages):
+    """The fixture really sits a mid-page span under two live columns —
+    the collapse's trigger — and a lone right fragment above page 1's
+    first span."""
+    assert len(pages) == 2
+    edges = _doc_column_edges(pages, frozenset())
+    assert len(edges) == 2
+    page0 = pages[0][1]
+    band = _find(page0, "Wide band")
+    assert _is_spanning(band, edges)
+    above = [
+        b for b in _texts(page0)
+        if b["bbox"][3] < band["bbox"][1] and not _is_spanning(b, edges)
+    ]
+    xs = {round(b["bbox"][0]) for b in above}
+    assert {72, 340} <= xs and len(above) == 6
+    page1 = pages[1][1]
+    assert _is_spanning(_find(page1, "Page two span"), edges)
+
+
+def _contract_banded(pages):
+    """The fixture really leaves a deep shared strip between two
+    banded sections on page 0 — the seam's trigger — and a matching
+    unmarked strip on page 1."""
+    assert len(pages) == 2
+    edges = _doc_column_edges(pages, frozenset())
+    assert len(edges) == 2
+    p0 = pages[0][1]
+    above = [b for b in _texts(p0) if b["bbox"][3] <= 480]
+    below = [b for b in _texts(p0) if b["bbox"][1] >= 560]
+    assert {round(b["bbox"][0]) for b in above} == {72, 340}
+    assert {round(b["bbox"][0]) for b in below} == {72, 340}
+    assert not [
+        b for b in _texts(p0)
+        if b["bbox"][1] < 555 and b["bbox"][3] > 485
+    ]
+    p1 = pages[1][1]
+    assert len(_texts(p1)) == 4
+    assert not [
+        b for b in _texts(p1)
+        if b["bbox"][1] < 330 and b["bbox"][3] > 265
+    ]
+
+
 CONTRACTS = {
     "mixed_1col_plus_2col": _contract_mixed,
     "mixed_parity_2col": _contract_parity,
@@ -583,7 +690,11 @@ CONTRACTS = {
     "span_only_edge": _contract_span_only,
     "signature_outdent_margin": _contract_signature_margin,
     "heads_only_phantom": _contract_heads_only,
+    "math_indent_phantom": _contract_math_indent,
+    "asymmetric_indent": _contract_asymmetric,
     "retained_content": _contract_retained,
+    "mid_page_span": _contract_mid_page_span,
+    "banded_sections": _contract_banded,
     "invisible_text": _contract_invisible,
 }
 
@@ -862,6 +973,37 @@ def _semantic_heads_only(result):
     require(result[2]["columns"] == 1, "#43 head-only quorum must not create a reading column")
 
 
+def _semantic_math_indent(result):
+    """#62: indent clusters fold into the body edge — heads and fragments emit
+    at their own y-position in one reading column, not batched per fake column."""
+    require(result[2]["columns"] == 1,
+            f"#62 indent clusters must not read as columns: {result[2]['columns']}")
+    for number in range(6):
+        require_order(result[3],
+                      f"Paper body {number} opening", f"Sec {number} Head",
+                      f"aG{number},k", f"Class Size Table {number}",
+                      f"Ref {number} Head", f"Paper body {number} middle",
+                      f"bH{number},k", f"{number} 1 1 2 2 7 14",
+                      f"Paper body {number} closing",
+                      issue="#62 math indent phantom")
+
+
+def _semantic_asymmetric(result):
+    """#68: the tag cluster folds into the geometrically nearer right
+    column — an index-distance tie must not splice it into the far one."""
+    require(result[2]["columns"] == 2,
+            f"two real columns keep their edges: {result[2]['columns']}")
+    for number in range(6):
+        require_order(result[3],
+                      f"Left body {number} alpha",
+                      f"Right body {number} upper",
+                      f"Left body {number} beta",
+                      f"Left body {number} gamma",
+                      f"({number}.a)", f"({number}.b)",
+                      f"Right body {number} lower", f"({number}.c)",
+                      issue="#68 asymmetric indent anchor")
+
+
 def _semantic_retained(result):
     """Negative controls retain margin prose and wide content once, in body reading order."""
     require_order(result[3], "Negative opening", "Normal margin prose", "continues as real content.",
@@ -877,6 +1019,35 @@ def _semantic_invisible(result):
                    issue="#63 non-rendering white spans")
     require_order(result[3], "Opening prose", "Trailing prose",
                   "Banner label", issue="#63 visible text keeps order")
+
+
+def _semantic_mid_page_span(result):
+    """#60: columns above a mid-page span keep column-major order — the
+    wide band emits at its own y inside column 0 — while page 1's
+    sparse header region keeps its front-loaded slot."""
+    require_order(result[3],
+                  "Left upper", "Left mid", "Left lower", "Wide band",
+                  "Left tail", "Left close", "Right upper", "Right mid",
+                  "Right lower", "Right tail", "Right close",
+                  issue="#60 mid-page span column order")
+    require_order(result[3],
+                  "Right lone head", "Head alpha", "Head beta",
+                  "Page two span", "Two left tail", "Two right tail",
+                  issue="#60 sparse header zone preserved")
+
+
+def _semantic_banded(result):
+    """#61: banded sections emit band-major — the declarations band in
+    both columns precedes the references band — while page 1's unmarked
+    shared gap keeps ordinary column-major order."""
+    require_order(result[3], "Alpha one", "Alpha head", "Alpha two",
+                  "Alpha three", "Beta one", "Beta head", "Beta two",
+                  "Beta three", "References", "Ref alpha", "Ref beta",
+                  "Ref gamma", "Ref delta", "Ref epsilon", "Ref zeta",
+                  issue="#61 banded sections")
+    require_order(result[3], "Gamma upper", "Gamma lower",
+                  "Delta upper", "Delta lower",
+                  issue="#61 unmarked shared gap")
 
 
 SEMANTICS = {
@@ -898,7 +1069,11 @@ SEMANTICS = {
     "span_only_edge": _semantic_span_only,
     "signature_outdent_margin": _semantic_signature_margin,
     "heads_only_phantom": _semantic_heads_only,
+    "math_indent_phantom": _semantic_math_indent,
+    "asymmetric_indent": _semantic_asymmetric,
     "retained_content": _semantic_retained,
+    "mid_page_span": _semantic_mid_page_span,
+    "banded_sections": _semantic_banded,
     "invisible_text": _semantic_invisible,
 }
 SYMPTOMS = {}
@@ -919,6 +1094,8 @@ READING_MAPS = {
     "outdented_chain": [0, 0, 0],
     "outdented_note_zone": [0, 0],
     "heads_only_phantom": [0, 0],
+    "math_indent_phantom": [0, 0, 0, 0],
+    "asymmetric_indent": [0, 1, 1],
     "signature_outdent_margin": [0],
     "two_col_heading_run": [0, 1],
     "two_col_label_list": [0, 1],
@@ -942,3 +1119,128 @@ def test_reading_column_mapping(source):
 def test_layout_semantic_baseline(converted):
     """Only an owned semantic check may xfail; lint and extraction are independent tests."""
     SEMANTICS[converted[0]](converted)
+
+
+def _two_col_shared_gap(doc, lower_left, lower_right):
+    """Two deep bands across two columns, split by a page-wide strip."""
+    page = _page(doc)
+    for x, side in ((72, "Alpha"), (340, "Beta")):
+        paragraph(page, (x, 170, x + 190, 300),
+                  f"{side} upper keeps plain wrapped prose inside its own "
+                  "column above the shared whitespace strip.")
+    paragraph(page, (72, 400, 262, 530), lower_left)
+    for put in lower_right:
+        put(page)
+    return page
+
+
+def test_label_word_prose_opener_never_marks(tmp_path):
+    """A boundary block that merely opens with a label word in prose —
+    'Funding for this work…' — is not a section mark, so the deep shared
+    strip stays continuous flow and the page keeps column-major order."""
+    doc = fitz.open()
+    _two_col_shared_gap(
+        doc,
+        "Alpha lower resumes the left column under the strip with "
+        "more ordinary flowing sentences.",
+        [lambda page: paragraph(
+            page, (340, 400, 530, 530),
+            "Funding for this work was provided by the institute under "
+            "an ordinary prose sentence, not a section head.")],
+    )
+    path = _save(doc, tmp_path / "label_opener.pdf")
+    with fitz.open(path) as saved:
+        ordered = _ordered_blocks(
+            saved[0], saved[0].get_text("dict")["blocks"],
+            frozenset(), [72.0, 340.0])
+    body = " ".join(
+        _block_text(b) for b in ordered if b["type"] == 0)
+    require_order(body, "Alpha upper", "Alpha lower",
+                  "Beta upper", "Funding for this work",
+                  issue="#61 label-word prose opener")
+
+
+def test_drop_cap_label_marks_under_own_lang(tmp_path):
+    """A drop-cap label head joins under the page's own profile: DE 'A' +
+    'nhang' fuses into 'Anhang' — a mark the EN join ('A nhang') misses —
+    so the shared strip commits and the page emits band-major."""
+    doc = fitz.open()
+    _two_col_shared_gap(
+        doc,
+        "Alpha lower resumes the left column under the strip with "
+        "more ordinary flowing sentences.",
+        [lambda page: fused_block(page, 340, 400, ["A", "nhang"]),
+         lambda page: paragraph(
+             page, (340, 430, 530, 530),
+             "Beta lower resumes under the drop-cap head with ordinary "
+             "flowing sentences of its own.")],
+    )
+    path = _save(doc, tmp_path / "dropcap_label.pdf")
+    with fitz.open(path) as saved:
+        ordered = _ordered_blocks(
+            saved[0], saved[0].get_text("dict")["blocks"],
+            frozenset(), [72.0, 340.0], lang=DE)
+    body = " ".join(
+        _block_text(b, DE) for b in ordered if b["type"] == 0)
+    require_order(body, "Alpha upper", "Beta upper",
+                  "Alpha lower", "Anhang", "Beta lower",
+                  issue="#61 drop-cap label under own profile")
+
+
+def test_fused_label_first_line_marks(tmp_path):
+    """A fused head block whose first line is a bare label over prose —
+    'Data Availability'/'data are available…' — still heads in render
+    (the h2 gate checks the first line), so it must mark the seam too:
+    the joined rest's lowercase prose can't hide it."""
+    doc = fitz.open()
+    _two_col_shared_gap(
+        doc,
+        "Alpha lower resumes the left column under the strip with "
+        "more ordinary flowing sentences.",
+        [lambda page: fused_block(
+            page, 340, 400,
+            ["Data Availability", "data are available on request."]),
+         lambda page: paragraph(
+             page, (340, 430, 530, 530),
+             "Beta lower resumes under the fused head with ordinary "
+             "flowing sentences of its own.")],
+    )
+    path = _save(doc, tmp_path / "fused_label.pdf")
+    with fitz.open(path) as saved:
+        ordered = _ordered_blocks(
+            saved[0], saved[0].get_text("dict")["blocks"],
+            frozenset(), [72.0, 340.0])
+    body = " ".join(
+        _block_text(b) for b in ordered if b["type"] == 0)
+    require_order(body, "Alpha upper", "Beta upper",
+                  "Alpha lower", "Data Availability", "Beta lower",
+                  issue="#61 fused label head marks")
+
+
+def test_wrapped_label_joined_text_marks(tmp_path):
+    """A label head wrapped across two lines — 'References and'/'Notes'
+    — only matches the joined block text (line 0's rest is the lowercase
+    'and'), so the joined-text check stays alongside the first-line
+    one."""
+    doc = fitz.open()
+    _two_col_shared_gap(
+        doc,
+        "Alpha lower resumes the left column under the strip with "
+        "more ordinary flowing sentences.",
+        [lambda page: fused_block(
+            page, 340, 400, ["References and", "Notes"]),
+         lambda page: paragraph(
+             page, (340, 430, 530, 530),
+             "Beta lower resumes under the wrapped head with ordinary "
+             "flowing sentences of its own.")],
+    )
+    path = _save(doc, tmp_path / "wrapped_label.pdf")
+    with fitz.open(path) as saved:
+        ordered = _ordered_blocks(
+            saved[0], saved[0].get_text("dict")["blocks"],
+            frozenset(), [72.0, 340.0])
+    body = " ".join(
+        _block_text(b) for b in ordered if b["type"] == 0)
+    require_order(body, "Alpha upper", "Beta upper",
+                  "Alpha lower", "References and Notes", "Beta lower",
+                  issue="#61 wrapped label joins to mark")

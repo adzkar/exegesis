@@ -382,6 +382,56 @@ def heads_only_phantom(path):
     return _save(doc, path)
 
 
+def math_indent_phantom(path):
+    """Equation/table/head indent clusters reach the doc quorum on a
+    single-column math paper — arxiv_revtex's phantom edges (#62)."""
+    doc = fitz.open()
+    for number in range(6):
+        page = _page(doc)
+        for y, label in ((190, "opening"), (390, "middle"), (570, "closing")):
+            paragraph(page, (120, y, 478, y + 60),
+                      f"Paper body {number} {label} wraps inside the true "
+                      "body column with enough prose to fill several lines "
+                      "of ordinary mathematical narrative text.")
+        # centered heads, aligned equation rows, and a table stack recur
+        # at three indents in two bands each — fragment clusters, not
+        # reading columns
+        text(page, 247, 252, f"Sec {number} Head", font="hebo")
+        text(page, 252, 360, f"Ref {number} Head", font="hebo")
+        text(page, 230, 300, f"aG{number},k = 23k + 1")
+        text(page, 230, 460, f"bH{number},k = 45k - 7")
+        text(page, 183, 330, f"Class Size Table {number}")
+        text(page, 183, 490, f"{number} 1 1 2 2 7 14")
+    return _save(doc, path)
+
+
+def asymmetric_indent(path):
+    """A fragment cluster sits 20pt left of the real right column but an
+    edge-*index* tie away from both anchors — equation tags beside a
+    right-hand column (#68): geometric distance must pick the anchor."""
+    doc = fitz.open()
+    variants = ("first", "second", "third", "fourth", "fifth", "sixth")
+    for number in range(6):
+        page = _page(doc)
+        for y, label in ((190, "alpha"), (350, "beta"), (510, "gamma")):
+            paragraph(page, (50, y, 300, y + 55),
+                      f"Left body {number} {label} fills the wide left "
+                      f"column with {variants[number]} wrapped prose.")
+        # equation tags cluster at x480 — gutter-straddling spans 20pt
+        # off the right column, 430pt off the left; supporters, not a
+        # reading column
+        for y, label in ((262, "a"), (422, "b"), (582, "c")):
+            text(page, 480, y, f"({number}.{label})")
+        # unique wording per page: a recurring sentence skeleton reads as
+        # margin evidence and the narrow right edge would lift as a
+        # voted margin column
+        for y, label in ((200, "upper"), (430, "lower")):
+            paragraph(page, (500, y, 596, y + 75),
+                      f"Right body {number} {label} holds the "
+                      f"{variants[number]} column prose.")
+    return _save(doc, path)
+
+
 def retained_content(path):
     """Ordinary horizontal margin prose and full-width spans are not disposable labels."""
     doc = fitz.open()
@@ -418,6 +468,82 @@ def invisible_text(path):
     return _save(doc, path)
 
 
+def mid_page_span(path):
+    """Columns above a mid-page span must keep column-major order (#60):
+    page 0 bands a wide table-like span under two live columns (Wiley's
+    TABLE 1 collapse); page 1 keeps the sparse header zone — a lone
+    right fragment above the first span still front-loads."""
+    doc = fitz.open()
+    page = _page(doc)
+    for x, side in ((72, "Left"), (340, "Right")):
+        for y, part in ((190, "upper"), (300, "mid"), (390, "lower")):
+            paragraph(page, (x, y, x + 200, y + 70),
+                      f"{side} {part} column text wraps over several lines "
+                      "the way a real journal column flows before the band.")
+        for y, part in ((600, "tail"), (690, "close")):
+            paragraph(page, (x, y, x + 200, y + 60),
+                      f"{side} {part} column text resumes under the band "
+                      "and keeps flowing inside its own column.")
+    paragraph(page, (72, 480, 540, 560),
+              "Wide band crosses the whole text width like a landscape "
+              "table or a full-width figure caption strip, forcing every "
+              "column to hold its members above and below it.")
+    page = _page(doc)
+    text(page, 340, 160, "Right lone head", size=13)
+    for y, part in ((200, "alpha"), (280, "beta")):
+        paragraph(page, (72, y, 272, y + 60),
+                  f"Head {part} belongs to the left column above the "
+                  "span with ordinary wrapping prose lines.")
+    paragraph(page, (72, 380, 540, 460),
+              "Page two span stretches the full text width under the "
+              "header region and starts the columns' body below it.")
+    for x, part in ((72, "Two left tail"), (340, "Two right tail")):
+        paragraph(page, (x, 500, x + 200, 560),
+                  f"{part} closes the page inside its own column.")
+    return _save(doc, path)
+
+
+def banded_sections(path):
+    """A section banded across both columns must not split around the
+    other column (#61): page 0 bands declarations over references under
+    a named-label head (Frontiers' back matter); page 1 holds the same
+    shared gap with no section mark and keeps column-major order."""
+    doc = fitz.open()
+    page = _page(doc)
+    paragraph(page, (72, 170, 262, 235),
+              "Alpha one opens the declarations band with wrapping "
+              "prose inside its own column flow.")
+    text(page, 72, 262, "Alpha head", font="hebo")
+    paragraph(page, (72, 275, 262, 340),
+              "Alpha two continues the band under its head with "
+              "ordinary sentences in the same column.")
+    paragraph(page, (72, 388, 262, 460),
+              "Alpha three closes the declarations band inside "
+              "the same column's flow.")
+    paragraph(page, (340, 178, 530, 243),
+              "Beta one opens the declarations band with wrapping "
+              "prose inside its own column flow.")
+    text(page, 340, 272, "Beta head", font="hebo")
+    paragraph(page, (340, 285, 530, 350),
+              "Beta two continues the band under its head with "
+              "ordinary sentences in the same column.")
+    paragraph(page, (340, 398, 530, 470),
+              "Beta three closes the declarations band inside "
+              "the same column's flow.")
+    text(page, 72, 570, "References", font="hebo")
+    for y, name in ((600, "alpha"), (630, "beta"), (660, "gamma")):
+        text(page, 72, y, f"Ref {name} first entry of the list.")
+    for y, name in ((580, "delta"), (610, "epsilon"), (640, "zeta")):
+        text(page, 340, y, f"Ref {name} continues the list in col one.")
+    page = _page(doc)
+    for x, side in ((72, "Gamma"), (340, "Delta")):
+        for y, part in ((200, "upper"), (340, "lower")):
+            paragraph(page, (x, y, x + 190, y + 60),
+                      f"{side} {part} is plain column prose with no "
+                      "section mark at the shared gap.")
+    return _save(doc, path)
+
+
 GENERATORS = {
     "mixed_1col_plus_2col": mixed_1col_plus_2col,
     "mixed_parity_2col": mixed_parity_2col,
@@ -437,6 +563,10 @@ GENERATORS = {
     "span_only_edge": span_only_edge,
     "signature_outdent_margin": signature_outdent_margin,
     "heads_only_phantom": heads_only_phantom,
+    "math_indent_phantom": math_indent_phantom,
+    "asymmetric_indent": asymmetric_indent,
     "retained_content": retained_content,
+    "mid_page_span": mid_page_span,
+    "banded_sections": banded_sections,
     "invisible_text": invisible_text,
 }

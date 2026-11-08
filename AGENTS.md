@@ -32,7 +32,8 @@ layout analysis over PyMuPDF blocks — no OCR, no ML dependencies.
   `--journals-dir DIR` for a corpus outside the checkout. Tests never import
   the script; `tests/test_diagnose_layouts.py` smoke-tests its CLI with
   generated PDFs. Its temporary profiling hook follows real render claims
-  and `_reading_columns`'s evidence locals; update the instrumentation
+  and `_reading_columns`'s (``edges``, ``evidence``, ``support``,
+  ``fragment``, ``outdent``) locals; update the instrumentation
   contract when those locals change. The script
   runs on `requirements.txt` alone — test helpers it borrows (e.g.
   `tests/helpers.py`) keep test-only imports like `pytest` call-time, not
@@ -72,7 +73,9 @@ excuses once — so the dropped words excuse as expected loss, not
 genuine word loss, and ghost geometry can't vote in the mirror.
 
 - **Column order** — column edges are x0 clusters found on ≥50% of pages
-  (doc-wide voting kills phantom edges from bylines/headings; furniture-
+  (doc-wide voting kills phantom edges from bylines/headings; a page
+  with no cluster quorum abstains rather than voting the empty-list
+  sentinel; furniture-
   shaped blocks don't vote). Wrap strips beside an in-column image don't
   vote either: `analyze._wrap_fragments` claims eligible blocks that sit
   on both sides of a non-trivial image inside a band some eligible block
@@ -90,6 +93,28 @@ genuine word loss, and ghost geometry can't vote in the mirror.
   Blocks crossing a gutter are spans; each
   column emits its own sequence of non-spans + covering spans in y order,
   columns left to right. Works for 1/2/3-column layouts.
+  The page header zone — non-spans above the first span — front-loads
+  only when the region is sparse front matter (one reading column's
+  worth, or lone blocks); when it fills two+ columns with multiple
+  members each it is columnar body and stays in column flow, so a
+  mid-page span (a wide table band, a full-width figure) can't
+  y-interleave the columns above it (#60). A horizontal whitespace
+  strip no column's items intersect — taller than `BAND_MIN_GAP`×line_h
+  — can be a section band boundary (#61): the page emits band-major
+  (band, then column) instead of column-major, so a section banded
+  across the columns (declarations over references, front matter over
+  an abstract) stays sequential rather than splitting around the other
+  column. A strip commits only when each side is a real band
+  (`BAND_MIN_DEPTH`×line_h — page-top running heads and page-bottom
+  colophons are thin strips, not bands) and its boundary carries at
+  most one *marked* block — a ≥1.3×-body head, a named section label
+  (`render._section_label`'s rest check mirrored on both the first
+  line and the joined text — a label word opening lowercase prose
+  can't mark, but a fused label-over-prose head or a wrapped
+  two-line label can), or an all-bold heading-shaped
+  block, deduped across the columns a span touches. Competing marks
+  mean parallel sections, not a band, and unmarked strips — figure
+  whitespace, ragged column tails — keep ordinary column flow.
   The committed doc grid is only the *prior*: `analyze._page_grids`
   reruns the same clustering per page on the same eligible items and
   a page orders on its own grid when the candidate clears the
@@ -132,7 +157,20 @@ genuine word loss, and ghost geometry can't vote in the mirror.
   non-outdent column on its right rather than ordering as its own
   column (MDPI's outdented section heads). A column of wrapped text
   lines fails the band-fill clause; a strip needs ≥3 evidence blocks;
-  the last edge can never fold. Non-spanning assignments and every
+  the last edge can never fold, and any member proving column flow —
+  ≥3 lines or an x-extent past the band bound — vetoes the fold
+  outright, so a fragment-dense paper's real body edge can't collapse
+  (#62: arxiv_revtex's true edge measured 87.5% strips because math
+  papers write in fragments). A second arm folds fragment-dominated
+  edges the strip shape can't reach: an edge whose *voters* — the
+  blocks clustering within `ZONE_EDGE_TOL` of its x0, spanning or not —
+  hold under `FRAG_PROSE_SHARE` prose members (≥`VOTE_MIN_WORDS`
+  alphabetic words of ≥3 letters) is an indent cluster that reached the
+  quorum — table rows, equation pieces, heads — not a reading column,
+  and folds into the nearest anchor edge (left on ties). Supporters,
+  not assigned blocks, carry that evidence: a real column's paragraphs
+  are spanning once a phantom edge splits its band, so assignment sees
+  only fragments at every edge. Non-spanning assignments and every
   span's covered columns pass through the map in `_ordered_blocks`, and
   the heading follower scan, caption column matching, and blockquote
   same-column checks all compare the mapped reading identity. Footnote
@@ -144,8 +182,11 @@ genuine word loss, and ghost geometry can't vote in the mirror.
   read `edges[physical col]`. `stats["columns"]` reports the widest
   page's distinct reading columns (the doc prior's map alone would
   under-report a mixed-grid document); `dev/diagnose_layouts.py` prints
-  each physical edge's mapped column (`edge=… -> rcolN (outdent)`)
-  plus the deciding share, and each page line carries its active
+  each physical edge's mapped column (`edge=… -> rcolN (outdent)` for
+  the strip arm, `(fragment)` for the prose-share arm)
+  plus the deciding share (a `(fragment)` tag's own FOLD row reports the
+  supporter prose share, spanning members included), and each page line
+  carries its active
   `grid=`/`src=` alongside the committed `doc_edges`.
 - **Paragraphs** — blocks merge into the open paragraph unless the first line
   is indented (>4pt) or the previous line ends with terminal punctuation.
@@ -153,7 +194,13 @@ genuine word loss, and ghost geometry can't vote in the mirror.
   letter fragment is never flushed alone.
 - **Headings/TOC** — h1: single-line ≥1.6× body, multi-line block all-lines
   ≥1.6×, or the first page-0 heading ≥1.3× (promoted so title → byline
-  position detection fires); h2: standalone ≥1.08× OR all-bold line/block
+  position detection fires); the first page-0 multi-line block of ≥1.6×
+  lines also promotes past the generic length bound — titles run long —
+  and one leading label line (MDPI's `Article`) splits off as `p.label`;
+  the rescue never re-promotes a veto-demoted block, and its candidate
+  still faces the name-list test (a marked list past the generic bound
+  never classified, so the veto never ran on it).
+  h2: standalone ≥1.08× OR all-bold line/block
   ≥0.9× outside edge zones (papers whose headings share the body font) that
   also precedes body-flow text in its column — footnote-zone, rasterized
   table, and kept-furniture blocks don't count (a trailing bold line is
@@ -165,11 +212,27 @@ genuine word loss, and ghost geometry can't vote in the mirror.
   and stays demoted (a demoted block's size-signaled ≥1.3× lines may
   still emit; only its bold-band lines are silenced). Lines opening
   with footnote markers (`*†‡§`) are never headings.
-  Sentence-like text with periods is rejected. Named labels (`References`,
+  Sentence-like text with periods is rejected, and so is text opening
+  lowercase — a mid-sentence fragment at heading size is prose, though
+  bio-paper heads opening on a non-ASCII lowercase (`β-blockers`), a
+  letter fused to a digit (`p53-mediated apoptosis`), or a camelCase
+  gene name whose lowercase prefix closes on a capital (`mTOR`,
+  `siRNA`) stay eligible. A
+  marker-anchored name list (`Jane Doe 1, John Roe 2*` — ≥2 comma/joiner
+  segments closing on affiliation digits or `*†‡§`) is never a heading
+  at block or line level; it emits through the byline path instead —
+  a loose `Materials and Methods`-style joiner list carries no markers
+  and stays heading-eligible. On page 0, size-promoted candidates in
+  the 12% edge zones demote like bold-only ones when they wear the
+  front-matter shapes — inside the tighter 7% zone (running heads,
+  journal names, date strips) or opening with an all-caps word
+  (`RESEARCH Open Access`) — while a real early h2 between the zones
+  still emits. Named labels (`References`,
   `Supporting Online Material`…) at block start emit h2, but respect the
   demotion — a trailing `Funding NIH grant…` is a plausible note tail,
   not a section head. All-caps short labels in the top 12% emit
-  `<p class="label">` instead. Chapters split at heading fragments; frags
+  `<p class="label">` instead, and so does a single all-caps word at
+  title size anywhere on the page (scirep's `OPEN` badge). Chapters split at heading fragments; frags
   before the first heading fold into chapter 1 rather than forming a
   degenerate leading chapter. The TOC nests: each h1 opens a section that
   absorbs following h2s (an h2 before the first h1 stays top-level); a
@@ -177,9 +240,15 @@ genuine word loss, and ghost geometry can't vote in the mirror.
   empty `<ol/>` for childless section tuples — and a headingless, noteless
   document seeds one entry at chapter one so nav/NCX are never empty.
 - **Bylines** — blocks ≥1.15× body, or the block right after an h1 when it
-  looks like a name list; merge into one `<p class="byline">` with short
-  single-line followers. A trailing drop-cap letter (one not in the
-  profile's `single_letter_words`) moves into the body paragraph. The merged text feeds the author metadata fallback.
+  looks like a name list, or a marker-anchored name list (the same
+  affiliation-digit/`*†‡§` test that vetoes headings) inside the
+  front-matter window — the title spread (pages 0–1) before the first
+  heading or in the first h1's wake; a mid-document marked list is a
+  citation or gene list, not authors, and never overwrites the real
+  byline behind `dc:creator`. Merge into one `<p
+  class="byline">` with short single-line followers. A trailing drop-cap
+  letter (one not in the profile's `single_letter_words`) moves into the
+  body paragraph. The merged text feeds the author metadata fallback.
 - **Headers/footers** — two layers: signatures repeated on ≥40% of pages in
   edge zones and bounded by `BOILERPLATE_MAX_LINES`/`BOILERPLATE_MAX_CHARS`
   (6 lines / 300 normalized letters — medRxiv's five-line license head

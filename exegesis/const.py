@@ -29,6 +29,12 @@ MAX_HEADING_CHARS = 120
 # on a dark banner stays.
 INVISIBLE_TEXT_MIN = 0xF0
 INVISIBLE_BG_MIN = 200
+# prose evidence for the reading-column fold (#62): a member counts as
+# prose when it holds ≥this many alphabetic words of ≥3 letters — a
+# column is a run of prose. Table rows, equation fragments, heads, and
+# caption labels recur at fixed indents on math/table papers and seed
+# phantom indent-cluster edges whose supporters stay under this bound.
+VOTE_MIN_WORDS = 4
 # An outdent edge is a physical column edge whose non-spanning blocks are
 # almost all short unpunctuated fragments floating in a narrow strip —
 # a real edge (full-width elements start there) that must not order as
@@ -41,6 +47,11 @@ INVISIBLE_BG_MIN = 200
 OUTDENT_HEADING_SHARE = 0.8
 OUTDENT_MIN_BLOCKS = 3
 OUTDENT_BAND_FILL = 0.85
+# a fragment-dominated edge — almost no prose-carrying members — folds
+# into the nearest real column: the bound is the complement of the
+# outdent share, so an edge needs ~1/5 prose evidence to read as a
+# column (the arxiv indent clusters hold ~0%)
+FRAG_PROSE_SHARE = 0.2
 PAGES_PER_FALLBACK_CHAPTER = 10
 
 # info-box detection bounds (#41): run adjacency and media attachment
@@ -77,6 +88,19 @@ ZONE_COL_MIN_WIDTH = 8.0  # x body_size — a prose column holds ~8em
 ZONE_COL_MIN_COVER = 0.15
 ZONE_GUTTER_TOL = 4.0
 ZONE_GUTTER_GRAZE = 0.2
+
+# a page-wide whitespace strip — no column's items intersect it — marks
+# a band seam: a section that occupies a horizontal band across the
+# columns (declarations over references, front matter over an abstract)
+# reads band-major instead of splitting around the other column (#61).
+# The bound is in line heights: paragraph spacing stays under it while
+# a real band break (Frontiers' ~1.7x, Bundesgesundheitsblatt's ~4x)
+# clears it.
+BAND_MIN_GAP = 1.5  # x line_h
+# the regions on both sides of a candidate strip must each hold real
+# content — a page-top running-head strip or a page-bottom colophon is
+# the same whitespace but not a band boundary
+BAND_MIN_DEPTH = 3.0  # x line_h
 
 # marginalia detection (#36): a block fully outside the doc grid's body
 # bands is only a *candidate* — lifting it to an aside needs spatial

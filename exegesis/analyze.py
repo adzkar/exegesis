@@ -23,6 +23,7 @@ from .const import (
     FIGURE_LABEL_CHARS,
     FIGURE_LABEL_PAD,
     FIGURE_MIN_LABELS,
+    FRAG_PROSE_SHARE,
     INFO_ADJ_GAP,
     INFO_ATTACH_GAP,
     INFO_ATTACH_MAX,
@@ -41,6 +42,7 @@ from .const import (
     OUTDENT_MIN_BLOCKS,
     PAGE_FRAME_RATIO,
     SIGNATURE_PREFIX_MAX_LINES,
+    VOTE_MIN_WORDS,
     WRAP_BAND_SHARE,
     WRAP_COVER_GAP,
     WRAP_EDGE_TOL,
@@ -231,7 +233,11 @@ def _voting_texts(page, pdict, boilerplate, lang):
     sidebar or running head recurring at the same x is the classic
     phantom-edge generator), a claimed info-box column must not vote
     a phantom edge, and a wrap strip's second x0 inside one logical
-    column must not either (#38).
+    column must not either (#38). Fragment clusters (table rows,
+    equation rows, head stacks) still vote edges — later machinery
+    (margins, asides, the reading-column fold) needs the physical edge
+    to exist — but a fragment-dominated edge never becomes a reading
+    column (#62).
     """
     items = [
         b
@@ -260,9 +266,15 @@ def _doc_column_edges(
     """
     votes = []
     for page, pdict in pages:
-        for e in _column_edges(
+        page_edges = _column_edges(
             _voting_texts(page, pdict, boilerplate, lang)
-        ):
+        )
+        # a page with no cluster quorum abstains — [0.0] is _column_edges's
+        # empty-list sentinel, not a measured edge; counting it as a vote
+        # lets fragment-poor pages elect a phantom edge at the left margin
+        if page_edges == [0.0]:
+            continue
+        for e in page_edges:
             for v in votes:
                 if abs(v[0] - e) < 15:
                     v[1] += 1
@@ -944,6 +956,31 @@ def _outdent_like(block, text, band_end):
     )
 
 
+# alphabetic words of ≥3 letters: the prose-evidence bound behind
+# `_reading_columns`'s fragment fold — a column is a run of prose, so
+# an edge whose blocks are almost all table rows, equation pieces, or
+# heads is an indent cluster, not a reading column (#62)
+_PROSE_WORD_RE = re.compile(r"[A-Za-zÀ-ÖØ-öø-ÿ]{3,}")
+
+
+def _column_flow(block, band_end):
+    """Unmistakable column-flow evidence for the outdent fold's veto.
+
+    The counter-shape to ``_outdent_like``: a paper that writes in
+    fragments (display equations, table rows, permutation lists) leaves
+    most of a real body column's blocks short and unpunctuated too, so
+    the strip share alone can brand the edge an outdent (#62's arxiv
+    case — the true body edge folded at 87.5% share). Any single member
+    that could only be column flow — three or more text lines, or an
+    x-extent reaching past the band bound a strip must stop inside —
+    proves the edge carries a real column and vetoes the fold.
+    """
+    nonempty = sum(
+        bool(_line_text(line).strip()) for line in _block_lines(block)
+    )
+    return nonempty >= 3 or block["bbox"][2] > band_end
+
+
 def _reading_columns(
     pages,
     edges,
@@ -967,7 +1004,23 @@ def _reading_columns(
     Spans never count either way — they cover the edge legitimately —
     and an edge with less than ``OUTDENT_MIN_BLOCKS`` of non-spanning
     evidence, or with no reading column to its right, is not an outdent
-    edge.
+    edge. A single unmistakable column-flow member — ≥3 text lines or
+    an x-extent past the band bound — vetoes the fold: a paper that
+    writes in fragments (equations, table rows) leaves its real body
+    edge mostly short and unpunctuated too (#62).
+
+    A second arm folds what the strip shape can't reach: an edge whose
+    *supporters* — the blocks clustering within ``ZONE_EDGE_TOL`` of its
+    x0, spanning or not — hold under ``FRAG_PROSE_SHARE`` members with
+    ≥``VOTE_MIN_WORDS`` alphabetic words is an indent cluster (table
+    rows, equation pieces, heads) that reached the quorum, not a
+    reading column (#62's arxiv phantom edges). It folds into the
+    geometrically nearest anchor edge, left on ties — its content sits
+    inside a real column's flow, so column-major would split that flow
+    around it.
+    Supporters, not assigned blocks, carry the evidence: a real
+    column's paragraphs are spanning once a phantom edge splits its
+    band, so assignment alone sees fragments at every edge.
 
     Evidence comes only from pages ≥1: page 0's front matter (title,
     bylines, disclaimers) clusters at wide left edges and cannot be told
@@ -979,62 +1032,120 @@ def _reading_columns(
     ``_doc_column_edges`` — furniture-shaped blocks contribute no
     evidence, just as they cast no votes.
 
-    Non-outdent edges keep their own reading column, renumbered left to
-    right; an outdent edge maps to the first non-outdent edge on its
-    right — transitively, when several outdent edges chain (the last
-    edge can never be an outdent, so the chain always lands). Keep this
-    mapping separate from ``edges``: geometry (``edges[col]`` indents,
-    coverage bands, span tests) stays physical; only ordering and
-    column-identity tests read the mapped index.
+    Non-folded edges keep their own reading column, renumbered left to
+    right; a folded edge maps to its anchor — transitively, when folds
+    chain — and an edge that can reach no anchor keeps its own column.
+    Keep this mapping separate from ``edges``: geometry (``edges[col]``
+    indents, coverage bands, span tests) stays physical; only ordering
+    and column-identity tests read the mapped index.
     """
     if len(edges) < 2:
         return list(range(len(edges)))
     evidence = [[] for _ in edges]
+    support = [[] for _ in edges]
     for pi in range(len(pages)) if pi_list is None else pi_list:
         if pi == 0:
             continue
         page, pdict = pages[pi]
         for b in pdict["blocks"]:
-            if (
-                b["type"] != 0
-                or b.get("aside") is not None
-                or _is_spanning(b, edges)
-            ):
+            if b["type"] != 0 or b.get("aside") is not None:
                 continue
             text = _block_text(b, lang)
-            if (
+            if not (
                 text
                 and not _is_furniture(b, page, text, lang)
                 and not _is_signature_furniture(
                     b, page.rect.height, boilerplate
                 )
             ):
-                evidence[_assign_column(b, edges)].append((b, text))
-    outdent = [
-        i + 1 < len(edges)
-        and len(ev) >= OUTDENT_MIN_BLOCKS
-        and sum(
-            _outdent_like(
-                b,
-                t,
-                edges[i] + (edges[i + 1] - edges[i]) * OUTDENT_BAND_FILL,
-            )
-            for b, t in ev
-        ) / len(ev)
-        >= OUTDENT_HEADING_SHARE
-        for i, ev in enumerate(evidence)
+                continue
+            # supporters — the blocks that clustered this edge — carry
+            # fragment evidence regardless of spanning: a real column's
+            # prose is spanning once a phantom edge splits its band
+            for j, e in enumerate(edges):
+                if abs(b["bbox"][0] - e) < ZONE_EDGE_TOL:
+                    support[j].append((b, text))
+            if _is_spanning(b, edges):
+                continue
+            evidence[_assign_column(b, edges)].append((b, text))
+    outdent = []
+    fragment = []
+    for i, ev in enumerate(evidence):
+        band_end = (
+            edges[i] + (edges[i + 1] - edges[i]) * OUTDENT_BAND_FILL
+            if i + 1 < len(edges)
+            else None
+        )
+        strips = (
+            sum(_outdent_like(b, t, band_end) for b, t in ev)
+            if band_end is not None
+            else 0
+        )
+        # a column is a run of prose: an edge whose *voters* are almost
+        # all fragments — table rows, equation pieces, heads — is an
+        # indent cluster that happened to reach the quorum, not a
+        # reading column; it folds into the nearest real column (#62).
+        # Supporters, not assigned blocks, carry the evidence: a real
+        # column's paragraphs are spanning once phantom edges split its
+        # band, so assignment sees fragments at every edge (arxiv
+        # _revtex's true body edge measured 0% prose by assignment).
+        # The ``_column_flow`` veto protects the outdent arm alone.
+        sup = support[i]
+        prose = sum(
+            len(_PROSE_WORD_RE.findall(t)) >= VOTE_MIN_WORDS
+            for _, t in sup
+        )
+        outdent.append(
+            band_end is not None
+            and len(ev) >= OUTDENT_MIN_BLOCKS
+            and strips / len(ev) >= OUTDENT_HEADING_SHARE
+            and not any(_column_flow(b, band_end) for b, _ in ev)
+        )
+        fragment.append(
+            bool(sup)
+            and prose / len(sup) < FRAG_PROSE_SHARE
+            and not outdent[-1]
+        )
+    anchors = [
+        i for i in range(len(edges)) if not outdent[i] and not fragment[i]
     ]
-    outdent[-1] = False
-    own = {}
-    for i, is_outdent in enumerate(outdent):
-        if not is_outdent:
-            own[i] = len(own)
-    return [
-        own[i]
-        if not outdent[i]
-        else own[next(j for j in range(i + 1, len(edges)) if not outdent[j])]
-        for i in range(len(edges))
-    ]
+    own = {i: n for n, i in enumerate(anchors)}
+
+    def _target(i, direction):
+        rng = (
+            range(i - 1, -1, -1)
+            if direction == "left"
+            else range(i + 1, len(edges))
+        )
+        for j in rng:
+            if j in own:
+                return j
+        return None
+
+    result = []
+    for i in range(len(edges)):
+        if i in own:
+            result.append(own[i])
+            continue
+        j = None
+        if outdent[i]:
+            # a head strip belongs with the section that follows it
+            j = _target(i, "right")
+        if j is None and fragment[i]:
+            # an interior indent cluster merges into the column it
+            # interrupts — the geometrically nearer anchor wins, left on
+            # a true distance tie (edge positions, not indices: an
+            # asymmetric grid places the near anchor edges away)
+            left, right = _target(i, "left"), _target(i, "right")
+            if left is None or (
+                right is not None
+                and edges[right] - edges[i] < edges[i] - edges[left]
+            ):
+                j = right
+            else:
+                j = left
+        result.append(own[j] if j is not None else i)
+    return result
 
 
 def _grids_agree(a, b, tol=ZONE_EDGE_TOL):
