@@ -422,6 +422,57 @@ def test_inv_words_concatenates_spans_per_line():
     assert ctx.inv_words == ["a1111111111"]
 
 
+def test_drop_arms_grade_post_drop_bbox():
+    """The drop arms judge the extent convert saw — a fused block that
+    lost its ghost spans is graded on the recomputed bbox, not the raw
+    tuple's fused one, so the ghost's reach can't pull it across a zone
+    threshold in either direction (#63)."""
+    import importlib.util
+
+    from exegesis.lang import EN
+
+    spec = importlib.util.spec_from_file_location("eval_epub", EVAL)
+    eval_epub = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(eval_epub)
+
+    # a furniture line fused above a ghost line: the raw tuple's fused
+    # y1=200 sits mid-page where no zone arm reaches, but post-drop the
+    # block ends at y=52 — inside the top-7% pattern zone where `www.`
+    # heads drop. Convert stripped the text; grading the fused extent
+    # would keep it and flag genuine loss on a correct conversion.
+    fused = {
+        "type": 0, "bbox": (72, 40, 200, 200),
+        "lines": [
+            {"bbox": (72, 40, 200, 52), "dir": (1, 0),
+             "spans": [{"text": "www.journal.org", "size": 9,
+                        "color": 0, "bbox": (72, 40, 200, 52)}]},
+            {"bbox": (72, 188, 200, 200), "dir": (1, 0),
+             "spans": [{"text": "a111", "size": 9, "color": 0xFFFFFF,
+                        "bbox": (72, 188, 200, 200)}]},
+        ],
+    }
+    # a directionless margin strip whose ghost line widens the fused
+    # extent past the <25pt fallback: fused it measures 52pt, post-drop
+    # the kept line is 20pt — convert strips it either directionless
+    strip = {
+        "type": 0, "bbox": (560, 100, 612, 420),
+        "lines": [
+            {"bbox": (592, 100, 612, 420), "dir": (0, 0),
+             "spans": [{"text": "Side Note", "size": 9, "color": 0,
+                        "bbox": (592, 100, 612, 420)}]},
+            {"bbox": (560, 100, 592, 420), "dir": (0, 0),
+             "spans": [{"text": "a222", "size": 9, "color": 0xFFFFFF,
+                        "bbox": (560, 100, 592, 420)}]},
+        ],
+    }
+    ctx = eval_epub._page_ctx(_stub_page([fused, strip]), set(), EN)
+    # raw `get_text("blocks")` tuples still report the fused extents
+    raw_fused = (72, 40, 200, 200, "www.journal.org\na111\n", 0, 0)
+    raw_strip = (560, 100, 612, 420, "Side Note\na222\n", 1, 0)
+    assert eval_epub._dropped(raw_fused, ctx, set(), EN)
+    assert eval_epub._dropped(raw_strip, ctx, set(), EN)
+
+
 def test_eval_bottom_footer_is_excused(tmp_path):
     """A repeated bottom running foot and a varying © line drop as
     furniture — the signature arm's `y0 > 0.80` and the pattern arm's

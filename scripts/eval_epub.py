@@ -410,16 +410,22 @@ def _kept(block, ctx, boilerplate: set[str], lang: LangProfile):
 
 
 def _strip(block, ctx) -> bool:
-    """Mirror of `analyze._is_margin_strip` over the tuple's bbox plus the
-    ctx's dict line data — the same mediabox-space margin test, rotated-
-    table clip exemption, upright veto, all-rotated qualifier, and <25pt
-    fallback when direction data is missing or unusable (a dict lookup
-    miss counts as missing)."""
+    """Mirror of `analyze._is_margin_strip` over the block's post-drop
+    bbox plus the ctx's dict line data — the same mediabox-space margin
+    test, rotated-table clip exemption, upright veto, all-rotated
+    qualifier, and <25pt fallback when direction data is missing or
+    unusable (a dict lookup miss counts as missing)."""
     import fitz  # lazy like main(): an ImportError must reach the exit-2 net
 
     from exegesis.analyze import _line_dir
 
-    x0, y0, x1, y1 = block[:4]
+    # convert graded the recomputed extent — on a dict hit the fused
+    # tuple's ghost reach can't stretch the tall-narrow, margin, clip,
+    # or <25pt gates either way (a synthetic remainder dict carries no
+    # bbox; its incoming extent is already post-split/post-drop)
+    dblock = ctx.dmap.get(tuple(block[:4]))
+    x0, y0, x1, y1 = (
+        dblock["bbox"] if dblock and "bbox" in dblock else block[:4])
     width = x1 - x0
     if not (y1 - y0 > 4 * width
             and (x0 > ctx.mb_w * 0.9 or x1 < ctx.mb_w * 0.1)):
@@ -428,7 +434,6 @@ def _strip(block, ctx) -> bool:
     if (clip is not None
             and fitz.Rect((x0, y0, x1, y1)).intersects(clip)):
         return False
-    dblock = ctx.dmap.get((x0, y0, x1, y1))
     dirs = ([_line_dir(l) for l in dblock.get("lines", [])]
             if dblock else [])
     if any(d == ctx.upright for d in dirs):
@@ -449,8 +454,14 @@ def _dropped(block, ctx, boilerplate: set[str],
     outer 10% horizontal margins. One predicate per block, so a block
     qualifying under several arms (a content-matching head that also
     recurs — the norm on journal corpora) is dropped, and counted,
-    once."""
-    _, y0, _, y1, text = block[:5]
+    once. The zone gates read the extent convert graded: on a `dmap`
+    hit the dict block's recomputed bbox replaces the raw tuple's
+    fused one, so a ghost line's reach can't pull the block across a
+    threshold either way — excusing kept text or flagging a correct
+    strip as genuine loss."""
+    text = block[4]
+    db = ctx.dmap.get(tuple(block[:4]))
+    _, y0, _, y1 = db["bbox"] if db and "bbox" in db else block[:4]
     h = ctx.rect.height
     joined = " ".join(text.split())
     # _is_furniture searches `_block_text` — `copy-`/`right` and
