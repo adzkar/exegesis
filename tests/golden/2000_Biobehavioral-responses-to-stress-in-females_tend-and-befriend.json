@@ -1787,6 +1787,7 @@
     }
   ],
   "stats": {
+    "asides": 0,
     "chapters": 14,
     "columns": 2,
     "footnotes": 29,
@@ -1794,6 +1795,7 @@
     "headings": 13,
     "images": 0,
     "pages": 19,
+    "raster_figures": 0,
     "raster_tables": 0,
     "title": "Biobehavioral Responses to Stress in Females: Tend-and-Befriend, not Fight-or-Flight"
   },

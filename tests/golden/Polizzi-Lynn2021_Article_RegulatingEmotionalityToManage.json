@@ -5,8 +5,8 @@
       "frags": [
         [
           "p",
-          "Cognitive Therapy and Research https://doi.org/10.1007/s1060",
-          73
+          "https://doi.org/10.1007/s10608-020-10186-1",
+          42
         ],
         [
           "p",
@@ -14,24 +14,34 @@
           16
         ],
         [
-          "p",
+          "h1",
           "Regulating Emotionality to Manage Adversity: A Systematic Re",
-          173
+          136
         ],
         [
           "p",
-          "Accepted: 23 November 2020 \u00a9 The Author(s), under exclusive ",
-          1569
+          "Craig P. Polizzi1 \u00b7 Steven Jay Lynn1 Accepted: 23 November 2",
+          1606
         ],
         [
           "p",
           "Keywords Emotion regulation \u00b7 Psychological resilience \u00b7 Adv",
           66
-        ],
+        ]
+      ]
+    },
+    {
+      "file": "chap_2.xhtml",
+      "frags": [
         [
           "h2",
           "Introduction",
           12
+        ],
+        [
+          "p",
+          "non-consciously adjust internal affective states to respond ",
+          1077
         ],
         [
           "p",
@@ -42,16 +52,6 @@
           "p",
           "",
           0
-        ],
-        [
-          "p",
-          "non-consciously adjust internal affective states to respond ",
-          1077
-        ],
-        [
-          "p",
-          "Vol.:(0123456789) 1 3",
-          21
         ],
         [
           "p",
@@ -86,7 +86,7 @@
       ]
     },
     {
-      "file": "chap_2.xhtml",
+      "file": "chap_3.xhtml",
       "frags": [
         [
           "h2",
@@ -96,7 +96,7 @@
       ]
     },
     {
-      "file": "chap_3.xhtml",
+      "file": "chap_4.xhtml",
       "frags": [
         [
           "h2",
@@ -111,7 +111,7 @@
       ]
     },
     {
-      "file": "chap_4.xhtml",
+      "file": "chap_5.xhtml",
       "frags": [
         [
           "h2",
@@ -131,22 +131,7 @@
         [
           "p",
           "Fig. 1 Article selection process emotional interdependency w",
-          202
-        ],
-        [
-          "p",
-          "1 3",
-          3
-        ],
-        [
-          "p",
-          "for full-text evaluation and selected 33 articles for inclus",
-          94
-        ],
-        [
-          "p",
-          "",
-          0
+          297
         ],
         [
           "p",
@@ -182,21 +167,36 @@
           "p",
           "1 3",
           3
-        ]
-      ]
-    },
-    {
-      "file": "chap_5.xhtml",
-      "frags": [
+        ],
         [
-          "h2",
-          "Results",
-          7
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "1 3",
+          3
         ]
       ]
     },
     {
       "file": "chap_6.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Results",
+          7
+        ],
+        [
+          "p",
+          "Vaughan et al. (2019) found that emotional dysregulation ful",
+          3035
+        ]
+      ]
+    },
+    {
+      "file": "chap_7.xhtml",
       "frags": [
         [
           "h2",
@@ -211,7 +211,7 @@
       ]
     },
     {
-      "file": "chap_7.xhtml",
+      "file": "chap_8.xhtml",
       "frags": [
         [
           "h2",
@@ -226,7 +226,7 @@
       ]
     },
     {
-      "file": "chap_8.xhtml",
+      "file": "chap_9.xhtml",
       "frags": [
         [
           "h2",
@@ -236,7 +236,7 @@
         [
           "p",
           "Many studies used a cross-sectional design, and several incl",
-          3502
+          466
         ],
         [
           "p",
@@ -251,7 +251,7 @@
       ]
     },
     {
-      "file": "chap_9.xhtml",
+      "file": "chap_10.xhtml",
       "frags": [
         [
           "h2",
@@ -276,7 +276,7 @@
       ]
     },
     {
-      "file": "chap_10.xhtml",
+      "file": "chap_11.xhtml",
       "frags": [
         [
           "h2",
@@ -291,7 +291,7 @@
       ]
     },
     {
-      "file": "chap_11.xhtml",
+      "file": "chap_12.xhtml",
       "frags": [
         [
           "h2",
@@ -316,7 +316,7 @@
       ]
     },
     {
-      "file": "chap_12.xhtml",
+      "file": "chap_13.xhtml",
       "frags": [
         [
           "h2",
@@ -331,7 +331,7 @@
       ]
     },
     {
-      "file": "chap_13.xhtml",
+      "file": "chap_14.xhtml",
       "frags": [
         [
           "h2",
@@ -351,7 +351,7 @@
       ]
     },
     {
-      "file": "chap_14.xhtml",
+      "file": "chap_15.xhtml",
       "frags": [
         [
           "h2",
@@ -371,7 +371,7 @@
       ]
     },
     {
-      "file": "chap_15.xhtml",
+      "file": "chap_16.xhtml",
       "frags": [
         [
           "h2",
@@ -406,7 +406,7 @@
       ]
     },
     {
-      "file": "chap_16.xhtml",
+      "file": "chap_17.xhtml",
       "frags": [
         [
           "h2",
@@ -421,7 +421,7 @@
       ]
     },
     {
-      "file": "chap_17.xhtml",
+      "file": "chap_18.xhtml",
       "frags": [
         [
           "h2",
@@ -436,7 +436,7 @@
       ]
     },
     {
-      "file": "chap_18.xhtml",
+      "file": "chap_19.xhtml",
       "frags": [
         [
           "h2",
@@ -456,7 +456,7 @@
       ]
     },
     {
-      "file": "chap_19.xhtml",
+      "file": "chap_20.xhtml",
       "frags": [
         [
           "h2",
@@ -476,22 +476,17 @@
         [
           "p",
           "negative emotions, and failures in interpersonal ER within t",
-          3062
+          5927
         ],
         [
           "p",
           "1 3",
           3
-        ],
-        [
-          "p",
-          "variable is indeed an adaption to adverse circumstances or i",
-          2864
         ]
       ]
     },
     {
-      "file": "chap_20.xhtml",
+      "file": "chap_21.xhtml",
       "frags": [
         [
           "h2",
@@ -506,7 +501,7 @@
       ]
     },
     {
-      "file": "chap_21.xhtml",
+      "file": "chap_22.xhtml",
       "frags": [
         [
           "h2",
@@ -521,7 +516,7 @@
       ]
     },
     {
-      "file": "chap_22.xhtml",
+      "file": "chap_23.xhtml",
       "frags": [
         [
           "h2",
@@ -536,7 +531,7 @@
       ]
     },
     {
-      "file": "chap_23.xhtml",
+      "file": "chap_24.xhtml",
       "frags": [
         [
           "h2",
@@ -561,7 +556,7 @@
       ]
     },
     {
-      "file": "chap_24.xhtml",
+      "file": "chap_25.xhtml",
       "frags": [
         [
           "h2",
@@ -580,6 +575,11 @@
         ],
         [
           "p",
+          "rumination, anxiety, and other variables. Personality and In",
+          3831
+        ],
+        [
+          "p",
           "Psychological Science in the Public Interest, 11(1), 1\u201349. h",
           3754
         ],
@@ -587,11 +587,6 @@
           "p",
           "1 3",
           3
-        ],
-        [
-          "p",
-          "rumination, anxiety, and other variables. Personality and In",
-          3831
         ],
         [
           "p",
@@ -610,8 +605,8 @@
         ],
         [
           "p",
-          "Masten, A. S., & Narayan, A. J. (2012). Child development in",
-          3917
+          "Park, C. L., Cohen, L. H., & Murch, R. L. (1996). Assessment",
+          7861
         ],
         [
           "p",
@@ -620,23 +615,13 @@
         ],
         [
           "p",
-          "Park, C. L., Cohen, L. H., & Murch, R. L. (1996). Assessment",
-          3943
-        ],
-        [
-          "p",
-          "American Journal of Geriatric Psychiatry, 25(10), 1135\u20131149.",
-          2452
-        ],
-        [
-          "p",
           "experiences. Journal of Personality and Social Psychology, 8",
           1956
         ],
         [
           "p",
-          "Publisher\u2019s Note Springer Nature remains neutral with regard",
-          135
+          "American Journal of Geriatric Psychiatry, 25(10), 1135\u20131149.",
+          2588
         ],
         [
           "p",
@@ -655,118 +640,124 @@
         ],
         [
           "p",
-          "1 Binghamton University (SUNY), Binghamton, NY, USA",
-          51
+          "1 Binghamton University (SUNY), Binghamton, NY, USA 1 3",
+          55
         ]
       ]
     }
   ],
   "stats": {
-    "chapters": 25,
+    "asides": 0,
+    "chapters": 26,
     "columns": 2,
-    "footnotes": 1,
+    "footnotes": 2,
     "grid_tables": 0,
-    "headings": 24,
+    "headings": 25,
     "images": 5,
     "pages": 21,
+    "raster_figures": 0,
     "raster_tables": 4,
     "title": "Regulating Emotionality to Manage Adversity: A Systematic Review of the Relation Between Emotion Regulation and Psychological Resilience"
   },
   "toc": [
     [
       1,
+      "Regulating Emotionality to Manage Adversity: A Systematic Review of the Relation Between Emotion Regulation and Psychological Resilience"
+    ],
+    [
+      2,
       "Introduction"
     ],
     [
-      1,
+      2,
       "Method"
     ],
     [
-      1,
+      2,
       "Literature Search"
     ],
     [
-      1,
+      2,
       "Eligibility Criteria"
     ],
     [
-      1,
+      2,
       "Results"
     ],
     [
-      1,
+      2,
       "Descriptive Statistics"
     ],
     [
-      1,
+      2,
       "Review of the Literature"
     ],
     [
-      1,
+      2,
       "Cross\u2011Sectional Studies (n = 17)"
     ],
     [
-      1,
+      2,
       "Comparison Studies (n = 10)"
     ],
     [
-      1,
+      2,
       "Longitudinal Studies (n = 6)"
     ],
     [
-      1,
+      2,
       "Discussion"
     ],
     [
-      1,
+      2,
       "Potential Mediators and Moderators"
     ],
     [
-      1,
+      2,
       "Bi\u2011Directional Relation"
     ],
     [
-      1,
+      2,
       "ER Strategies"
     ],
     [
-      1,
+      2,
       "Acceptance and Avoidance"
     ],
     [
-      1,
+      2,
       "Other ER Strategies"
     ],
     [
-      1,
+      2,
       "Summary"
     ],
     [
-      1,
+      2,
       "Clinical Implications"
     ],
     [
-      1,
+      2,
       "Limitations of the Literature and Future Directions"
     ],
     [
-      1,
+      2,
       "Strengths and Limitations of the Current Review"
     ],
     [
-      1,
+      2,
       "Conclusion"
     ],
     [
-      1,
+      2,
       "Funding"
     ],
     [
-      1,
+      2,
       "Compliance with Ethical Standards"
     ],
     [
-      1,
+      2,
       "References"
     ],
     [

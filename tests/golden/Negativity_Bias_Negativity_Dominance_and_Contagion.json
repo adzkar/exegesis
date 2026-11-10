@@ -30,8 +30,13 @@
         ],
         [
           "p",
+          "documented the wide range of positive biases. These appear i",
+          1826
+        ],
+        [
+          "p",
           "The dominance of negative contamination affords a particular",
-          4624
+          2797
         ],
         [
           "p",
@@ -131,7 +136,12 @@
         [
           "p",
           "According to the principle of negativity dominance, the holi",
-          4007
+          1046
+        ],
+        [
+          "p",
+          "hedonic episodes, personality traits, etc.) is more negative",
+          2960
         ]
       ]
     },
@@ -282,6 +292,11 @@
           "p",
           "Evaluative conditioning. Other than mere exposure, evaluativ",
           1949
+        ],
+        [
+          "p",
+          "ative and positive event scheduled to occur on the same day,",
+          2927
         ]
       ]
     },
@@ -296,7 +311,7 @@
         [
           "p",
           "This minimally investigated area provides the only direct ev",
-          4877
+          1949
         ]
       ]
     },
@@ -405,13 +420,13 @@
         ],
         [
           "p",
-          "There have been thorough reviews of negative bias in impress",
-          2874
+          "More recently, Lupfer, Weeks, and Dupuis (2000) noted that a",
+          598
         ],
         [
           "p",
-          "More recently, Lupfer, Weeks, and Dupuis (2000) noted that a",
-          598
+          "There have been thorough reviews of negative bias in impress",
+          2874
         ]
       ]
     },
@@ -777,6 +792,11 @@
           "p",
           "We do not offer a general, simple theory of negativity bias.",
           2565
+        ],
+        [
+          "p",
+          "Bohner, G., Bless, H., Schwarz, N., & Strack, F. (1988). Wha",
+          3576
         ]
       ]
     },
@@ -792,11 +812,6 @@
           "p",
           "Anderson, E. (1984). The code of the streets. Atlantic Month",
           2139
-        ],
-        [
-          "p",
-          "Bohner, G., Bless, H., Schwarz, N., & Strack, F. (1988). Wha",
-          3576
         ],
         [
           "p",
@@ -816,7 +831,12 @@
         [
           "p",
           "Rozin, P., & Schiller, D. (1980). The nature and acquisition",
-          3555
+          4225
+        ],
+        [
+          "p",
+          "Warren, R. P., & Pfaffman, C. (1959). Early experience and t",
+          142
         ],
         [
           "p",
@@ -832,11 +852,6 @@
           "p",
           "Woodworth, R. S. (1938). Experimental psychology. New York: ",
           65
-        ],
-        [
-          "p",
-          "Wrzesniewski, A., Rozin, P., & Bennett, G. (in press). Worki",
-          812
         ],
         [
           "p",
@@ -862,6 +877,7 @@
     }
   ],
   "stats": {
+    "asides": 0,
     "chapters": 33,
     "columns": 2,
     "footnotes": 1,
@@ -869,6 +885,7 @@
     "headings": 32,
     "images": 2,
     "pages": 26,
+    "raster_figures": 0,
     "raster_tables": 1,
     "title": "Negativity Bias, Negativity Dominance, and Contagion"
   },

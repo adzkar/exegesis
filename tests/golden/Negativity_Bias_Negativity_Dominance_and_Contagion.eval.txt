@@ -15,7 +15,6 @@
 | Med | C | genuine word loss 20: [('bias', 2), ('able', 1), ('ing', 1), ('un', 1), ('co', 1), ('son', 1), ('pleas', 1), ('ant', 1), ('sys', 1), ('tem', 1)] |
 | Low | D | duplicate TOC titles: ['Contagion'] |
 | Low | F | Table 1: rasterized to image (cells not text-checkable) |
-| Low | G | chap_21.xhtml: <img> missing caption alt text |
 | Low | G | chap_32.xhtml: <img> missing caption alt text |
 
 ## Classified word loss
@@ -23,6 +22,6 @@
 |-------|-------|--------------|
 | rejoined hyphenation | 1073 | tive, in, tion, nega, re, ing, ative, con |
 | stripped furniture | 71 | negativity, bias, rozin, royzman, 296, 320, 315, 297 |
-| rasterized table cells | 141 | x, positive, emotion, additional, table, 1, taxonomies, source |
+| rasterized table cells | 141 | x, positive, additional, emotion, source, date, anger, fear |
 | superscript splits | 0 |  |
 | genuine loss | 20 | bias, able, ing, un, co, son, pleas, ant |
