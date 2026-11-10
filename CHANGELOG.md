@@ -4,6 +4,10 @@ All notable changes to exegesis are documented here. Versions follow
 [Semantic Versioning](https://semver.org); per-release notes are
 generated on each GitHub Release (see `RELEASE.md`).
 
+## [0.2.1] — 2026-11-10
+
+- test: re-seat the root corpus on the journals/ survey set — 18 samples, goldens regenerated
+
 ## [0.2.0] — 2026-11-10
 
 Layout-robustness milestone: 17 issue-driven fixes from the journal-corpus
