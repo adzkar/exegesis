@@ -1,6 +1,6 @@
 {
-  "generated": "2026-11-04 00:04",
-  "version": "0.1.2",
+  "generated": "2026-11-10 20:11",
+  "version": "0.2.0",
   "results": [
     {
       "pdf": "2000_Biobehavioral-responses-to-stress-in-females_tend-and-befriend.pdf",
@@ -14,7 +14,9 @@
       "columns": 2,
       "grid_tables": 0,
       "raster_tables": 0,
-      "seconds": 0.5
+      "raster_figures": 0,
+      "asides": 0,
+      "seconds": 0.9
     },
     {
       "pdf": "A Wandering Mind Is an Unhappy Mind.pdf",
@@ -28,7 +30,9 @@
       "columns": 3,
       "grid_tables": 0,
       "raster_tables": 0,
-      "seconds": 0.1
+      "raster_figures": 0,
+      "asides": 0,
+      "seconds": 0.2
     },
     {
       "pdf": "Negativity_Bias_Negativity_Dominance_and_Contagion.pdf",
@@ -42,21 +46,25 @@
       "columns": 2,
       "grid_tables": 0,
       "raster_tables": 1,
-      "seconds": 0.3
+      "raster_figures": 0,
+      "asides": 0,
+      "seconds": 0.5
     },
     {
       "pdf": "Polizzi-Lynn2021_Article_RegulatingEmotionalityToManage.pdf",
       "status": "ok",
       "title": "Regulating Emotionality to Manage Adversity: A Systematic Review of the Relation Between Emotion Regulation and Psychological Resilience",
       "pages": 21,
-      "chapters": 25,
-      "headings": 24,
-      "footnotes": 1,
+      "chapters": 26,
+      "headings": 25,
+      "footnotes": 2,
       "images": 5,
       "columns": 2,
       "grid_tables": 0,
       "raster_tables": 4,
-      "seconds": 0.5
+      "raster_figures": 0,
+      "asides": 0,
+      "seconds": 0.7
     }
   ]
 }
