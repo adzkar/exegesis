@@ -1,0 +1,27 @@
+# epub-eval: bundesges_de.pdf
+
+**Verdict:** 1 high-severity findings — needs attention; verbatim word coverage 86.9% (1429/1645, epub emitted 1537 words after rejoins)
+
+## Checks
+- A container: PASS — 13 members, 4 chapters, 3 images
+- B metadata: title='Bewegung fördern, Gesundheit stärken'
+- C coverage: rejoined 192, furniture 20, rasterized table cells 0, superscript splits 0, genuine loss 24
+- D toc: 4 entries, h1=1 h2=3, dupes=none
+- G figures: pdf rasters=3, embedded=3, vector pages=[]
+
+## Findings (severity-ranked)
+| Sev | Check | Finding |
+|-----|-------|---------|
+| High | C | genuine word loss 24 (>1%): [('f', 3), ('t', 2), ('s', 1), ('r', 1), ('in', 1), ('de', 1), ('tigungen', 1), ('perlich', 1), ('nen', 1), ('ak', 1)] |
+| Low | G | chap_3.xhtml: <img> missing caption alt text |
+| Low | G | chap_3.xhtml: <img> missing caption alt text |
+| Low | G | chap_3.xhtml: <img> missing caption alt text |
+
+## Classified word loss
+| class | words | top examples |
+|-------|-------|--------------|
+| rejoined hyphenation | 192 | ge, be, ver, de, ter, gen, ent, gli |
+| stripped furniture | 20 | 2026, bundesgesundheitsblatt, gesundheitsforschung, gesundheitsschutz, 11, editorial, 1257, 1259 |
+| rasterized table cells | 0 |  |
+| superscript splits | 0 |  |
+| genuine loss | 24 | f, t, s, r, in, de, tigungen, perlich |

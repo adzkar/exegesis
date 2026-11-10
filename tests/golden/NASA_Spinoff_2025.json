@@ -1,0 +1,9034 @@
+{
+  "spine": [
+    {
+      "file": "chap_1.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Abstract",
+          8
+        ],
+        [
+          "p",
+          "National Aeronautics and Space Administration",
+          45
+        ],
+        [
+          "p",
+          "SPINOFF",
+          7
+        ]
+      ]
+    },
+    {
+      "file": "chap_2.xhtml",
+      "frags": [
+        [
+          "h1",
+          "2025",
+          4
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "National Aeronautics and Space Administration Technology Tra",
+          125
+        ]
+      ]
+    },
+    {
+      "file": "chap_3.xhtml",
+      "frags": [
+        [
+          "h2",
+          "On the cover",
+          12
+        ],
+        [
+          "p",
+          "Cameras mounted on the Orion spacecraft captured a detailed ",
+          147
+        ],
+        [
+          "p",
+          "SPINOFF",
+          7
+        ]
+      ]
+    },
+    {
+      "file": "chap_4.xhtml",
+      "frags": [
+        [
+          "h1",
+          "2025",
+          4
+        ]
+      ]
+    },
+    {
+      "file": "chap_5.xhtml",
+      "frags": [
+        [
+          "h1",
+          "NASA Technology Transfer Program",
+          32
+        ]
+      ]
+    },
+    {
+      "file": "chap_6.xhtml",
+      "frags": [
+        [
+          "h2",
+          "NASA Headquarters",
+          17
+        ],
+        [
+          "p",
+          "Daniel Lockney, Technology Transfer Program Executive",
+          53
+        ]
+      ]
+    },
+    {
+      "file": "chap_7.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Spinoff Staff",
+          13
+        ],
+        [
+          "p",
+          "Ann Harkey, Communications Director Mike DiCicco, Managing E",
+          195
+        ]
+      ]
+    },
+    {
+      "file": "chap_8.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Contents",
+          8
+        ],
+        [
+          "p",
+          "1 Introduction",
+          14
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "3 Spinoff Capsules",
+          18
+        ]
+      ]
+    },
+    {
+      "file": "chap_9.xhtml",
+      "frags": [
+        [
+          "h2",
+          "27 Spinoff Features",
+          19
+        ]
+      ]
+    },
+    {
+      "file": "chap_10.xhtml",
+      "frags": [
+        [
+          "h2",
+          "28 NASA Data Helps Beavers Build Back Streams",
+          45
+        ],
+        [
+          "p",
+          "Nature\u2019s engineers, beavers get help from NASA to mitigate d",
+          76
+        ]
+      ]
+    },
+    {
+      "file": "chap_11.xhtml",
+      "frags": [
+        [
+          "h2",
+          "32 Seeing Is Communicating",
+          26
+        ],
+        [
+          "p",
+          "Eye-tracking technology makes \u201ctalking\u201d possible for people ",
+          72
+        ]
+      ]
+    },
+    {
+      "file": "chap_12.xhtml",
+      "frags": [
+        [
+          "h2",
+          "34 Home-Grown Housing",
+          21
+        ],
+        [
+          "p",
+          "Cultivating mushrooms to build housing on Earth, the Moon, a",
+          67
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_13.xhtml",
+      "frags": [
+        [
+          "h2",
+          "38 A Better Backup Plan for the Unthinkable",
+          43
+        ],
+        [
+          "p",
+          "Autonomous self-destruct technology eliminates the cost of h",
+          70
+        ]
+      ]
+    },
+    {
+      "file": "chap_14.xhtml",
+      "frags": [
+        [
+          "h2",
+          "40 Better Data for Bodies in Motion",
+          35
+        ],
+        [
+          "p",
+          "A wearable device to monitor astronauts\u2019 tumultuous return t",
+          87
+        ]
+      ]
+    },
+    {
+      "file": "chap_15.xhtml",
+      "frags": [
+        [
+          "h2",
+          "42 Folding NASA Experience into an Origamist\u2019s Toolkit",
+          54
+        ],
+        [
+          "p",
+          "Math for designing lasers becomes artist\u2019s key to creating c",
+          82
+        ]
+      ]
+    },
+    {
+      "file": "chap_16.xhtml",
+      "frags": [
+        [
+          "h2",
+          "46 Space-Based Tech for Home Health Monitoring",
+          46
+        ],
+        [
+          "p",
+          "34 Contactless monitoring for vital signs uses radio-frequen",
+          89
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_17.xhtml",
+      "frags": [
+        [
+          "h2",
+          "48 Scaling Up Hydrogen",
+          22
+        ],
+        [
+          "p",
+          "NASA technology for measuring insulation efficiency is helpi",
+          91
+        ]
+      ]
+    },
+    {
+      "file": "chap_18.xhtml",
+      "frags": [
+        [
+          "h2",
+          "50 Cosmic Experiments Make Cosmetic Nutrients",
+          45
+        ],
+        [
+          "p",
+          "Antigravity bioreactor grows robust stem cells, extracts pla",
+          94
+        ]
+      ]
+    },
+    {
+      "file": "chap_19.xhtml",
+      "frags": [
+        [
+          "h2",
+          "52 3D Printed Engines Propel Next Industrial Revolution",
+          55
+        ],
+        [
+          "p",
+          "42 Converging efforts to 3D print engines promise major savi",
+          86
+        ]
+      ]
+    },
+    {
+      "file": "chap_20.xhtml",
+      "frags": [
+        [
+          "h2",
+          "58 Space Tech Gives Treadmill Users a \u2018Boost\u2019",
+          45
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Creators of the original antigravity treadmill continue to a",
+          109
+        ]
+      ]
+    },
+    {
+      "file": "chap_21.xhtml",
+      "frags": [
+        [
+          "h2",
+          "60 Coral Expertise Finds Broad Application",
+          42
+        ],
+        [
+          "p",
+          "Remote sensing company helps customers navigate data, guided",
+          77
+        ]
+      ]
+    },
+    {
+      "file": "chap_22.xhtml",
+      "frags": [
+        [
+          "h2",
+          "62 Measuring Buzz, Hum, and Rattle",
+          34
+        ],
+        [
+          "p",
+          "Wireless microphone array quickly, cheaply, accurately maps ",
+          96
+        ]
+      ]
+    },
+    {
+      "file": "chap_23.xhtml",
+      "frags": [
+        [
+          "h2",
+          "64 NASA Sets Standard for Nutritional Health Products",
+          53
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Early NASA partnership becomes foundation of reborn dietary ",
+          74
+        ]
+      ]
+    },
+    {
+      "file": "chap_24.xhtml",
+      "frags": [
+        [
+          "h2",
+          "68 Out-of-This-World Organs",
+          27
+        ],
+        [
+          "p",
+          "Space-based science facility cultures human tissue from biop",
+          72
+        ]
+      ]
+    },
+    {
+      "file": "chap_25.xhtml",
+      "frags": [
+        [
+          "h2",
+          "71 NASA Hydrogen History Informs World\u2019s Hydrogen Future",
+          56
+        ],
+        [
+          "p",
+          "World\u2019s largest liquid hydrogen tank is a model for much big",
+          81
+        ]
+      ]
+    },
+    {
+      "file": "chap_26.xhtml",
+      "frags": [
+        [
+          "h2",
+          "74 Toxin-Eating Plants",
+          22
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "NASA research makes choosing houseplants to remove indoor ai",
+          76
+        ]
+      ]
+    },
+    {
+      "file": "chap_27.xhtml",
+      "frags": [
+        [
+          "h2",
+          "77 Instant Innovation for Plastic Products",
+          42
+        ],
+        [
+          "p",
+          "New family of composite plastics offers multiple benefits fo",
+          84
+        ]
+      ]
+    },
+    {
+      "file": "chap_28.xhtml",
+      "frags": [
+        [
+          "h2",
+          "80 Intelligent Machines Remove Humans from the Loop",
+          51
+        ],
+        [
+          "p",
+          "Autonomous artificial intelligence lets machines communicate",
+          90
+        ]
+      ]
+    },
+    {
+      "file": "chap_29.xhtml",
+      "frags": [
+        [
+          "h2",
+          "83 Hubble Battery Tech Holds Power on Earth",
+          43
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Nickel-hydrogen technology is safe, durable, and long-lastin",
+          87
+        ]
+      ]
+    },
+    {
+      "file": "chap_30.xhtml",
+      "frags": [
+        [
+          "h2",
+          "86 Spinoff Technology Across the Nation",
+          39
+        ]
+      ]
+    },
+    {
+      "file": "chap_31.xhtml",
+      "frags": [
+        [
+          "h2",
+          "89 Technology Transfer Program",
+          30
+        ]
+      ]
+    },
+    {
+      "file": "chap_32.xhtml",
+      "frags": [
+        [
+          "h2",
+          "90 Students Help Create NASA Tech Prototypes",
+          44
+        ],
+        [
+          "p",
+          "86",
+          2
+        ]
+      ]
+    },
+    {
+      "file": "chap_33.xhtml",
+      "frags": [
+        [
+          "h2",
+          "93 Spinoffs of Tomorrow",
+          23
+        ],
+        [
+          "p",
+          "Spinoff (spin\u00b4\u00f4f) -noun. 1. A commercialized product or serv",
+          1010
+        ]
+      ]
+    },
+    {
+      "file": "chap_34.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Introduction",
+          12
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Welcome to Spinoff 2025!",
+          24
+        ],
+        [
+          "p",
+          "At NASA, we explore the secrets of the universe for the bene",
+          86
+        ],
+        [
+          "p",
+          "The same innovations that make our far-reaching missions pos",
+          131
+        ]
+      ]
+    },
+    {
+      "file": "chap_35.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Clayton Turner",
+          14
+        ],
+        [
+          "p",
+          "The heart of NASA\u2019s mission is a commitment to ensuring tech",
+          617
+        ],
+        [
+          "p",
+          "This year\u2019s edition of our annual Spinoff publication showca",
+          624
+        ],
+        [
+          "p",
+          "This year\u2019s edition also highlights the treasure trove of un",
+          241
+        ],
+        [
+          "p",
+          "Together, we will bring the boundless possibilities of space",
+          175
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "The Orion crew module for NASA\u2019s Artemis II mission waits in",
+          152
+        ]
+      ]
+    },
+    {
+      "file": "chap_36.xhtml",
+      "frags": [
+        [
+          "h1",
+          "SPINOFF Capsules",
+          16
+        ],
+        [
+          "p",
+          "Technology spun off from NASA is in your pocket, your car, t",
+          344
+        ],
+        [
+          "p",
+          "Here are examples of repurposed NASA technology showing up e",
+          103
+        ]
+      ]
+    },
+    {
+      "file": "chap_37.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Equalizing Internet Access",
+          26
+        ]
+      ]
+    },
+    {
+      "file": "chap_38.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Spraying for Food Safety",
+          24
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_39.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Making websites user-friendly for everyone with an easy-to-u",
+          69
+        ],
+        [
+          "p",
+          "It\u2019s hard enough to go online with a smartphone using one ha",
+          419
+        ],
+        [
+          "p",
+          "More than 1 billion people worldwide and 1 in 4 American adu",
+          409
+        ],
+        [
+          "p",
+          "To ensure anyone could access every page of NASA\u2019s new websi",
+          328
+        ],
+        [
+          "p",
+          "\u201cSometimes people don\u2019t really know where to start with acce",
+          291
+        ],
+        [
+          "p",
+          "To make NASA content accessible for all readers, Equalize Di",
+          684
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "While federal agencies are required to meet minimum accessib",
+          475
+        ],
+        [
+          "p",
+          "After a writer drafts a new article on the site, but before ",
+          462
+        ],
+        [
+          "p",
+          "The highlighting feature developed for the space agency is n",
+          442
+        ],
+        [
+          "p",
+          "Amber Hinds, CEO of Equalize Digital, tests the new NASA web",
+          135
+        ],
+        [
+          "p",
+          "\u201cIt\u2019s something that appeals to me \u2014 to do more than just ma",
+          242
+        ]
+      ]
+    },
+    {
+      "file": "chap_40.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Industry benefits from NASA-designed electrostatic spray noz",
+          63
+        ],
+        [
+          "p",
+          "Whether protecting crops from diseases and pests or sanitizi",
+          533
+        ],
+        [
+          "p",
+          "ESS traces its origins to research done at the University of",
+          431
+        ],
+        [
+          "p",
+          "\u201cA 40-micron droplet is small enough to accept an electrosta",
+          225
+        ],
+        [
+          "p",
+          "NASA\u2019s interest in this technology originated with astronaut",
+          915
+        ],
+        [
+          "p",
+          "Astronaut Kayla Barron looks at chile peppers growing in the",
+          278
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "\u201cWe used a mister nozzle, which is what you see when waiting",
+          200
+        ],
+        [
+          "p",
+          "Buhler said the primary advantage of a mister nozzle is that",
+          744
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Electrostatic spray nozzles impart a small electric charge t",
+          277
+        ],
+        [
+          "p",
+          "Today, ESS uses the NASA-designed nozzle to make spraying mo",
+          526
+        ]
+      ]
+    },
+    {
+      "file": "chap_41.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Giving Sensors Good Optics",
+          26
+        ]
+      ]
+    },
+    {
+      "file": "chap_42.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Launch, Return, Repeat",
+          22
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_43.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Fiber-optic sensing technology improved by NASA is now avail",
+          77
+        ],
+        [
+          "p",
+          "While screaming toward Earth\u2019s surface at 17,000 mph, the in",
+          578
+        ],
+        [
+          "p",
+          "NASA\u2019s Armstrong Flight Research Center in Edwards, Californ",
+          512
+        ],
+        [
+          "p",
+          "Allen Parker, an electrical engineer at Armstrong, had seen ",
+          246
+        ],
+        [
+          "p",
+          "To capture temperature data across the entire surface of LOF",
+          670
+        ],
+        [
+          "p",
+          "\u201cWhen we first started, we\u2019d push a button and get data 90 s",
+          103
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "samples per second.\u201d",
+          20
+        ],
+        [
+          "p",
+          "These fiber-optic sensors have now become commonplace on NAS",
+          444
+        ],
+        [
+          "p",
+          "Primary customers for Sensuron include not only the aviation",
+          270
+        ],
+        [
+          "p",
+          "\u201cIf there\u2019s a large temperature change along the edges of th",
+          264
+        ],
+        [
+          "p",
+          "Braun said the new company has sold around 90 units, some to",
+          271
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Today, engineers at Sensuron still regularly speak with NASA",
+          268
+        ],
+        [
+          "p",
+          "NASA engineer Patrick Chan holds a fiber-optic sensor line. ",
+          261
+        ],
+        [
+          "p",
+          "to the outside world,\u201d he said. \u201cAnd it\u2019s good to have a gro",
+          310
+        ],
+        [
+          "p",
+          "aeronautics, it uses algorithms developed by NASA to make me",
+          126
+        ]
+      ]
+    },
+    {
+      "file": "chap_44.xhtml",
+      "frags": [
+        [
+          "h2",
+          "A NASA thermal protection system enables reuse of commercial",
+          71
+        ],
+        [
+          "p",
+          "The dream of reusable spacecraft became reality when NASA de",
+          401
+        ],
+        [
+          "p",
+          "By participating in NASA\u2019s Startup Studio, the Littleton, Co",
+          242
+        ],
+        [
+          "p",
+          "FedTech, a venture firm that specializes in connecting entre",
+          504
+        ],
+        [
+          "p",
+          "\u201cThe material itself is a flight-proven technology that NASA",
+          345
+        ],
+        [
+          "p",
+          "This picture of the underside of the space shuttle Discovery",
+          261
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "atmosphere at speeds greater than Mach 25. The porous cerami",
+          155
+        ],
+        [
+          "p",
+          "\u201cIt\u2019s essentially a very highly engineered form of sand comb",
+          330
+        ],
+        [
+          "p",
+          "With commercial space companies developing flight schedules ",
+          360
+        ],
+        [
+          "p",
+          "Another category of TPS is ablative, meaning they disperse h",
+          187
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "more complicated to use, and requires costly refurbishment, ",
+          79
+        ],
+        [
+          "p",
+          "The Canopy tiles are scheduled for testing at the Ames Arc J",
+          126
+        ],
+        [
+          "p",
+          "Working at full capacity, the company can manufacture up to ",
+          154
+        ],
+        [
+          "p",
+          "growing demand, but the current process is a first step on t",
+          294
+        ],
+        [
+          "p",
+          "Reusable rockets will allow commercial space companies to lo",
+          276
+        ],
+        [
+          "p",
+          "\u201cThere\u2019s a lot of technology that needs to be transitioned o",
+          262
+        ]
+      ]
+    },
+    {
+      "file": "chap_45.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Commercial Sales Flow from NASA Valves",
+          38
+        ]
+      ]
+    },
+    {
+      "file": "chap_46.xhtml",
+      "frags": [
+        [
+          "h1",
+          "From Mars Rovers to Factory Assembly Lines",
+          42
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_47.xhtml",
+      "frags": [
+        [
+          "h2",
+          "NASA-funded AI technology enabling autonomous rovers and dro",
+          98
+        ],
+        [
+          "p",
+          "Artificial intelligence software designed to learn and analy",
+          234
+        ],
+        [
+          "p",
+          "Boston, works with existing cameras, computers, and even cel",
+          147
+        ],
+        [
+          "p",
+          "\u201cOur software can learn very quickly on a processor with a v",
+          91
+        ],
+        [
+          "p",
+          "learned working with NASA,\u201d said Neurala cofounder and CEO M",
+          308
+        ],
+        [
+          "p",
+          "Versace and Neurala began working with NASA more than a deca",
+          334
+        ],
+        [
+          "p",
+          "Focusing on a rover concept that could independently learn t",
+          310
+        ],
+        [
+          "p",
+          "In both the rover and the drone applications, the Neurala so",
+          199
+        ],
+        [
+          "p",
+          "European company apetito uses Neurala\u2019s vision inspection so",
+          344
+        ],
+        [
+          "p",
+          "Onsite computing is an advantage in manufacturing as well, w",
+          185
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "\u201cIf you do the math, you have very little time to understand",
+          485
+        ],
+        [
+          "p",
+          "Manufacturers typically don\u2019t want their information online,",
+          196
+        ],
+        [
+          "p",
+          "Mark Motter, an engineer at NASA\u2019s Langley Research Center i",
+          194
+        ],
+        [
+          "p",
+          "\u201cBut actually, in a dynamic environment you have things flyi",
+          326
+        ],
+        [
+          "p",
+          "Motter, who initially suggested Neurala compete for STTR fun",
+          480
+        ]
+      ]
+    },
+    {
+      "file": "chap_48.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Valves developed for NASA programs meet needs of commercial ",
+          83
+        ],
+        [
+          "p",
+          "Founded during World War II, Marotta Controls of Montville, ",
+          358
+        ],
+        [
+          "p",
+          "Today, however, there are many more players in space travel,",
+          440
+        ],
+        [
+          "p",
+          "Among the valves Marotta developed for NASA programs and now",
+          697
+        ],
+        [
+          "p",
+          "Marotta Controls founder Pat Marotta, far right, poses with ",
+          352
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Two valves the company developed for the Commercial Crew Pro",
+          93
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "commercial spacecraft, Ippolitto said. Under Commercial Crew",
+          291
+        ],
+        [
+          "p",
+          "developed for an in-flight abort system, where it will funne",
+          542
+        ],
+        [
+          "p",
+          "He said Marotta now has components on every U.S. launch vehi",
+          151
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Jimmy Moore, engineer with the Valves, Actuators, and Ducts ",
+          530
+        ],
+        [
+          "p",
+          "Designing for high pressures and other rigors of space trave",
+          373
+        ],
+        [
+          "p",
+          "\u201cIt\u2019s about high temperatures, nasty fluids, demanding appli",
+          737
+        ]
+      ]
+    },
+    {
+      "file": "chap_49.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Cloud Software for Above the Clouds",
+          35
+        ]
+      ]
+    },
+    {
+      "file": "chap_50.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Controlled Propulsion for Gentle Landings",
+          41
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_51.xhtml",
+      "frags": [
+        [
+          "h2",
+          "NASA-licensed software enables detailed planning for commerc",
+          69
+        ],
+        [
+          "p",
+          "Planning a space mission can be a very involved process. Ens",
+          379
+        ],
+        [
+          "p",
+          "\u201cIt\u2019s basically a mission in a box,\u201d said Loic Chappaz, cofo",
+          185
+        ],
+        [
+          "p",
+          "Continuum\u2019s story begins at NASA\u2019s Jet Propulsion Laboratory",
+          649
+        ],
+        [
+          "p",
+          "\u201cWe developed several mission concepts, with analysis and si",
+          236
+        ],
+        [
+          "p",
+          "The Double Asteroid Redirection Test required extreme precis",
+          896
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Based on the Amazon Web Services cloud platform, Continuum\u2019s",
+          675
+        ],
+        [
+          "p",
+          "\u201cWhen you measure position, there\u2019s some error there that ca",
+          81
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Continuum\u2019s platform includes several features for mission p",
+          256
+        ],
+        [
+          "p",
+          "calculus,\u201d said Bill Taber, who leads MONTE development at J",
+          165
+        ],
+        [
+          "p",
+          "As of 2024, several space startups have begun planning missi",
+          239
+        ],
+        [
+          "p",
+          "\u201cThe vision was always to transfer some of that technology i",
+          266
+        ]
+      ]
+    },
+    {
+      "file": "chap_52.xhtml",
+      "frags": [
+        [
+          "h2",
+          "A valve designed for NASA rover landings enables aerospace c",
+          82
+        ],
+        [
+          "p",
+          "The Curiosity and Perseverance Mars rovers continue to provi",
+          555
+        ],
+        [
+          "p",
+          "Working under contract to NASA\u2019s Jet Propulsion Laboratory i",
+          373
+        ],
+        [
+          "p",
+          "Engines producing about 750 pounds of thrust each for Martia",
+          388
+        ],
+        [
+          "p",
+          "\u201cWith the engines pointing down, we throttle up and increase",
+          431
+        ],
+        [
+          "p",
+          "That required a reliable pyrovalve \u2014 a Y-shaped pipe with a ",
+          680
+        ],
+        [
+          "p",
+          "To build the valve, NASA turned to a company that had provid",
+          281
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "But a problem arose during flight qualification testing. Som",
+          292
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "The solution the team came up with was simple \u2014 magnets at t",
+          187
+        ],
+        [
+          "p",
+          "\u201cWhen you are up against the wall and have to get something ",
+          822
+        ]
+      ]
+    },
+    {
+      "file": "chap_53.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Cutting-Edge Computing Goes Spaceborne",
+          38
+        ]
+      ]
+    },
+    {
+      "file": "chap_54.xhtml",
+      "frags": [
+        [
+          "h1",
+          "From Cockpit Controls to Dashboard Data",
+          39
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_55.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Spaceborne Computer missions demonstrate faster, easier prot",
+          90
+        ],
+        [
+          "p",
+          "When Hewlett Packard Enterprise Co. (HPE) sent an unmodified",
+          298
+        ],
+        [
+          "p",
+          "\u201cNo one in the aerospace industry thought this was going to ",
+          293
+        ],
+        [
+          "p",
+          "Unaltered, off-the-shelf computers don\u2019t last long in space ",
+          324
+        ],
+        [
+          "p",
+          "Following the success of the Spaceborne Computer missions, t",
+          212
+        ],
+        [
+          "p",
+          "The solution has been radiation hardening: a commercial comp",
+          269
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "As a result, radiation-hardened computers \u201care usually sever",
+          661
+        ],
+        [
+          "p",
+          "NASA reached out to Silicon Graphics International, a compan",
+          400
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "When the approach worked, it wasn\u2019t just HPE and NASA who we",
+          444
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "radiation hardening.",
+          20
+        ],
+        [
+          "p",
+          "Following HPE\u2019s success, OrbitsEdge is making HPE\u2019s Edgeline",
+          530
+        ],
+        [
+          "p",
+          "Spaceborne Computer 2, currently on the International Space ",
+          185
+        ],
+        [
+          "p",
+          "HPE said a number of other commercial space companies are al",
+          511
+        ]
+      ]
+    },
+    {
+      "file": "chap_56.xhtml",
+      "frags": [
+        [
+          "h2",
+          "NASA feedback enables better display systems for aircraft, m",
+          63
+        ],
+        [
+          "p",
+          "In the early days of computers, interfaces were paper printo",
+          178
+        ],
+        [
+          "p",
+          "As more and more everyday products become computerized, thei",
+          335
+        ],
+        [
+          "p",
+          "In the early 1990s, digital multi-function display screens w",
+          336
+        ],
+        [
+          "p",
+          "\u201cWe had a couple of Small Business Innovation Research contr",
+          305
+        ],
+        [
+          "p",
+          "Defense,\u201d said Chris Giordano, vice president of user experi",
+          172
+        ],
+        [
+          "p",
+          "This GUI tool soon became GL Studio, named after the OpenGL ",
+          82
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "graphics generation. By the 2000s, GL Studio was commercial ",
+          350
+        ],
+        [
+          "p",
+          "\u201cWe started working with GL Studio as far back as 2009. We c",
+          337
+        ],
+        [
+          "p",
+          "GL Studio has several features that originate from various N",
+          347
+        ],
+        [
+          "p",
+          "NASA\u2019s WorldWind is a virtual globe program that produces a ",
+          530
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "The ability to export Java-based interfaces was soon built i",
+          157
+        ],
+        [
+          "p",
+          "Another case where NASA\u2019s needs resulted in new features aro",
+          431
+        ],
+        [
+          "p",
+          "The company followed NASA\u2019s request, and while Orion\u2019s scree",
+          831
+        ]
+      ]
+    },
+    {
+      "file": "chap_57.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Hard(ware) to the Core",
+          22
+        ]
+      ]
+    },
+    {
+      "file": "chap_58.xhtml",
+      "frags": [
+        [
+          "h2",
+          "NASA-developed open-source software forms basis of spacecraf",
+          70
+        ],
+        [
+          "p",
+          "At the heart of every satellite is a computer designed to co",
+          321
+        ],
+        [
+          "p",
+          "The core Flight System (cFS) is an open-source software fram",
+          328
+        ],
+        [
+          "p",
+          "\u201cIt allows applications to communicate and be managed on the",
+          288
+        ],
+        [
+          "p",
+          "With its open-source availability, cFS has become a standard",
+          297
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "As a manufacturer of computer hardware for spacecraft, Aitec",
+          629
+        ],
+        [
+          "p",
+          "Emulation recreates the hardware environment inside another ",
+          508
+        ],
+        [
+          "p",
+          "Most of the robotic missions operated by Goddard Space Fligh",
+          779
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "The emulator helped design the SP0-S, but now it\u2019s become a ",
+          390
+        ],
+        [
+          "p",
+          "The SP0-S is the latest in a line of spacecraft computers pr",
+          66
+        ],
+        [
+          "p",
+          "\u201cThink about every time NASA\u2019s flown something \u2014 that means ",
+          247
+        ],
+        [
+          "p",
+          "by Aitech. So customers can test software on the SP0-S witho",
+          165
+        ]
+      ]
+    },
+    {
+      "file": "chap_59.xhtml",
+      "frags": [
+        [
+          "h1",
+          "NASA and Education Make Quite the Pear",
+          38
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_60.xhtml",
+      "frags": [
+        [
+          "h2",
+          "NASA partnership makes interactive educational resources for",
+          80
+        ],
+        [
+          "p",
+          "Few things capture a child\u2019s imagination like space explorat",
+          475
+        ],
+        [
+          "p",
+          "Pear Deck is a subsidiary of the educational technology firm",
+          654
+        ],
+        [
+          "p",
+          "\u201cIt\u2019s a tool that fosters collaborative learning experiences",
+          437
+        ],
+        [
+          "p",
+          "Befitting the \u201cpear\u201d name, the company\u2019s online marketplace ",
+          607
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "\u201cWe have an open call for partnerships,\u201d said Rob LaSalvia, ",
+          190
+        ],
+        [
+          "p",
+          "Working with NASA Headquarters in Washington through an ongo",
+          368
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "One of the NASA-inspired lessons instructs students to draw ",
+          619
+        ],
+        [
+          "p",
+          "Today, these NASA lessons are among the most popular offerin",
+          638
+        ]
+      ]
+    },
+    {
+      "file": "chap_61.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Intelligent Processing at the Edge",
+          34
+        ]
+      ]
+    },
+    {
+      "file": "chap_62.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Make Way for Satellites",
+          23
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_63.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Faster space computing improves disaster response time",
+          54
+        ],
+        [
+          "p",
+          "Earth observation enables enormous benefits for people on th",
+          236
+        ],
+        [
+          "p",
+          "\u201cSatellites are just data collectors. They don\u2019t know what t",
+          414
+        ],
+        [
+          "p",
+          "Founded in 2017, Ubotica sought to eliminate that time gap. ",
+          643
+        ],
+        [
+          "p",
+          "Ubotica partnered with NASA\u2019s Jet Propulsion Laboratory in S",
+          776
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Ubotica\u2019s system is designed to interface with common enterp",
+          261
+        ],
+        [
+          "p",
+          "Spaceborne Computer-2, enabling further development of these",
+          128
+        ],
+        [
+          "p",
+          "\u201cThe models we worked on with Ubotica fell into two categori",
+          81
+        ],
+        [
+          "p",
+          "classification,\u201d said Emily Dunkel, a data scientist at JPL ",
+          245
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "The models run on the space station were simple but effectiv",
+          80
+        ],
+        [
+          "p",
+          "Ubotica and NASA, they primarily were tasked with sorting ou",
+          366
+        ],
+        [
+          "p",
+          "\u201cWe got the hardware back, and it was still fully functional",
+          248
+        ],
+        [
+          "p",
+          "The Spaceborne Computer-2 provided spaceflight validation fo",
+          849
+        ]
+      ]
+    },
+    {
+      "file": "chap_64.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Space traffic coordination system helps make sure satellites",
+          79
+        ],
+        [
+          "p",
+          "As of 2024, there are more than 45,000 human-made objects or",
+          479
+        ],
+        [
+          "p",
+          "Right now, the U.S. Space Force tracks these orbital objects",
+          687
+        ],
+        [
+          "p",
+          "For these companies, receiving thousands of conjunction aler",
+          138
+        ],
+        [
+          "p",
+          "\u201cA lot of them are low-risk, but for a human to be able to g",
+          352
+        ],
+        [
+          "p",
+          "Tens of thousands of human-made objects orbit Earth. To ensu",
+          543
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "\u201cWe had to figure out the best way for the CubeSats to be de",
+          411
+        ],
+        [
+          "p",
+          "In the absence of telescopes or radars to keep track of obje",
+          303
+        ],
+        [
+          "p",
+          "Today, several former NASA personnel and contractors work at",
+          353
+        ],
+        [
+          "p",
+          "A graph shows potential orbital maneuvers generated by Kayha",
+          279
+        ],
+        [
+          "p",
+          "\u201cI graduated from the University of Colorado in Boulder, one",
+          338
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_65.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Using AI to Predict the Sky",
+          27
+        ]
+      ]
+    },
+    {
+      "file": "chap_66.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Bringing Hybrid Power to the Rescue",
+          35
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "NASA partnership to explore AI in space bolsters analytics s",
+          112
+        ],
+        [
+          "p",
+          "Data analytics is a multibillion-dollar industry, and the gr",
+          589
+        ],
+        [
+          "p",
+          "\u201cWorking with NASA has been so important, because it lets us",
+          83
+        ],
+        [
+          "p",
+          "curve,\u201d said Robert Hill, head of space solutions at the Uni",
+          221
+        ],
+        [
+          "p",
+          "The Frontier Development Lab (FDL) is an ongoing partnership",
+          77
+        ],
+        [
+          "p",
+          "commercial AI firms to apply advanced machine learning to pr",
+          244
+        ],
+        [
+          "p",
+          "The Frontier Development Lab (FDL) is a partnership between ",
+          747
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "KX participated in the FDL partnership between 2017 and 2019",
+          535
+        ],
+        [
+          "p",
+          "In the summer of 2024, people across North America were amaz",
+          969
+        ],
+        [
+          "p",
+          "\u201cIt was taking those datasets and looking for anomalies. We ",
+          620
+        ]
+      ]
+    },
+    {
+      "file": "chap_67.xhtml",
+      "frags": [
+        [
+          "h2",
+          "NASA-funded hybrid power system makes drones more capable in",
+          70
+        ],
+        [
+          "p",
+          "In industries all over the country, remotely piloted aircraf",
+          425
+        ],
+        [
+          "p",
+          "Living in California, Joshua Resnick had seen his fair share",
+          207
+        ],
+        [
+          "p",
+          "\u201cYou look at some of those helicopter missions, and you real",
+          422
+        ],
+        [
+          "p",
+          "Soon after, Resnick, Hulter, and friend David Adams cofounde",
+          891
+        ],
+        [
+          "p",
+          "Parallel Flight Technologies\u2019 Firefly aircraft is designed t",
+          254
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "In 2019, Parallel Flight received Phase I SBIR funding from ",
+          530
+        ],
+        [
+          "p",
+          "NASA\u2019S Glenn Research Center has pursued hybrid powertrain a",
+          589
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "While the NASA SBIR funding wasn\u2019t continued past the first ",
+          136
+        ],
+        [
+          "p",
+          "Foundation, the U.S. Department of Agriculture, and National",
+          645
+        ]
+      ]
+    },
+    {
+      "file": "chap_68.xhtml",
+      "frags": [
+        [
+          "h1",
+          "NASA \u2018RAMPT\u2019 Up 3D Printed Engine Size",
+          38
+        ]
+      ]
+    },
+    {
+      "file": "chap_69.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Innovation Comes Out of the Wool Work",
+          37
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_70.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Initiative advances, validates technology for 3D printing bi",
+          76
+        ],
+        [
+          "p",
+          "Additive manufacturing, better known as 3D printing, has bec",
+          85
+        ],
+        [
+          "p",
+          "many industries, and NASA has been central to adapting it fo",
+          118
+        ],
+        [
+          "p",
+          "\u201cEngines are challenging to move from development into produ",
+          89
+        ],
+        [
+          "p",
+          "resources to develop, so there are tremendous opportunities ",
+          459
+        ],
+        [
+          "p",
+          "NASA\u2019s largest effort on this front has been the Rapid Analy",
+          448
+        ],
+        [
+          "p",
+          "To 3D print a large nozzle, the team explored a new techniqu",
+          537
+        ],
+        [
+          "p",
+          "energy deposition, which seemed promising for large-scale pr",
+          547
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "was hot fire tested and accumulated over 200 starts, proving",
+          77
+        ],
+        [
+          "p",
+          "\u201cWith RAMPT, we reduced the overall thrust chamber weight by",
+          71
+        ],
+        [
+          "p",
+          "That\u2019s huge because in the last 20 years, we\u2019ve been chasing",
+          262
+        ],
+        [
+          "p",
+          "A follow-on program used RPMI machines to produce even light",
+          147
+        ],
+        [
+          "p",
+          "Nick Wald, general manager at RPMI, said the project not onl",
+          430
+        ],
+        [
+          "p",
+          "Now, about 90% of the company\u2019s service business \u2014 that is, ",
+          298
+        ],
+        [
+          "p",
+          "Tyler Blumenthal, RPMI\u2019s sales manager, noted that NASA is a",
+          697
+        ]
+      ]
+    },
+    {
+      "file": "chap_71.xhtml",
+      "frags": [
+        [
+          "h2",
+          "NASA takes wool filters where no sheep has gone before",
+          54
+        ],
+        [
+          "p",
+          "For millennia, sheep\u2019s wool has been key to major leaps in t",
+          291
+        ],
+        [
+          "p",
+          "In the enclosed environment of a spacecraft, a fire is among",
+          594
+        ],
+        [
+          "p",
+          "Looking for a good option to extend the life of the Orion sp",
+          381
+        ],
+        [
+          "p",
+          "\u201cTwelve years ago, we came across some interesting technolog",
+          267
+        ],
+        [
+          "p",
+          "Founded in 2012, the company initially focused on filters fo",
+          739
+        ],
+        [
+          "p",
+          "Water droplets on top of Lanaco filter material. Its wool co",
+          209
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "\u201cWool is naturally fire-resistant, it\u2019s naturally bacteriost",
+          233
+        ],
+        [
+          "p",
+          "Lanaco\u2019s work has previously resulted in firefighting masks ",
+          254
+        ],
+        [
+          "p",
+          "Today, Lanaco\u2019s filters can be found in industrial respirato",
+          167
+        ],
+        [
+          "p",
+          "Lanaco products are also cleaning the air in filtration syst",
+          647
+        ]
+      ]
+    },
+    {
+      "file": "chap_72.xhtml",
+      "frags": [
+        [
+          "h1",
+          "View from the Sky Helps Predict Crop Yields",
+          43
+        ]
+      ]
+    },
+    {
+      "file": "chap_73.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Tweaking Analysis Tools to Give SAGE Advice",
+          43
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_74.xhtml",
+      "frags": [
+        [
+          "h2",
+          "NASA Harvest brings satellite data, crop prediction function",
+          75
+        ],
+        [
+          "p",
+          "When SIMA began working with NASA Harvest in 2020, the Argen",
+          146
+        ],
+        [
+          "p",
+          "SIMA, or Sistema Integrado de Monitoreo Agr\u00edcola, sells a da",
+          152
+        ],
+        [
+          "p",
+          "The collaboration with NASA Harvest, the space agency\u2019s agri",
+          229
+        ],
+        [
+          "p",
+          "\u201cIt\u2019s a sought-after feature because in agriculture it\u2019s ver",
+          258
+        ],
+        [
+          "p",
+          "SIMA\u2019s main app, available for download on Apple and Android",
+          287
+        ],
+        [
+          "p",
+          "\u201cThe idea is to standardize all of this information in a way",
+          240
+        ],
+        [
+          "p",
+          "Headquartered in Rosario, Argentina, SIMA\u2019s strong relations",
+          210
+        ],
+        [
+          "p",
+          "\u201cWe brought expertise in Earth-observation data and machine ",
+          595
+        ],
+        [
+          "p",
+          "Sahajpal noted that SIMA\u2019s strengths worked well with those ",
+          83
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "we brought in expertise in applying machine learning models ",
+          188
+        ],
+        [
+          "p",
+          "The science development was led by NASA Harvest researchers,",
+          118
+        ],
+        [
+          "p",
+          "Yerkovich noted that SIMA\u2019s data, which the company calls \u201cg",
+          143
+        ],
+        [
+          "p",
+          "\u201cOf course, satellite images are among NASA\u2019s primary assets",
+          334
+        ],
+        [
+          "p",
+          "For SIMA, which was founded in 2013 and now has offices thro",
+          154
+        ],
+        [
+          "p",
+          "Working with NASA and the University of Maryland served as a",
+          439
+        ]
+      ]
+    },
+    {
+      "file": "chap_75.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Sound predictive simulations can significantly cut developme",
+          68
+        ],
+        [
+          "p",
+          "While designing the telescope for a proposed NASA satellite,",
+          353
+        ],
+        [
+          "p",
+          "\u201cThe additional work we\u2019re doing is not to validate the desi",
+          311
+        ],
+        [
+          "p",
+          "The idea was to build assemblies that would be stressed and ",
+          392
+        ],
+        [
+          "p",
+          "\u201cThe reason people don\u2019t do this is because it costs a lot o",
+          212
+        ],
+        [
+          "p",
+          "The initial investment came from Small Business Innovation R",
+          1061
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "The Stratospheric Aerosol Measurement experiment demonstrate",
+          473
+        ],
+        [
+          "p",
+          "\u201cIt\u2019s all about having a high-fidelity model that you can tr",
+          325
+        ],
+        [
+          "p",
+          "Among Quartus\u2019 commercial offerings are custom science paylo",
+          444
+        ],
+        [
+          "p",
+          "Halterman said these capabilities are especially interesting",
+          620
+        ]
+      ]
+    },
+    {
+      "file": "chap_76.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Dust-Powered 3D Printing",
+          24
+        ]
+      ]
+    },
+    {
+      "file": "chap_77.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Flipping NASA Tech and Sticking the Landing",
+          43
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_78.xhtml",
+      "frags": [
+        [
+          "h2",
+          "NASA tech adds gecko grip to phone accessory",
+          44
+        ],
+        [
+          "p",
+          "Akeem Shannon\u2019s story began with a phone call.",
+          46
+        ],
+        [
+          "p",
+          "Finding his sales job unfulfilling and unsure what to do nex",
+          563
+        ],
+        [
+          "p",
+          "In the early 2010s, a team of roboticists at NASA\u2019s Jet Prop",
+          389
+        ],
+        [
+          "p",
+          "\u201cWe really learned from geckos. They are able to exploit the",
+          298
+        ],
+        [
+          "p",
+          "many tiny hairs,\u201d said Paul Glick, who worked on these adhes",
+          255
+        ],
+        [
+          "p",
+          "The microscopic hairs on the gecko\u2019s toe pads are called set",
+          90
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "the moniker of \u201csynthetic setae.\u201d While Shannon originally h",
+          307
+        ],
+        [
+          "p",
+          "With a synthetic setae attachment on a phone case, the phone",
+          636
+        ],
+        [
+          "p",
+          "\u201cWe used the NASA research to inform our suppliers and bette",
+          189
+        ],
+        [
+          "p",
+          "Initially sold at one mall kiosk, Flipstik was slow to gain ",
+          345
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Much like a gecko\u2019s foot, this apparatus developed at NASA\u2019s",
+          233
+        ]
+      ]
+    },
+    {
+      "file": "chap_79.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Planetary construction technology makes large-scale 3D print",
+          88
+        ],
+        [
+          "p",
+          "After 3D printing a habitat designed for Mars and working wi",
+          182
+        ],
+        [
+          "p",
+          "The Secaucus, New Jersey company\u2019s latest offering, Starforg",
+          267
+        ],
+        [
+          "p",
+          "The project, with work performed mostly at Kennedy\u2019s Swamp W",
+          417
+        ],
+        [
+          "p",
+          "Starforge uses pellet \u201cinks\u201d that draw on the same principle",
+          302
+        ],
+        [
+          "p",
+          "\u201cIt\u2019s really an innovation in pellet printing,\u201d said SpaceFa",
+          221
+        ],
+        [
+          "p",
+          "\u201cOur pellets come to about a couple dollars a pound,\u201d Malott",
+          330
+        ],
+        [
+          "p",
+          "SpaceFactory\u2019s work with NASA began with the Centennial Chal",
+          473
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Tracie Prater, now a technical manager in habitation systems",
+          259
+        ],
+        [
+          "p",
+          "\u201cWe were seeking the use of local resources to reduce the am",
+          163
+        ],
+        [
+          "p",
+          "NASA\u2019s Monsi Roman, who managed the challenge, agreed. \u201cThey",
+          285
+        ],
+        [
+          "p",
+          "SpaceFactory has since used the robotic arm printer it devel",
+          514
+        ],
+        [
+          "p",
+          "users. In addition to people who use a phone to watch videos",
+          205
+        ],
+        [
+          "p",
+          "NASA\u2019s Prater said the Centennial Challenge \u201cwas designed to",
+          122
+        ],
+        [
+          "p",
+          "Shannon even said he\u2019s seen users who are deaf purchase Flip",
+          612
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "The apparent motion of stars forms trails in the sky in this",
+          130
+        ]
+      ]
+    },
+    {
+      "file": "chap_80.xhtml",
+      "frags": [
+        [
+          "h1",
+          "SPINOFF Features",
+          16
+        ],
+        [
+          "p",
+          "Some of the challenges NASA scientists and technologists nee",
+          452
+        ]
+      ]
+    },
+    {
+      "file": "chap_81.xhtml",
+      "frags": [
+        [
+          "h1",
+          "NASA Data Helps Beavers Build Back Streams",
+          42
+        ]
+      ]
+    },
+    {
+      "file": "chap_82.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Nature\u2019s engineers, beavers get help from NASA to mitigate d",
+          76
+        ],
+        [
+          "p",
+          "When beavers move into a stream to start a homestead, they a",
+          237
+        ],
+        [
+          "p",
+          "Beaver dams slow down streams to create ponds, thereby preve",
+          494
+        ],
+        [
+          "p",
+          "Boise State University received a space agency grant to deve",
+          530
+        ],
+        [
+          "p",
+          "Boise State University in Idaho and Utah State University in",
+          287
+        ],
+        [
+          "p",
+          "When NASA\u2019s Research Opportunities in Space and Earth Scienc",
+          519
+        ],
+        [
+          "p",
+          "Not many ROSES proposals have commercial outcomes, said Cind",
+          264
+        ],
+        [
+          "p",
+          "Beaver dams and canals create wetlands and retain water, pro",
+          449
+        ]
+      ]
+    },
+    {
+      "file": "chap_83.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Leveling the Pond",
+          17
+        ],
+        [
+          "p",
+          "After beavers were nearly eradicated by hunters and trappers",
+          355
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "To support ecosystem restoration, the online Beaver Restorat",
+          333
+        ],
+        [
+          "p",
+          "One factor that can raise opposition to employing beavers in",
+          213
+        ],
+        [
+          "p",
+          "For example, if a beaver dam is close to human infrastructur",
+          669
+        ],
+        [
+          "p",
+          "\u201cIdaho was one of the first places thinking about re-wilding",
+          75
+        ],
+        [
+          "p",
+          "A beaver family nibbles on aspen branches just up Logan Cany",
+          72
+        ],
+        [
+          "p",
+          "State University, in Spawn Creek, Utah.",
+          39
+        ]
+      ]
+    },
+    {
+      "file": "chap_84.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Jodi Brandt, Boise State University",
+          35
+        ],
+        [
+          "p",
+          "Credit: Sarah Koenigsberg",
+          25
+        ]
+      ]
+    },
+    {
+      "file": "chap_85.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Buck-Toothed Ecosystem Engineers",
+          32
+        ],
+        [
+          "p",
+          "the dam,\u201d said Koenigsberg, noting that beavers can benefit ",
+          112
+        ],
+        [
+          "p",
+          "\u201cIdaho was one of the first places thinking about re-wilding",
+          303
+        ],
+        [
+          "p",
+          "on their lands,\u201d said Jodi Brandt, associate professor in Hu",
+          261
+        ],
+        [
+          "p",
+          "BRAT uses satellite data to analyze stream conditions and ra",
+          606
+        ],
+        [
+          "p",
+          "\u201cThe MRRMaid approach to monitoring uses satellites that are",
+          411
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "\u201cThe future of our planet relies on these commercial partner",
+          109
+        ],
+        [
+          "p",
+          "the benefits of stream restoration. With satellite data, \u201cwe",
+          138
+        ],
+        [
+          "p",
+          "Federal agencies like the Forest Service and the Bureau of L",
+          390
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Businesses and organizations need proof of conservation succ",
+          257
+        ],
+        [
+          "p",
+          "\u201cThat\u2019s what applied science is all about \u2014 getting In addit",
+          562
+        ],
+        [
+          "p",
+          "the users whatever is needed for environmental decision maki",
+          262
+        ],
+        [
+          "p",
+          "And sometimes those commercial partners need a little help f",
+          385
+        ]
+      ]
+    },
+    {
+      "file": "chap_86.xhtml",
+      "frags": [
+        [
+          "h1",
+          "\u201cYou\u2019re basically outsmarting the beavers by using a pipe to",
+          67
+        ]
+      ]
+    },
+    {
+      "file": "chap_87.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Filling Data Gaps",
+          17
+        ],
+        [
+          "p",
+          "hidden leak in the dam.\u201d The current versions of MRRMaid and",
+          122
+        ],
+        [
+          "p",
+          "systems \u2014 to run simulations and generate reports. Because m",
+          264
+        ]
+      ]
+    },
+    {
+      "file": "chap_88.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Sarah Koenigsberg, Utah State University",
+          40
+        ],
+        [
+          "p",
+          "Even with access to the best remote sensing and data, though",
+          389
+        ],
+        [
+          "p",
+          "Brandt said public engagement is critical for success. \u201cWe h",
+          324
+        ]
+      ]
+    },
+    {
+      "file": "chap_89.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Cindy Schmidt, Ames Research Center",
+          35
+        ]
+      ]
+    },
+    {
+      "file": "chap_90.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Seeing Is Communicating",
+          23
+        ],
+        [
+          "p",
+          "An effort funded by Congress to improve and miniaturize eye-",
+          559
+        ]
+      ]
+    },
+    {
+      "file": "chap_91.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Eye-tracking technology makes \u2018talking\u2019 possible for people ",
+          69
+        ],
+        [
+          "p",
+          "The technology isn\u2019t new, but it has become much more widely",
+          421
+        ],
+        [
+          "p",
+          "During the COVID-19 pandemic, Eyegaze integrated communicati",
+          569
+        ],
+        [
+          "p",
+          "\u201cWorking with NASA, we were able to make the device less bul",
+          314
+        ],
+        [
+          "p",
+          "improve the company\u2019s Eyegaze Edge system, eliminating barri",
+          111
+        ],
+        [
+          "p",
+          "Eye-tracking systems for computers pinpoint a person\u2019s gaze ",
+          623
+        ],
+        [
+          "p",
+          "\u201cWe are constantly thinking about what the customers want. O",
+          355
+        ],
+        [
+          "p",
+          "The Eyegaze Edge technology is so easy to use that children ",
+          218
+        ]
+      ]
+    },
+    {
+      "file": "chap_92.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Visual Surfing",
+          14
+        ],
+        [
+          "p",
+          "As personal electronic devices and internet access became co",
+          301
+        ],
+        [
+          "p",
+          "government partners put it in a position to meet that demand",
+          61
+        ]
+      ]
+    },
+    {
+      "file": "chap_93.xhtml",
+      "frags": [
+        [
+          "h2",
+          "The Right to Speak",
+          18
+        ],
+        [
+          "p",
+          "The company\u2019s Eyeworld software integrates with The company ",
+          875
+        ],
+        [
+          "p",
+          "computers, mobile phones, and tablets, allowing the Eyegaze ",
+          848
+        ],
+        [
+          "p",
+          "locked-in syndrome, which paralyzes all voluntary muscles ex",
+          258
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Clinicians use Eyegaze Edge and teach their patients how to ",
+          383
+        ],
+        [
+          "p",
+          "Eyegaze Edge measures several eye features, making it possib",
+          713
+        ]
+      ]
+    },
+    {
+      "file": "chap_94.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Home-Grown Housing",
+          18
+        ]
+      ]
+    },
+    {
+      "file": "chap_95.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Cultivating mushrooms to build housing on Earth, the Moon, a",
+          67
+        ],
+        [
+          "p",
+          "Smurfs have been doing it since the 1950s, but a group worki",
+          410
+        ],
+        [
+          "p",
+          "Mushroom stems and caps can add flavor and nutrients to food",
+          522
+        ],
+        [
+          "p",
+          "To continue funding this effort, the foundation\u2019s commercial",
+          377
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Acacia mellifera has been allowed to spread virtually unchec",
+          400
+        ],
+        [
+          "p",
+          "Growing lunar and Martian habitats from mushrooms requires a",
+          308
+        ],
+        [
+          "p",
+          "Chris Maurer, principal architect with redhouse studio and c",
+          222
+        ]
+      ]
+    },
+    {
+      "file": "chap_96.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Mycotecture",
+          11
+        ],
+        [
+          "p",
+          "Not just any mushroom or substrate will do to grow habitats.",
+          665
+        ],
+        [
+          "p",
+          "The Mycohab staff uses a NASA-developed growing technique to",
+          206
+        ],
+        [
+          "p",
+          "The experiments proved the viability of the",
+          43
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "dual use of fungus as food and construction material. But th",
+          474
+        ],
+        [
+          "p",
+          "\u201cMycotecture\u201d \u2014 mycelia-based architecture \u2014 could flourish ",
+          168
+        ],
+        [
+          "p",
+          "And because the fungi can grow anywhere, it won\u2019t be necessa",
+          257
+        ],
+        [
+          "p",
+          "This microscopic image shows fungal mycelia, the root-like T",
+          708
+        ],
+        [
+          "p",
+          "For structures on another planetary body, NASA will use a li",
+          499
+        ],
+        [
+          "p",
+          "All of this could be done even before astronauts arrive. Aft",
+          270
+        ],
+        [
+          "p",
+          "Ivan Severus, site manager for Mycohab, holds a brick made f",
+          197
+        ],
+        [
+          "p",
+          "Because Mycohab is using the waste created by the Acacia mel",
+          420
+        ]
+      ]
+    },
+    {
+      "file": "chap_97.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Moon-Shrooms",
+          12
+        ],
+        [
+          "p",
+          "After proving the growing process worked, Maurer from redhou",
+          333
+        ],
+        [
+          "p",
+          "These houses have the added benefit of generating \u201cWe seques",
+          112
+        ],
+        [
+          "p",
+          "every pound of material we make, compared to concrete that e",
+          312
+        ],
+        [
+          "p",
+          "\u201cInstead of putting demolished houses into landfills like we",
+          235
+        ],
+        [
+          "p",
+          "Mycohab completed a demonstration house in 2024 that uses my",
+          203
+        ],
+        [
+          "p",
+          "Using locally available biowaste requires a unique recipe to",
+          255
+        ],
+        [
+          "p",
+          "\u201cThere is no hardware store on the Moon. We have to think th",
+          159
+        ],
+        [
+          "p",
+          "binding dehydrated woodchips, that veneer reminds you of hom",
+          336
+        ],
+        [
+          "p",
+          "In the meantime, Mycohab is growing and selling mushrooms wh",
+          481
+        ],
+        [
+          "p",
+          "\u201cIt\u2019s a long detour to outer space to actually land this pro",
+          256
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_98.xhtml",
+      "frags": [
+        [
+          "h1",
+          "\u201cHad it not been",
+          16
+        ],
+        [
+          "p",
+          "funded by NASA, we wouldn\u2019t be where we are today.\u201d",
+          51
+        ]
+      ]
+    },
+    {
+      "file": "chap_99.xhtml",
+      "frags": [
+        [
+          "h2",
+          "A Bit of Home",
+          13
+        ],
+        [
+          "p",
+          "While additional research is still needed, there are many be",
+          420
+        ],
+        [
+          "p",
+          "Chris Maurer, redhouse studio Melanin-rich fungi can also ab",
+          282
+        ],
+        [
+          "p",
+          "Materials made with mycelia also absorb sound and vibrations",
+          235
+        ]
+      ]
+    },
+    {
+      "file": "chap_100.xhtml",
+      "frags": [
+        [
+          "h1",
+          "A Better Backup Plan for the Unthinkable",
+          40
+        ]
+      ]
+    },
+    {
+      "file": "chap_101.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Autonomous self-destruct technology eliminates the cost of h",
+          70
+        ],
+        [
+          "p",
+          "When a rocket launches, the ground command only has three to",
+          732
+        ],
+        [
+          "p",
+          "Starting in 2025, any vehicle launching from a federal launc",
+          524
+        ]
+      ]
+    },
+    {
+      "file": "chap_102.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Multiple Launches, Multiple Sites",
+          33
+        ],
+        [
+          "p",
+          "agency has completed 46 such agreements, one of which was wi",
+          119
+        ],
+        [
+          "p",
+          "\u201cWe wanted the IAFTU to have the adaptability to plug and pl",
+          284
+        ],
+        [
+          "p",
+          "Now retired, Valencia said the team expected the project to ",
+          383
+        ],
+        [
+          "p",
+          "Sagrad offers the SG901-1229 AFTU using the NASA specificati",
+          383
+        ]
+      ]
+    },
+    {
+      "file": "chap_103.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Just Turn Off the Motor",
+          23
+        ],
+        [
+          "p",
+          "Once the FAA allows remote pilots to operate drones that go ",
+          340
+        ],
+        [
+          "p",
+          "\u201cBack in the day, you could only fly one rocket at a time. I",
+          500
+        ],
+        [
+          "p",
+          "Sagrad of Melbourne, Florida, offers a technology to automat",
+          317
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Just as a rocket could experience a problem right after take",
+          381
+        ],
+        [
+          "p",
+          "The new system is universal, designed to work for a single r",
+          397
+        ],
+        [
+          "p",
+          "Because the Sagrad AFTU was designed to work for any vehicle",
+          320
+        ],
+        [
+          "p",
+          "customized algorithms to make flight termination decisions. ",
+          98
+        ],
+        [
+          "p",
+          "Making the technology effective and available for both comme",
+          120
+        ],
+        [
+          "p",
+          "Nothing like it existed at the time. Creating this custom te",
+          346
+        ],
+        [
+          "p",
+          "\u201cThe electronics are designed to continue to operate through",
+          317
+        ],
+        [
+          "p",
+          "\u201cWhen I see these commercial companies as well as our milita",
+          195
+        ],
+        [
+          "p",
+          "Starting in 2025, any rocket that launches from a federal la",
+          372
+        ],
+        [
+          "p",
+          "\u201cWe called together all these companies in the industry enti",
+          634
+        ],
+        [
+          "p",
+          "technology development.\u201d \u25cf",
+          26
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "With NASA providing technical expertise, the company helped ",
+          391
+        ],
+        [
+          "p",
+          "AFTU hardware tested by NASA\u2019s Flight Opportunities program ",
+          382
+        ]
+      ]
+    },
+    {
+      "file": "chap_104.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Better Data for Bodies in Motion",
+          32
+        ],
+        [
+          "p",
+          "To discover why astronauts returning to Earth frequently exp",
+          419
+        ]
+      ]
+    },
+    {
+      "file": "chap_105.xhtml",
+      "frags": [
+        [
+          "h2",
+          "A wearable device to monitor astronauts\u2019 tumultuous return t",
+          87
+        ],
+        [
+          "p",
+          "a jarring landing. Hitting the ground in a Soyuz capsule is ",
+          392
+        ]
+      ]
+    },
+    {
+      "file": "chap_106.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Parachute Drops and Car Crashes",
+          31
+        ],
+        [
+          "p",
+          "The prototype design, named DXR, met every specification exc",
+          349
+        ],
+        [
+          "p",
+          "Adding the TSR AIR to a tailfin or other places on an airpla",
+          401
+        ],
+        [
+          "p",
+          "knowledge of conditions that affect battery longevity, and m",
+          425
+        ],
+        [
+          "p",
+          "spacesuits. One result, created by Diversified Technical Sys",
+          227
+        ],
+        [
+          "p",
+          "Common data recorders, such as those used for laboratory tes",
+          650
+        ],
+        [
+          "p",
+          "\u201cThe astronauts are in the spacecraft for a while, and you d",
+          373
+        ],
+        [
+          "p",
+          "A \u201csoft\u201d landing in a Soyuz capsule is like driving a car in",
+          408
+        ],
+        [
+          "p",
+          "In addition to providing an array of hardware, DTS provides ",
+          292
+        ]
+      ]
+    },
+    {
+      "file": "chap_107.xhtml",
+      "frags": [
+        [
+          "h2",
+          "\u201cA development project like this",
+          32
+        ],
+        [
+          "p",
+          "\u201cOur predictive tools were adapted from the",
+          43
+        ],
+        [
+          "p",
+          "is a very interactive process.\u201d",
+          31
+        ],
+        [
+          "p",
+          "DTS started with its core technology, designed to capture da",
+          335
+        ]
+      ]
+    },
+    {
+      "file": "chap_108.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Mike Beckage, Diversified",
+          25
+        ],
+        [
+          "p",
+          "head and neck are subjected to high rates of acceleration in",
+          225
+        ]
+      ]
+    },
+    {
+      "file": "chap_109.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Technical Systems",
+          17
+        ],
+        [
+          "p",
+          "\u201cWe\u2019re thankful to have those opportunities to work on reall",
+          293
+        ],
+        [
+          "p",
+          "DTS already had extensive experience in miniaturizing data r",
+          265
+        ],
+        [
+          "p",
+          "The agency used this off-the-shelf technology to verify the ",
+          398
+        ]
+      ]
+    },
+    {
+      "file": "chap_110.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Astronaut Safety",
+          16
+        ],
+        [
+          "p",
+          "DTS\u2019s work to create a self-contained wearable device that d",
+          225
+        ],
+        [
+          "p",
+          "The TSR AIR data recorder measures the \u201cA development projec",
+          93
+        ],
+        [
+          "p",
+          "velocity and motion of an object. DTS created a wearable ver",
+          373
+        ],
+        [
+          "p",
+          "but now industry uses the device for safety test flights, tr",
+          440
+        ]
+      ]
+    },
+    {
+      "file": "chap_111.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Folding NASA Experience into an Origamist\u2019s Toolkit",
+          51
+        ]
+      ]
+    },
+    {
+      "file": "chap_112.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Math for designing lasers becomes artist\u2019s key to creating c",
+          82
+        ],
+        [
+          "p",
+          "What does origami have in common with electronics? Here, mat",
+          151
+        ],
+        [
+          "p",
+          "The discovery of the mathematical underpinnings of folded pa",
+          308
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "While working on optical computing and similar technology in",
+          297
+        ],
+        [
+          "p",
+          "\u201cOver the years of solving mathematical problems to describe",
+          460
+        ],
+        [
+          "p",
+          "Since Lang left NASA, the agency has called him back in to c",
+          124
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "In the Microdevices Laboratory at JPL in the late 1980s and ",
+          331
+        ],
+        [
+          "p",
+          "in engineering and origami. One of those was the Starshade",
+          58
+        ],
+        [
+          "p",
+          "concept, a design for a baseball diamond-sized disk that wou",
+          399
+        ],
+        [
+          "p",
+          "\u201cOne of the theoretical fields I learned about at JPL turned",
+          323
+        ]
+      ]
+    },
+    {
+      "file": "chap_113.xhtml",
+      "frags": [
+        [
+          "h1",
+          "\u201cOver the years of solving mathematical problems",
+          48
+        ],
+        [
+          "p",
+          "to describe lasers and optoelectronics, I built up a toolkit",
+          450
+        ],
+        [
+          "p",
+          "patterns that gave the appearance of woven strips. Though th",
+          252
+        ]
+      ]
+    },
+    {
+      "file": "chap_114.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Robert Lang",
+          11
+        ],
+        [
+          "p",
+          "Lang and sculptor Kevin Box, stands outside White Rock Branc",
+          121
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_115.xhtml",
+      "frags": [
+        [
+          "h2",
+          "It\u2019s All About the Numbers",
+          26
+        ],
+        [
+          "p",
+          "A simple nonlinear constrained optimization problem would be",
+          369
+        ],
+        [
+          "p",
+          "Designing lasers and other components required a similar cal",
+          750
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "The math was too complex to solve by hand but easy for a com",
+          264
+        ],
+        [
+          "p",
+          "By the mid-1990s, he had created an opensource software call",
+          545
+        ],
+        [
+          "p",
+          "In 2001, he left his last engineering job to become a full-t",
+          74
+        ]
+      ]
+    },
+    {
+      "file": "chap_116.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Engineered Origami Leads back to NASA",
+          37
+        ],
+        [
+          "p",
+          "Lang has written or coauthored around 20 books on origami an",
+          626
+        ],
+        [
+          "p",
+          "His portfolio is filled with animals, plants, and the occasi",
+          415
+        ],
+        [
+          "p",
+          "In designing his nonrepresentational pieces, he often revers",
+          808
+        ],
+        [
+          "p",
+          "The initial project was not the first time Lang had used ori",
+          609
+        ],
+        [
+          "p",
+          "He said it\u2019s his engineering background, including his NASA ",
+          403
+        ],
+        [
+          "p",
+          "\u201cSo the irony is that, when I was employed fulltime at NASA,",
+          394
+        ]
+      ]
+    },
+    {
+      "file": "chap_117.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Space-Based Tech for Home Health Monitoring",
+          43
+        ]
+      ]
+    },
+    {
+      "file": "chap_118.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Contactless monitoring for vital signs uses radio-frequency ",
+          86
+        ],
+        [
+          "p",
+          "Even before we\u2019re aware of heart trouble, breathing problems",
+          741
+        ],
+        [
+          "p",
+          "Creating a smaller, inexpensive, contactless device to measu",
+          226
+        ],
+        [
+          "p",
+          "Breathing and pumping blood are just two ways the body creat",
+          413
+        ],
+        [
+          "p",
+          "Radio waves seemed the ideal approach. Radars were already r",
+          555
+        ],
+        [
+          "p",
+          "In the late 1990s, hardware and computing technology were so",
+          272
+        ]
+      ]
+    },
+    {
+      "file": "chap_119.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Our Vibrating Bodies",
+          20
+        ],
+        [
+          "p",
+          "After figuring out the best radio frequency to use, NASA des",
+          437
+        ],
+        [
+          "p",
+          "The algorithms trained by machine learning differentiated th",
+          450
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "respiration, but the company added heart rate variability de",
+          197
+        ],
+        [
+          "p",
+          "Radio-frequency technology developed by the Jet Propulsion L",
+          269
+        ],
+        [
+          "p",
+          "Filters developed by Advanced TeleSensors block potential in",
+          378
+        ],
+        [
+          "p",
+          "The software can track multiple vital signs, revealing trend",
+          285
+        ],
+        [
+          "p",
+          "Some of the company\u2019s first clients were in equine rehabilit",
+          396
+        ],
+        [
+          "p",
+          "\u201cNobody had been able to come up with The Cardi/o vital sign",
+          290
+        ],
+        [
+          "p",
+          "the methodology to make this technology very reliable, but w",
+          298
+        ]
+      ]
+    },
+    {
+      "file": "chap_120.xhtml",
+      "frags": [
+        [
+          "h2",
+          "\u2018Transforming the World\u2019",
+          24
+        ],
+        [
+          "p",
+          "looked for smaller, cheaper hardware to perform the same fun",
+          296
+        ],
+        [
+          "p",
+          "Contactless monitoring offers numerous benefits for managing",
+          344
+        ],
+        [
+          "p",
+          "When Ghoshal participated in a demonstration of the prototyp",
+          254
+        ]
+      ]
+    },
+    {
+      "file": "chap_121.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Horse-Sense Technology",
+          22
+        ],
+        [
+          "p",
+          "The Cardi/o Monitor is compact, just 3 inches \u201cWe went throu",
+          643
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "to 10 feet, with the best performance between 5 and 7 feet. ",
+          262
+        ],
+        [
+          "p",
+          "This is particularly important for high-risk conditions such",
+          343
+        ],
+        [
+          "p",
+          "Describing the NASA engineers as very supportive, Ghoshal sa",
+          164
+        ],
+        [
+          "p",
+          "The algorithms \u201cNASA has a phenomenal set of engineers. The ",
+          621
+        ]
+      ]
+    },
+    {
+      "file": "chap_122.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Scaling Up Hydrogen",
+          19
+        ]
+      ]
+    },
+    {
+      "file": "chap_123.xhtml",
+      "frags": [
+        [
+          "h2",
+          "NASA tech for measuring insulation efficiency is helping exp",
+          85
+        ],
+        [
+          "p",
+          "When NASA engineer James Fesmire needed to measure the therm",
+          197
+        ],
+        [
+          "p",
+          "The latest iteration of that device, called a cryostat, is n",
+          161
+        ],
+        [
+          "p",
+          "\u201cThis is important for progress and the future,\u201d Fesmire sai",
+          204
+        ],
+        [
+          "p",
+          "The device is a simulation test platform that replicates rea",
+          368
+        ]
+      ]
+    },
+    {
+      "file": "chap_124.xhtml",
+      "frags": [
+        [
+          "h2",
+          "The Vision to Carry It Forward",
+          30
+        ],
+        [
+          "p",
+          "Fesmire\u2019s work over 30 years ago to quantify the small amoun",
+          476
+        ],
+        [
+          "p",
+          "Fesmire went on to design a series of cryostats for NASA (Sp",
+          265
+        ],
+        [
+          "p",
+          "GenH2 has licenses from NASA for four cryostat models and of",
+          261
+        ],
+        [
+          "p",
+          "\u201cWe are the inventors,\u201d said Dr. Martha Williams, who joined",
+          245
+        ],
+        [
+          "p",
+          "GenH2 cofounder James Fesmire stands next to the Cryostat CS",
+          218
+        ]
+      ]
+    },
+    {
+      "file": "chap_125.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Keeping Up Standards",
+          20
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "The body of knowledge Fesmire built at NASA with his cryosta",
+          205
+        ],
+        [
+          "p",
+          "The Cryostat CS900 is poised to enable widespread use of liq",
+          275
+        ],
+        [
+          "p",
+          "Adam Swanger, a colleague of Fesmire and Williams at NASA wh",
+          269
+        ],
+        [
+          "p",
+          "For spaceflight, in the absence of air, rocket fuel requires",
+          267
+        ],
+        [
+          "p",
+          "\u201cInsulation and proper characterization of it at these tempe",
+          247
+        ],
+        [
+          "p",
+          "Some boiloff losses are generally inevitable for liquid gase",
+          390
+        ],
+        [
+          "p",
+          "NASA\u2019s Cryostat CS-500, pictured here as it cools down to cr",
+          664
+        ]
+      ]
+    },
+    {
+      "file": "chap_126.xhtml",
+      "frags": [
+        [
+          "h2",
+          "\u2018We\u2019re Doing This Because We Should\u2019",
+          36
+        ],
+        [
+          "p",
+          "Liquid hydrogen is currently attracting significant investme",
+          235
+        ],
+        [
+          "p",
+          "\u201cThe field of cryogenics is foundational to some of the most",
+          398
+        ],
+        [
+          "p",
+          "The liquid hydrogen capability of the Cryostat CS900 \u201cbuilds",
+          201
+        ]
+      ]
+    },
+    {
+      "file": "chap_127.xhtml",
+      "frags": [
+        [
+          "h1",
+          "\u201cThe field of cryogenics is foundational to some of the most",
+          60
+        ],
+        [
+          "p",
+          "impressive achievements in human history, including spacefli",
+          65
+        ]
+      ]
+    },
+    {
+      "file": "chap_128.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Adam Swanger, Kennedy Space Center",
+          34
+        ]
+      ]
+    },
+    {
+      "file": "chap_129.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Cosmic Experiments Make Cosmetic Nutrients",
+          42
+        ]
+      ]
+    },
+    {
+      "file": "chap_130.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Antigravity bioreactor grows",
+          28
+        ],
+        [
+          "p",
+          "Most Earthlings will never escape gravity, but an invention ",
+          167
+        ],
+        [
+          "p",
+          "robust stem cells, extracts plant nutrients for anti-aging c",
+          65
+        ],
+        [
+          "p",
+          "Since it was introduced more than 30 years ago, the ability ",
+          369
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "\u201cLet\u2019s face it, the cosmetic landscape is filled with brands",
+          310
+        ],
+        [
+          "p",
+          "It was this mentality that was triggered when another cosmet",
+          389
+        ],
+        [
+          "p",
+          "The RCCS was not new when the company Renu\u00e9ll approached Pol",
+          178
+        ]
+      ]
+    },
+    {
+      "file": "chap_131.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Grounded, NASA Brings Space Environment to Earthlings",
+          53
+        ],
+        [
+          "p",
+          "The technology itself dates back to the aftermath of the spa",
+          438
+        ],
+        [
+          "p",
+          "They found that if they placed the kidney cells and culture ",
+          66
+        ],
+        [
+          "p",
+          "in a gently rolling horizontal cylinder, the cells stayed su",
+          975
+        ],
+        [
+          "p",
+          "Two of the team members licensed their technology from NASA ",
+          412
+        ]
+      ]
+    },
+    {
+      "file": "chap_132.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Rejuvenating a Skin Care Spinoff",
+          32
+        ]
+      ]
+    },
+    {
+      "file": "chap_133.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Healing Babies, Courting Brands",
+          31
+        ],
+        [
+          "p",
+          "The Rotary Cell Culture System invented by researchers at Jo",
+          290
+        ],
+        [
+          "p",
+          "Pollock had built a name in brand development and contract m",
+          496
+        ],
+        [
+          "p",
+          "The company has also started using RCCS technology to obtain",
+          387
+        ],
+        [
+          "p",
+          "Most companies obtain extracts from plants using either heat",
+          859
+        ],
+        [
+          "p",
+          "which help keep skin moist and flexible.",
+          40
+        ],
+        [
+          "p",
+          "These are incorporated into a diverse range of products in B",
+          544
+        ],
+        [
+          "p",
+          "While some other skin care companies use stem cell secretum,",
+          334
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "that the extract could eventually become the basis for an ap",
+          93
+        ],
+        [
+          "p",
+          "Independent clinical trials demonstrated that the products s",
+          226
+        ],
+        [
+          "p",
+          "dark circles, and skin roughness, and caused a dramatic incr",
+          149
+        ],
+        [
+          "p",
+          "\u201cIn a small amount of time with no private equity, no big lo",
+          478
+        ],
+        [
+          "p",
+          "The company first sold the products to dermatologists and sp",
+          134
+        ],
+        [
+          "p",
+          "network, he said. He credits the products\u2019 basis in NASA sci",
+          113
+        ],
+        [
+          "p",
+          "\u201cWithout that, I don\u2019t think we would",
+          37
+        ],
+        [
+          "p",
+          "have gotten to the size we are. It gave us credibility start",
+          260
+        ],
+        [
+          "p",
+          "Brand Labs USA owns this four-cylinder Rotary Cell Culture S",
+          424
+        ]
+      ]
+    },
+    {
+      "file": "chap_134.xhtml",
+      "frags": [
+        [
+          "h1",
+          "3D Printed Engines Propel Next Industrial Revolution",
+          52
+        ]
+      ]
+    },
+    {
+      "file": "chap_135.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Converging efforts to 3D print engines promise major savings",
+          83
+        ],
+        [
+          "p",
+          "In the fall of 2023, NASA hot fire tested an aluminum-based,",
+          323
+        ],
+        [
+          "p",
+          "The new possibility of printed aluminum engine parts will me",
+          409
+        ],
+        [
+          "p",
+          "NASA\u2019s Marshall Space Flight Center in Huntsville, Alabama, ",
+          388
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Tipping Point funding and an Announcement of Collaborative O",
+          256
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "NASA engineers Tessa Fedotowsky and Ben Williams inspect an ",
+          746
+        ],
+        [
+          "p",
+          "promises all these advantages, along with substantial weight",
+          69
+        ],
+        [
+          "p",
+          "This was the culmination of a relationship between NASA and ",
+          621
+        ]
+      ]
+    },
+    {
+      "file": "chap_136.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Engine Printing Takes Off",
+          25
+        ],
+        [
+          "p",
+          "One company whose interest was piqued was Masten Space Syste",
+          252
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "refined. The Rapid Analysis and Manufacturing Propulsion Tec",
+          275
+        ]
+      ]
+    },
+    {
+      "file": "chap_137.xhtml",
+      "frags": [
+        [
+          "h2",
+          "The Next Industrial Revolution",
+          30
+        ],
+        [
+          "p",
+          "In early 2021, the LP-DED process was maturing, and an Annou",
+          481
+        ],
+        [
+          "p",
+          "Elementum 3D reengineered its A6061 RAM2 aluminum alloy powd",
+          265
+        ],
+        [
+          "p",
+          "\u201cWe went through various iterations of the powder to make su",
+          272
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Under Tipping Point funding from Marshall, Elementum 3D work",
+          247
+        ],
+        [
+          "p",
+          "space agency to work on a 3D printed aluminum rocket engine,",
+          429
+        ],
+        [
+          "p",
+          "earliest metal alloy composites, was tested in late 2019. It",
+          227
+        ],
+        [
+          "p",
+          "Cutting weight at this scale has major implications for spac",
+          131
+        ]
+      ]
+    },
+    {
+      "file": "chap_138.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Rocket Tech RAMs Its Way into New Markets",
+          41
+        ],
+        [
+          "p",
+          "The work got the attention of Ball Aerospace, which is now u",
+          592
+        ],
+        [
+          "p",
+          "Not by accident, A6061 is one of the world\u2019s most commonly u",
+          752
+        ],
+        [
+          "p",
+          "Meanwhile, the company Ceramic Disc Technology is using the ",
+          459
+        ],
+        [
+          "p",
+          "Another company is turning A1000-RAM10 into prototype lighti",
+          234
+        ],
+        [
+          "p",
+          "\u201cWe\u2019re not just building for rocket industries,\u201d said Anthon",
+          217
+        ]
+      ]
+    },
+    {
+      "file": "chap_139.xhtml",
+      "frags": [
+        [
+          "h1",
+          "\u201cWe\u2019re not just building for rocket industries,",
+          47
+        ]
+      ]
+    },
+    {
+      "file": "chap_140.xhtml",
+      "frags": [
+        [
+          "h1",
+          "We\u2019re building materials and alloys that can",
+          44
+        ],
+        [
+          "p",
+          "help people in their everyday life.\u201d",
+          36
+        ]
+      ]
+    },
+    {
+      "file": "chap_141.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Anthony Manerbino, Elementum 3D",
+          31
+        ]
+      ]
+    },
+    {
+      "file": "chap_142.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Space Tech Gives Treadmill Users a \u2018Boost\u2019",
+          42
+        ]
+      ]
+    },
+    {
+      "file": "chap_143.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Creators of the original antigravity treadmill continue to a",
+          109
+        ],
+        [
+          "p",
+          "When Sean Whalen and a couple of friends founded Boost Tread",
+          201
+        ],
+        [
+          "p",
+          "\u201cWe knew we could improve the machines in a bunch of differe",
+          408
+        ],
+        [
+          "p",
+          "Allen and Whalen had started a company called AlterG in 2005",
+          585
+        ]
+      ]
+    },
+    {
+      "file": "chap_144.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Setbacks Burst Engineer\u2019s Bubble",
+          32
+        ],
+        [
+          "p",
+          "The elder Whalen began considering equipment to help astrona",
+          381
+        ],
+        [
+          "p",
+          "He eventually hit on the use of differences in air pressure ",
+          401
+        ],
+        [
+          "p",
+          "After becoming an Ames employee in 1989, he built a system h",
+          404
+        ],
+        [
+          "p",
+          "With the idea of offloading weight during rehabilitative exe",
+          286
+        ],
+        [
+          "p",
+          "He went on to build another prototype air pressure-different",
+          328
+        ],
+        [
+          "p",
+          "NASA astronaut Nicole Stott works out on a treadmill on the ",
+          399
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_145.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Space Idea Becomes Home Reality",
+          31
+        ]
+      ]
+    },
+    {
+      "file": "chap_146.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Antigravity Concept Continues to Soar",
+          37
+        ],
+        [
+          "p",
+          "Offloading weight during exercise is an obvious rehabilitati",
+          508
+        ],
+        [
+          "p",
+          "Now Boost has cut the price of an antigravity treadmill by a",
+          314
+        ],
+        [
+          "p",
+          "Boost Treadmills of Palo Alto, California, is the second com",
+          261
+        ],
+        [
+          "p",
+          "\u201cThese machines are also just way more durable, and if there",
+          199
+        ],
+        [
+          "p",
+          "Even people whose age prevents them from running as much as ",
+          598
+        ],
+        [
+          "p",
+          "In 2022, the company released the Boost 2, which boasts seve",
+          424
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Boost Treadmills cofounder Sean Whalen runs on the Boost 2. ",
+          709
+        ],
+        [
+          "p",
+          "The company is making its next treadmills even more affordab",
+          373
+        ],
+        [
+          "p",
+          "Although NASA has not yet tested the concept in space, Rober",
+          385
+        ],
+        [
+          "p",
+          "The company estimates it\u2019s sold about 600 units to date, wit",
+          335
+        ],
+        [
+          "p",
+          "\u201cI can\u2019t imagine it having a better outcome,\u201d said Actor Jer",
+          457
+        ]
+      ]
+    },
+    {
+      "file": "chap_147.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Coral Expertise Finds Broad Application",
+          39
+        ]
+      ]
+    },
+    {
+      "file": "chap_148.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Remote sensing company helps customers navigate data, guided",
+          77
+        ],
+        [
+          "p",
+          "When a Florida company wanted to incorporate new satellite d",
+          206
+        ],
+        [
+          "p",
+          "HySpeed\u2019s founder, James Goodman, has worked with space agen",
+          213
+        ],
+        [
+          "p",
+          "There, as a NASA Earth Systems Science Fellowship recipient,",
+          240
+        ],
+        [
+          "p",
+          "The fish forecasting company, ROFFS Inc., was interested in ",
+          375
+        ],
+        [
+          "p",
+          "Miami-based HySpeed Computing offers remote sensing services",
+          184
+        ],
+        [
+          "p",
+          "\u201cInstead of cloud computing, it\u2019s space computing.\u201d",
+          51
+        ]
+      ]
+    },
+    {
+      "file": "chap_149.xhtml",
+      "frags": [
+        [
+          "h2",
+          "James Goodman, HySpeed Computing",
+          32
+        ]
+      ]
+    },
+    {
+      "file": "chap_150.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Automating a Reliable Approach",
+          30
+        ]
+      ]
+    },
+    {
+      "file": "chap_151.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Space Computing",
+          15
+        ],
+        [
+          "p",
+          "\u201cThe data is there, and companies can get to it,\u201d Goodman sa",
+          207
+        ],
+        [
+          "p",
+          "After earning his doctoral degree, Goodman went on to work o",
+          164
+        ],
+        [
+          "p",
+          "HySpeed has also continued to work with NASA, developing a w",
+          314
+        ]
+      ]
+    },
+    {
+      "file": "chap_152.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Complicated and Diverse Systems",
+          31
+        ],
+        [
+          "p",
+          "\u201cI always felt I wasn\u2019t just solving one question.",
+          50
+        ],
+        [
+          "p",
+          "I was focused on the code and developing software that could",
+          156
+        ],
+        [
+          "p",
+          "NASA uses remote sensing to monitor Earth and other planets,",
+          292
+        ],
+        [
+          "p",
+          "More recently, in a project aimed at enabling high-performan",
+          303
+        ],
+        [
+          "p",
+          "\u201cBeyond the academic side of this research, and beyond just ",
+          279
+        ],
+        [
+          "p",
+          "The space agency\u2019s multispectral Landsat satellites orbit Ea",
+          358
+        ],
+        [
+          "p",
+          "\u201cAs we move further away from Earth, crews are going to need",
+          236
+        ],
+        [
+          "p",
+          "HySpeed Computing was founded in 2010, and in addition to pr",
+          283
+        ],
+        [
+          "p",
+          "Back on Earth, HySpeed continues to make remote sensing data",
+          750
+        ],
+        [
+          "p",
+          "\u201cThey were looking at sediment plumes in the water column an",
+          151
+        ],
+        [
+          "p",
+          "Working with HySpeed, the team identified the appropriate ap",
+          217
+        ],
+        [
+          "p",
+          "Increasingly high resolution helps detect smaller details in",
+          154
+        ],
+        [
+          "p",
+          "\u201cWe care about coral reefs because we care about having a he",
+          204
+        ]
+      ]
+    },
+    {
+      "file": "chap_153.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Measuring Buzz, Hum, and Rattle",
+          31
+        ],
+        [
+          "p",
+          "Collecting flight test noise data or chirps from insects in ",
+          740
+        ]
+      ]
+    },
+    {
+      "file": "chap_154.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Wireless microphone array quickly, cheaply, accurately maps ",
+          93
+        ],
+        [
+          "p",
+          "Since releasing its first commercial product in 2017, a sens",
+          530
+        ],
+        [
+          "p",
+          "The result is a series of small, saucer-shaped bases equippe",
+          529
+        ],
+        [
+          "p",
+          "Thanks to support from NASA, the more affordable testing too",
+          146
+        ],
+        [
+          "p",
+          "panel, supporting long-term deployment. Built-in GPS maintai",
+          384
+        ],
+        [
+          "p",
+          "A startup developing a new remotely piloted vehicle can now ",
+          310
+        ],
+        [
+          "p",
+          "The flight testing NASA and commercial airlines perform with",
+          388
+        ]
+      ]
+    },
+    {
+      "file": "chap_155.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Bugging Bugs",
+          12
+        ],
+        [
+          "p",
+          "All it takes to operate an individual node or an extensive a",
+          228
+        ],
+        [
+          "p",
+          "\u201cEach node contains a small computer system,\u201d said Patterson",
+          295
+        ],
+        [
+          "p",
+          "This small, portable technology is finding its way into a va",
+          408
+        ],
+        [
+          "p",
+          "A traditional wired system requires the simultaneous and ins",
+          474
+        ]
+      ]
+    },
+    {
+      "file": "chap_156.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Neither Rain nor Snow",
+          21
+        ],
+        [
+          "p",
+          "NASA Aeronautics has always used wired systems to collect th",
+          896
+        ],
+        [
+          "p",
+          "such as the noise level at airports are just a few possibili",
+          148
+        ],
+        [
+          "p",
+          "The WirelessArray supports a variety of sensors, so a microp",
+          779
+        ],
+        [
+          "p",
+          "aeronautics move into more advanced concepts like the truss-",
+          328
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "a sonic boom is approaching an area.",
+          36
+        ],
+        [
+          "p",
+          "The technology can be applied to anything that generates sou",
+          438
+        ],
+        [
+          "p",
+          "\u201cEach node contains a small computer system.\u201d",
+          45
+        ],
+        [
+          "p",
+          "The WirelessArray developed by Interdisciplinary Consulting ",
+          387
+        ],
+        [
+          "p",
+          "Chip Patterson, Interdisciplinary Consulting Corp.",
+          50
+        ]
+      ]
+    },
+    {
+      "file": "chap_157.xhtml",
+      "frags": [
+        [
+          "h1",
+          "NASA Sets Standard for Nutritional Health Products",
+          50
+        ]
+      ]
+    },
+    {
+      "file": "chap_158.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Early NASA partnership becomes foundation of reborn dietary ",
+          74
+        ],
+        [
+          "p",
+          "Among the most enduring medical mysteries of space travel ar",
+          447
+        ],
+        [
+          "p",
+          "The rest of us now stand to benefit, however, from the myste",
+          272
+        ]
+      ]
+    },
+    {
+      "file": "chap_159.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Answering NASA\u2019s Call",
+          21
+        ],
+        [
+          "p",
+          "those of a pharmaceutical company. These became what Nugevit",
+          170
+        ],
+        [
+          "p",
+          "Houston-based Nugevity is a restructured version of the comp",
+          309
+        ],
+        [
+          "p",
+          "AmeriSciences LP was only a few years old when NASA reached ",
+          391
+        ],
+        [
+          "p",
+          "Another important result of working with Johnson\u2019s pharmacol",
+          479
+        ],
+        [
+          "p",
+          "Under a Space Act Agreement, the company collected input fro",
+          500
+        ],
+        [
+          "p",
+          "products Nugevity co-developed with NASA and has released si",
+          392
+        ],
+        [
+          "p",
+          "Ingredients included a wide variety of vitamins, minerals, a",
+          560
+        ],
+        [
+          "p",
+          "OS2 is now Nugevity\u2019s most popular product within the United",
+          379
+        ],
+        [
+          "p",
+          "One of the most productive relationships, he said, was a col",
+          336
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_160.xhtml",
+      "frags": [
+        [
+          "h1",
+          "\u201cEvery time we",
+          14
+        ],
+        [
+          "p",
+          "talked to a different [NASA] office, they added different re",
+          183
+        ],
+        [
+          "p",
+          "Several of Nugevity\u2019s supplements, such as AS 10 Life and OS",
+          175
+        ]
+      ]
+    },
+    {
+      "file": "chap_161.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Carlos Montesinos, Nugevity",
+          27
+        ],
+        [
+          "p",
+          "Nugevity\u2019s own recipes still meet NASA\u2019s standards for quali",
+          154
+        ]
+      ]
+    },
+    {
+      "file": "chap_162.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Pill-Based Space Tech",
+          21
+        ],
+        [
+          "p",
+          "After the company came up with formulations that met the nee",
+          476
+        ],
+        [
+          "p",
+          "Not long after, however, the company ran into financial diff",
+          563
+        ],
+        [
+          "p",
+          "AmeriSciences ultimately commercialized several products ste",
+          181
+        ],
+        [
+          "p",
+          "Matt Scott, a five-time Paralympian and a double gold Paraly",
+          395
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Among the users of the sports nutrition products are the U.S",
+          799
+        ],
+        [
+          "p",
+          "Upon its revival, Nugevity incorporated the Pharma IQ standa",
+          673
+        ]
+      ]
+    },
+    {
+      "file": "chap_163.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Reaching New Markets, Reviving Old Partnership",
+          46
+        ],
+        [
+          "p",
+          "In the years before the pandemic, much of Nugevity\u2019s growth ",
+          304
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Among the products Nugevity has released since its rebrandin",
+          219
+        ],
+        [
+          "p",
+          "Credit: Premium Vitamins and Supplements LLC Caption And he\u2019",
+          599
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "It\u2019s a continuation of the partnership that he said has been",
+          868
+        ]
+      ]
+    },
+    {
+      "file": "chap_164.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Out-of-This-World Organs",
+          24
+        ],
+        [
+          "p",
+          "Heart tissue, knee cartilage, and pharmaceutical crystals ha",
+          451
+        ]
+      ]
+    },
+    {
+      "file": "chap_165.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Commercial spaceborne research platform grows drug crystals,",
+          79
+        ],
+        [
+          "p",
+          "The Redwire Advanced Space Experiment Processor, or ADSEP, i",
+          605
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "\u201cThen they float off and do other things they need \u201cIn space",
+          137
+        ],
+        [
+          "p",
+          "constructs, and each cell layer stays where you want it,\u201d he",
+          214
+        ],
+        [
+          "p",
+          "At this point, Redwire staff back on Earth take charge, comm",
+          230
+        ],
+        [
+          "p",
+          "That\u2019s where ADSEP comes in. The meniscus Redwire grew aboar",
+          190
+        ],
+        [
+          "p",
+          "Once the cells are printed, Redwire asks space station crew ",
+          198
+        ],
+        [
+          "p",
+          "\u201cIt\u2019s a multi-purpose processor of mini Redwire maintains tw",
+          278
+        ],
+        [
+          "p",
+          "laboratories based in these cassettes,\u201d said Rich Boling, wh",
+          161
+        ]
+      ]
+    },
+    {
+      "file": "chap_166.xhtml",
+      "frags": [
+        [
+          "h2",
+          "A Series of Successes",
+          21
+        ],
+        [
+          "p",
+          "Redwire announced in May it had printed and grown the first ",
+          194
+        ],
+        [
+          "p",
+          "\u201cADSEP has been around since the 1990s, and it\u2019s still a wor",
+          129
+        ],
+        [
+          "p",
+          "Typically, crew will put an ADSEP cassette that houses a bio",
+          142
+        ],
+        [
+          "p",
+          "In the last few years, Redwire has announced a series of spa",
+          336
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Meniscus tears are among the most common injuries for U.S. m",
+          335
+        ]
+      ]
+    },
+    {
+      "file": "chap_167.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Why Print in Space",
+          18
+        ],
+        [
+          "p",
+          "Gravity is a significant obstacle to bioprinting cells and g",
+          276
+        ],
+        [
+          "p",
+          "Redwire\u2019s latest iteration of the device, ADSEP-4, pictured ",
+          116
+        ],
+        [
+          "p",
+          "\u201cYou can make something on Earth that looks like a heart, fo",
+          116
+        ],
+        [
+          "p",
+          "return those to Earth to enable batch-size production in the",
+          129
+        ],
+        [
+          "p",
+          "Like human tissue, pharmaceutical crystals also grow more un",
+          215
+        ],
+        [
+          "p",
+          "In addition to designing experiments for the space station l",
+          409
+        ],
+        [
+          "p",
+          "inflatable space habitat.",
+          25
+        ]
+      ]
+    },
+    {
+      "file": "chap_168.xhtml",
+      "frags": [
+        [
+          "h2",
+          "History of ADSEP",
+          16
+        ],
+        [
+          "p",
+          "The ADSEP locker was initially developed by Techshot Inc. (S",
+          528
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_169.xhtml",
+      "frags": [
+        [
+          "h1",
+          "NASA Hydrogen History Informs World\u2019s Hydrogen Future",
+          53
+        ],
+        [
+          "p",
+          "Redwire itself has received additional NASA funding to furth",
+          250
+        ],
+        [
+          "p",
+          "ADSEP first flew in 1996 on space shuttle mission STS-77, wh",
+          192
+        ],
+        [
+          "p",
+          "CB&I of The Woodlands, Texas, built the world\u2019s largest liqu",
+          331
+        ]
+      ]
+    },
+    {
+      "file": "chap_170.xhtml",
+      "frags": [
+        [
+          "h2",
+          "World\u2019s largest liquid hydrogen tank is a model for much big",
+          78
+        ],
+        [
+          "p",
+          "The biggest liquid hydrogen tank in the world, a sphere 83 f",
+          379
+        ],
+        [
+          "p",
+          "The system had \u201ca moment in the sun,\u201d as Boling put it, in 1",
+          366
+        ],
+        [
+          "p",
+          "\u201cNASA was the largest user of liquid hydrogen in the world f",
+          299
+        ],
+        [
+          "p",
+          "ADSEP\u2019s in-space production technologies are likely to contr",
+          270
+        ],
+        [
+          "p",
+          "There simply hasn\u2019t been much of a market for hydrogen, espe",
+          243
+        ],
+        [
+          "p",
+          "\u201cThe Redwire ADSEP facility has been very effective in suppo",
+          213
+        ],
+        [
+          "p",
+          "Both cryogenic tanks at 39B were built by CB&I, formerly kno",
+          357
+        ],
+        [
+          "p",
+          "Redwire\u2019s Boling said, \u201cIt\u2019s an iterative process that has r",
+          586
+        ],
+        [
+          "p",
+          "\u201cADSEP has been around since the 1990s, and it\u2019s still a wor",
+          114
+        ]
+      ]
+    },
+    {
+      "file": "chap_171.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Rich Boling, Redwire",
+          20
+        ],
+        [
+          "p",
+          "The liquid hydrogen tank CB&I just built, the largest in the",
+          348
+        ]
+      ]
+    },
+    {
+      "file": "chap_172.xhtml",
+      "frags": [
+        [
+          "h1",
+          "\u201cThe work at NASA really helped develop and demonstrate",
+          55
+        ],
+        [
+          "p",
+          "some of these large-scale construction techniques.\u201d",
+          51
+        ]
+      ]
+    },
+    {
+      "file": "chap_173.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Mark Butts, CB&I",
+          16
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_174.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Meeting the Challenges of Scaling Up",
+          36
+        ],
+        [
+          "p",
+          "stainless steel on the inner shell. \u201cWe precluded that need ",
+          134
+        ],
+        [
+          "p",
+          "Liquid hydrogen is difficult to handle at any scale. With a ",
+          389
+        ],
+        [
+          "p",
+          "This tank is also the first to use a new kind of insulation,",
+          535
+        ],
+        [
+          "p",
+          "\u201cJust building a sphere inside a sphere is challenging,\u201d sai",
+          289
+        ],
+        [
+          "p",
+          "Then, once the space between the inner and outer walls was f",
+          579
+        ],
+        [
+          "p",
+          "\u201cThe glass bubbles were very challenging to work with,\u201d said",
+          133
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "It\u2019s also the first tank of its kind with a heat exchanger b",
+          302
+        ],
+        [
+          "p",
+          "The testing found that every dollar spent on electricity for",
+          109
+        ],
+        [
+          "p",
+          "Swanger said a NASA analysis of the supply chain for propell",
+          300
+        ],
+        [
+          "p",
+          "NASA is still figuring out how to refrigerate such a large t",
+          754
+        ],
+        [
+          "p",
+          "and CB&I are also part of a consortium led by the Shell oil ",
+          287
+        ],
+        [
+          "p",
+          "Hydrogen is the only fuel that can be produced and consumed ",
+          1059
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "widespread use in storage tanks a challenge, but Swanger sai",
+          257
+        ],
+        [
+          "p",
+          "Currently, he said, operators have no direct control over th",
+          535
+        ]
+      ]
+    },
+    {
+      "file": "chap_175.xhtml",
+      "frags": [
+        [
+          "h2",
+          "The Capacity for Change",
+          23
+        ],
+        [
+          "p",
+          "The new tank can hold about 4,730 cubic meters of liquid hyd",
+          390
+        ],
+        [
+          "p",
+          "Here the heat exchanger is hoisted in the interior of NASA\u2019s",
+          240
+        ]
+      ]
+    },
+    {
+      "file": "chap_176.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Toxin-Eating Plants",
+          19
+        ],
+        [
+          "p",
+          "A rating system to identify which houseplants remove specifi",
+          738
+        ]
+      ]
+    },
+    {
+      "file": "chap_177.xhtml",
+      "frags": [
+        [
+          "h2",
+          "NASA research makes choosing houseplants to remove indoor ai",
+          76
+        ],
+        [
+          "p",
+          "Using NASA-funded research into how different plants might b",
+          390
+        ],
+        [
+          "p",
+          "\u201cNASA published a really interesting bit of data that we tho",
+          217
+        ],
+        [
+          "p",
+          "W.C. Wolverton, former head of the Environmental Research La",
+          564
+        ],
+        [
+          "p",
+          "Research performed on Earth helps NASA identify plants to gr",
+          753
+        ],
+        [
+          "p",
+          "Anyone can go to the Pollution Absorption System website to ",
+          217
+        ],
+        [
+          "p",
+          "Starting with the plants used in the NASA studies, Plant Dro",
+          919
+        ],
+        [
+          "p",
+          "Chemicals found in everyday products we use also increase in",
+          374
+        ],
+        [
+          "p",
+          "dozens of houseplants to remove the five most common indoor ",
+          143
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Crosby believes the colorful graphic and simple presentation",
+          312
+        ],
+        [
+          "p",
+          "\u201cIf you\u2019re a plant retailer in the States or anywhere in the",
+          296
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_178.xhtml",
+      "frags": [
+        [
+          "h1",
+          "\u201cNASA published",
+          15
+        ],
+        [
+          "p",
+          "a really interesting bit of data that we thought could make",
+          59
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "a difference.\u201d",
+          14
+        ]
+      ]
+    },
+    {
+      "file": "chap_179.xhtml",
+      "frags": [
+        [
+          "h2",
+          "James Crosby, McCann London",
+          27
+        ]
+      ]
+    },
+    {
+      "file": "chap_180.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Instant Innovation for Plastic Products",
+          39
+        ],
+        [
+          "p",
+          "A Kennedy Space Center technologist figured out how to infus",
+          324
+        ]
+      ]
+    },
+    {
+      "file": "chap_181.xhtml",
+      "frags": [
+        [
+          "h2",
+          "New family of composite plastics offers multiple benefits fo",
+          84
+        ],
+        [
+          "p",
+          "When NASA researchers set out to make plastics into better i",
+          275
+        ],
+        [
+          "p",
+          "When a company licensed the technology from NASA, its engine",
+          431
+        ]
+      ]
+    },
+    {
+      "file": "chap_182.xhtml",
+      "frags": [
+        [
+          "h2",
+          "\u2018The Best of Both Worlds\u2019",
+          25
+        ],
+        [
+          "p",
+          "making something out of engineered plastics can simply swap ",
+          161
+        ],
+        [
+          "p",
+          "Aerogels are the world\u2019s most effective insulators.",
+          51
+        ],
+        [
+          "p",
+          "More than 99 percent air, these highly porous materials weig",
+          682
+        ],
+        [
+          "p",
+          "\u201cIt\u2019s got applicability for really specialized, high-end stu",
+          449
+        ],
+        [
+          "p",
+          "In the early 2000s, Martha Williams, then a polymer chemist ",
+          561
+        ],
+        [
+          "p",
+          "Aerogel is an extreme example, but most of the best insulato",
+          422
+        ],
+        [
+          "p",
+          "\u201cYou\u2019re trying to get the best of both worlds,\u201d she said. \u201cY",
+          213
+        ],
+        [
+          "p",
+          "Williams led the development of innovative techniques for bl",
+          578
+        ],
+        [
+          "p",
+          "They found that the addition of aerogels increased the plast",
+          391
+        ],
+        [
+          "p",
+          "Okhata customers purchase aerogel-infused plastics, or \u201caero",
+          264
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "been pretty complex problems,\u201d said Knaust. \u201cAnd once you st",
+          175
+        ],
+        [
+          "p",
+          "In a way, the technology\u2019s multitude of characteristics and ",
+          376
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Bloem Living, a popular home and garden company, is experime",
+          615
+        ],
+        [
+          "p",
+          "insulate the same space with a completely different material",
+          335
+        ]
+      ]
+    },
+    {
+      "file": "chap_183.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Many Problems, One Solution",
+          27
+        ],
+        [
+          "p",
+          "Okhata, however, is currently focused on much broader market",
+          513
+        ],
+        [
+          "p",
+          "Okhata is working with a major lighting manufacturer on fixt",
+          738
+        ],
+        [
+          "p",
+          "Or, he noted, plastic body panels in vehicles could benefit ",
+          142
+        ],
+        [
+          "p",
+          "After licensing the technology in 2020, the company spent th",
+          1065
+        ],
+        [
+          "p",
+          "The rewards are often numerous, especially",
+          42
+        ],
+        [
+          "p",
+          "\u201cYou\u2019re trying to get the best of both worlds. You need",
+          55
+        ],
+        [
+          "p",
+          "because the incorporation of aerogel introduces several diff",
+          187
+        ],
+        [
+          "p",
+          "the polymer properties, but you\u2019re trying to use the additiv",
+          105
+        ],
+        [
+          "p",
+          "Another Okhata customer made this case from an aeropolymer t",
+          146
+        ]
+      ]
+    },
+    {
+      "file": "chap_184.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Martha Williams, Kennedy Space Center, retired",
+          46
+        ]
+      ]
+    },
+    {
+      "file": "chap_185.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Intelligent Machines Remove Humans from the Loop",
+          48
+        ]
+      ]
+    },
+    {
+      "file": "chap_186.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Autonomous artificial intelligence lets machines communicate",
+          87
+        ],
+        [
+          "p",
+          "Artificial intelligence might be the hottest topic in tech c",
+          665
+        ],
+        [
+          "p",
+          "Today, that technology is poised to automate recordkeeping f",
+          311
+        ],
+        [
+          "p",
+          "Barnard\u2019s relationship with the space agency had begun a cou",
+          588
+        ],
+        [
+          "p",
+          "Gonzalez also introduced Barnard to Bruce Pittman, who worke",
+          667
+        ]
+      ]
+    },
+    {
+      "file": "chap_187.xhtml",
+      "frags": [
+        [
+          "h1",
+          "\u201cThe biggest things we got from",
+          31
+        ],
+        [
+          "p",
+          "NASA are risk management and root cause analysis.\u201d",
+          50
+        ],
+        [
+          "p",
+          "Multinational corporations are using the M2M Intelligence pl",
+          211
+        ]
+      ]
+    },
+    {
+      "file": "chap_188.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Geoffrey Barnard, Machine-to-Machine Intelligence",
+          49
+        ],
+        [
+          "p",
+          "Mars. \u201cIf you could have that kind of connectivity with low ",
+          180
+        ],
+        [
+          "p",
+          "In addition to the Ames nanotechnology team, he worked with ",
+          314
+        ],
+        [
+          "p",
+          "Machine-to-Machine Intelligence Corporation of Tiburon, Cali",
+          276
+        ],
+        [
+          "p",
+          "Pittman helped establish a Cooperative Research and Developm",
+          501
+        ]
+      ]
+    },
+    {
+      "file": "chap_189.xhtml",
+      "frags": [
+        [
+          "h2",
+          "From the Space Agency to the High Seas",
+          38
+        ],
+        [
+          "p",
+          "Following the CRADA\u2019s cancellation, Barnard set about establ",
+          576
+        ]
+      ]
+    },
+    {
+      "file": "chap_190.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Rooting Out Problems, Managing Risk",
+          35
+        ],
+        [
+          "p",
+          "Central to the technology was automating a problem-solving a",
+          743
+        ],
+        [
+          "p",
+          "In the end, though, the technology to allow small, low-power",
+          411
+        ],
+        [
+          "p",
+          "Barnard said the necessary level of security and risk manage",
+          489
+        ],
+        [
+          "p",
+          "\u201cThe thing that NASA is, in my opinion,",
+          39
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "the best at in the world is their attitude and approach to r",
+          355
+        ],
+        [
+          "p",
+          "The work caught the attention of Ames\u2019 director of nanotechn",
+          624
+        ]
+      ]
+    },
+    {
+      "file": "chap_191.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Hubble Battery Tech Holds Power on Earth",
+          40
+        ]
+      ]
+    },
+    {
+      "file": "chap_192.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Nickel-hydrogen technology is safe, durable, and long-lastin",
+          87
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "As international trade begins to digitize documentation and ",
+          661
+        ],
+        [
+          "p",
+          "system required autonomy, which \u201cis faster and more efficien",
+          247
+        ],
+        [
+          "p",
+          "Oracle became the first major customer, with M2M Intelligenc",
+          340
+        ],
+        [
+          "p",
+          "\u201cMy intent is to use our M2M Intelligence as a key component",
+          282
+        ],
+        [
+          "p",
+          "Now Barnard has his eyes on a new market: international trad",
+          909
+        ],
+        [
+          "p",
+          "Battery technology that has powered the International Space ",
+          224
+        ],
+        [
+          "p",
+          "The batteries are \u201ccrazy durable in every sense of the word,",
+          279
+        ],
+        [
+          "p",
+          "\u201cWith our cost-saving innovations, we believe it\u2019s the best ",
+          118
+        ]
+      ]
+    },
+    {
+      "file": "chap_193.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Space Station Power",
+          19
+        ],
+        [
+          "p",
+          "Nickel-hydrogen battery technology has been around for decad",
+          377
+        ],
+        [
+          "p",
+          "NASA first used nickel-hydrogen batteries in 1990 for the Hu",
+          144
+        ],
+        [
+          "p",
+          "NASA had the supercomputer, NASA had the end-to-end networks",
+          476
+        ],
+        [
+          "p",
+          "cause analysis that we codified in automated M2M Intelligenc",
+          63
+        ],
+        [
+          "p",
+          "The batteries were designed to operate for five years, but a",
+          489
+        ],
+        [
+          "p",
+          "hydrogen batteries.",
+          19
+        ],
+        [
+          "p",
+          "Meanwhile, the technology continued to fly on new missions.",
+          59
+        ],
+        [
+          "p",
+          "\u201cWhen the space station came along, we conducted trade studi",
+          344
+        ],
+        [
+          "p",
+          "nickel-hydrogen technology and encased it in safe, robust ve",
+          415
+        ],
+        [
+          "p",
+          "nickel-hydrogen batteries. Credit: NASA Credit: EnerVenue In",
+          62
+        ],
+        [
+          "p",
+          "has worked on battery technologies for the space agency for ",
+          79
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Nickel-cadmium batteries and hydrogen-oxygen fuel cells were",
+          258
+        ],
+        [
+          "p",
+          "\u201cThe nickel-hydrogen batteries surpassed everything,\u201d Miller",
+          66
+        ],
+        [
+          "p",
+          "Six of them launched in 2000, powering the space station for",
+          138
+        ],
+        [
+          "p",
+          "\u201cThe nickel-hydrogen batteries were the primary energy stora",
+          231
+        ]
+      ]
+    },
+    {
+      "file": "chap_194.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Lowering the Cost",
+          17
+        ],
+        [
+          "p",
+          "The batteries are heavy \u2014 don\u2019t look for them in future cars",
+          204
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Each nickel-hydrogen cell consists of a nickel cathode \u2014 the",
+          273
+        ],
+        [
+          "p",
+          "\u201cYou can think of it as storing energy in the form of hydrog",
+          80
+        ],
+        [
+          "p",
+          "EnerVenue Chief Technology Advisor Dr. Yi Cui developed a te",
+          367
+        ]
+      ]
+    },
+    {
+      "file": "chap_195.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Lasting Forever",
+          15
+        ],
+        [
+          "p",
+          "Although they are bigger and heavier than lithium-ion cells,",
+          265
+        ],
+        [
+          "p",
+          "These batteries also don\u2019t require energy-consuming temperat",
+          192
+        ],
+        [
+          "p",
+          "Nickel-hydrogen batteries can provide more energy storage pe",
+          216
+        ],
+        [
+          "p",
+          "\u201cIt basically lasts forever,\u201d Heinemann said.",
+          45
+        ],
+        [
+          "p",
+          "EnerVenue has an automated assembly line in Fremont and a mu",
+          505
+        ],
+        [
+          "p",
+          "The company said it has about $500 million worth of purchase",
+          404
+        ],
+        [
+          "p",
+          "\u201cAs long as it doesn\u2019t move, we\u2019ve got the best energy-stora",
+          231
+        ],
+        [
+          "p",
+          "NASA\u2019s Miller was optimistic about using this battery techno",
+          173
+        ],
+        [
+          "p",
+          "EnerVenue\u2019s batteries don\u2019t require energy-consuming tempera",
+          211
+        ]
+      ]
+    },
+    {
+      "file": "chap_196.xhtml",
+      "frags": [
+        [
+          "h1",
+          "\u201cWe believe it\u2019s the best battery for",
+          37
+        ],
+        [
+          "p",
+          "power plants, businesses, and homes.\u201d",
+          37
+        ]
+      ]
+    },
+    {
+      "file": "chap_197.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Jorg Heinemann, EnerVenue",
+          25
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_198.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Spinoff Technology Across the Nation",
+          36
+        ],
+        [
+          "table",
+          "Page ArticleTechnologyCompany, Location4 Equalizing Internet",
+          4052
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "8 28 20 11",
+          10
+        ]
+      ]
+    },
+    {
+      "file": "chap_199.xhtml",
+      "frags": [
+        [
+          "h2",
+          "92518",
+          5
+        ],
+        [
+          "p",
+          "28 77",
+          5
+        ]
+      ]
+    },
+    {
+      "file": "chap_200.xhtml",
+      "frags": [
+        [
+          "h2",
+          "7 17 52",
+          7
+        ],
+        [
+          "p",
+          "32 24 5 Utah State University, Logan, UT",
+          40
+        ],
+        [
+          "p",
+          "68 4",
+          4
+        ]
+      ]
+    },
+    {
+      "file": "chap_201.xhtml",
+      "frags": [
+        [
+          "h2",
+          "12 71",
+          5
+        ],
+        [
+          "p",
+          "62",
+          2
+        ]
+      ]
+    },
+    {
+      "file": "chap_202.xhtml",
+      "frags": [
+        [
+          "h2",
+          "6 46",
+          4
+        ],
+        [
+          "p",
+          "48 13 64 38",
+          11
+        ]
+      ]
+    },
+    {
+      "file": "chap_203.xhtml",
+      "frags": [
+        [
+          "h2",
+          "50 60",
+          5
+        ],
+        [
+          "p",
+          "80 83 58 19 14 42",
+          17
+        ]
+      ]
+    },
+    {
+      "file": "chap_204.xhtml",
+      "frags": [
+        [
+          "h2",
+          "10 15",
+          5
+        ],
+        [
+          "p",
+          "40 23",
+          5
+        ]
+      ]
+    },
+    {
+      "file": "chap_205.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Technology Transfer Program",
+          27
+        ],
+        [
+          "p",
+          "Every year, NASA invents or modifies existing technology, wr",
+          432
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_206.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Students Create Assistive Technology Prototypes",
+          47
+        ]
+      ]
+    },
+    {
+      "file": "chap_207.xhtml",
+      "frags": [
+        [
+          "h2",
+          "New demo tools help transfer NASA technology to industry",
+          56
+        ],
+        [
+          "p",
+          "Technology that NASA has developed to help astronauts live a",
+          76
+        ],
+        [
+          "p",
+          "has a long history of improving the lives of people with dis",
+          452
+        ],
+        [
+          "p",
+          "NASA\u2019s Technology Transfer Expansion (T2X) program encourage",
+          396
+        ],
+        [
+          "p",
+          "First, the T2X team worked with T2 offices across the agency",
+          724
+        ],
+        [
+          "p",
+          "Michael Nizich, director of the Entrepreneurship and Technol",
+          331
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "\u201cInnovation is what makes humanity unique. We",
+          45
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "will always find a way to adapt and survive,\u201d said Dan Lockn",
+          308
+        ],
+        [
+          "p",
+          "The patented NASA technology students used this year include",
+          775
+        ],
+        [
+          "p",
+          "The current batch of technologies will be fully From left, L",
+          556
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "\u201cWorking with NASA has been a dream come true",
+          45
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "for the ETIC at New York Tech,\u201d said the ETIC\u2019s director, Dr",
+          267
+        ],
+        [
+          "p",
+          "Joanna Sroka, junior computer science and data science major",
+          275
+        ],
+        [
+          "p",
+          "The future looks bright in Technology Transfer.",
+          47
+        ],
+        [
+          "p",
+          "With the proper investment, support, and encouragement, our ",
+          1032
+        ]
+      ]
+    },
+    {
+      "file": "chap_208.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Spinoffs of Tomorrow",
+          20
+        ],
+        [
+          "p",
+          "When a company, academic institution, nonprofit, or individu",
+          440
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_209.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Ames",
+          4
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_210.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Adaptive Wind Estimation for Small Drones",
+          41
+        ]
+      ]
+    },
+    {
+      "file": "chap_211.xhtml",
+      "frags": [
+        [
+          "h2",
+          "A unified approach to autonomous flights of multi-rotor",
+          55
+        ],
+        [
+          "p",
+          "vehicles in urban environment Their affordability is making ",
+          553
+        ],
+        [
+          "table",
+          "Benefits Applications \u2022 Fast, reliable estimation of drag\u2022 C",
+          243
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Ames Research Center has developed the new concept of wing s",
+          559
+        ]
+      ]
+    },
+    {
+      "file": "chap_212.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Benefits",
+          8
+        ]
+      ]
+    },
+    {
+      "file": "chap_213.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Applications",
+          12
+        ],
+        [
+          "p",
+          "\u2022 Increase in lift-to-drag ratio, thus increased range \u2022 Com",
+          154
+        ],
+        [
+          "p",
+          "and endurance \u2022 Decreased fuel costs \u2022 Reduced vertical tail",
+          96
+        ]
+      ]
+    },
+    {
+      "file": "chap_214.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Armstrong",
+          9
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_215.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Improved Fiber-Optic Shape Sensing",
+          34
+        ]
+      ]
+    },
+    {
+      "file": "chap_216.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Enables flexible aircraft wings, improved structural design ",
+          65
+        ],
+        [
+          "p",
+          "Armstrong Flight Research Center has dramatically improved u",
+          538
+        ],
+        [
+          "table",
+          "Benefits Applications\u2022 Improved shape-sensing accuracy\u2022 Stru",
+          394
+        ]
+      ]
+    },
+    {
+      "file": "chap_217.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Aeroelastic Wing Shaping",
+          24
+        ]
+      ]
+    },
+    {
+      "file": "chap_218.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Method for aeroelastic wing shaping using distributed propul",
+          64
+        ]
+      ]
+    },
+    {
+      "file": "chap_219.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Interactive Sonic Boom Display",
+          30
+        ]
+      ]
+    },
+    {
+      "file": "chap_220.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Benefits",
+          8
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "\u2022 Enables in-flight boom",
+          24
+        ],
+        [
+          "p",
+          "predictions, control room flight planning, and analysis \u2022 Re",
+          107
+        ]
+      ]
+    },
+    {
+      "file": "chap_221.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Provides pilots with real-time sonic boom information",
+          53
+        ],
+        [
+          "p",
+          "Armstrong Flight Research Center has developed a real-time s",
+          436
+        ],
+        [
+          "p",
+          "real time",
+          9
+        ]
+      ]
+    },
+    {
+      "file": "chap_222.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Applications",
+          12
+        ],
+        [
+          "p",
+          "\u2022 Commercial supersonic",
+          23
+        ],
+        [
+          "p",
+          "vehicles \u2022 Enables government",
+          29
+        ],
+        [
+          "p",
+          "regulation and oversight of supersonic aircraft \u2022 Aerospace ",
+          84
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_223.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Glenn",
+          5
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_224.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Portable Laser-Guided Robotic Metrology (PLGRM)",
+          47
+        ],
+        [
+          "p",
+          "Portable antenna testing tool Researchers at Glenn Research ",
+          431
+        ]
+      ]
+    },
+    {
+      "file": "chap_225.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Benefits",
+          8
+        ],
+        [
+          "p",
+          "\u2022 Portable: can be shipped, saving time and money \u2022 Easy to ",
+          98
+        ],
+        [
+          "p",
+          "powered by standard wall outlets \u2022 Flexible: can accommodate",
+          81
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Innovators at Glenn Research Center have developed a thermal",
+          457
+        ]
+      ]
+    },
+    {
+      "file": "chap_226.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Benefits",
+          8
+        ],
+        [
+          "table",
+          "Applications\u2022 Lightweight design is easily integrated into a",
+          305
+        ],
+        [
+          "p",
+          "maintenance costs",
+          17
+        ]
+      ]
+    },
+    {
+      "file": "chap_227.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Goddard",
+          7
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_228.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Pyramid Image Quality Indicator",
+          31
+        ]
+      ]
+    },
+    {
+      "file": "chap_229.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Improved X-ray analysis tool",
+          28
+        ],
+        [
+          "p",
+          "Image quality indicators (IQIs) for industrial 2D X-ray radi",
+          481
+        ]
+      ]
+    },
+    {
+      "file": "chap_230.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Benefits",
+          8
+        ]
+      ]
+    },
+    {
+      "file": "chap_231.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Applications",
+          12
+        ],
+        [
+          "p",
+          "\u2022 Aircraft \u2022 Telecommunications \u2022 Automotive \u2022 Research and ",
+          71
+        ],
+        [
+          "table",
+          "Applications\u2022 Easily scalable for size requirements\u2022 Nondest",
+          151
+        ]
+      ]
+    },
+    {
+      "file": "chap_232.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Thermal Management for Aircraft Propulsion Systems",
+          50
+        ]
+      ]
+    },
+    {
+      "file": "chap_233.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Waste heat power generation",
+          27
+        ]
+      ]
+    },
+    {
+      "file": "chap_234.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Gear Bearings",
+          13
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_235.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Specialized moving parts for motors",
+          35
+        ]
+      ]
+    },
+    {
+      "file": "chap_236.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Benefits",
+          8
+        ],
+        [
+          "p",
+          "\u2022 Enables precise control \u2022 Low cost, simple design \u2022 High s",
+          79
+        ],
+        [
+          "p",
+          "Researchers at Goddard Space Flight Center have developed a ",
+          409
+        ]
+      ]
+    },
+    {
+      "file": "chap_237.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Applications",
+          12
+        ],
+        [
+          "p",
+          "\u2022 Transportation (including",
+          27
+        ],
+        [
+          "p",
+          "automotive, aircraft, marine, and rail) \u2022 Power tools \u2022 Indu",
+          83
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "JPL",
+          3
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_238.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Autonomous Vehicle Control in \u2018Egospace\u2019",
+          40
+        ]
+      ]
+    },
+    {
+      "file": "chap_239.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Autonomous navigation around static and mobile objects",
+          54
+        ],
+        [
+          "p",
+          "This precision control approach automatically maneuvers robo",
+          373
+        ],
+        [
+          "table",
+          "Benefits Applications\u2022 Reduces likelihood of collisions\u2022 Aut",
+          286
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_240.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Benefits",
+          8
+        ]
+      ]
+    },
+    {
+      "file": "chap_241.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Applications",
+          12
+        ],
+        [
+          "p",
+          "\u2022 Cost-effective design \u2022 Miniaturized without sacrificing p",
+          207
+        ]
+      ]
+    },
+    {
+      "file": "chap_242.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Johnson",
+          7
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_243.xhtml",
+      "frags": [
+        [
+          "h1",
+          "RFID Inventory Tracking",
+          23
+        ]
+      ]
+    },
+    {
+      "file": "chap_244.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Smart enclosures help track in-stock items",
+          42
+        ],
+        [
+          "p",
+          "This innovation can track individual items inside a smart co",
+          260
+        ],
+        [
+          "table",
+          "Benefits Applications\u2022 Cost-effective tagging/tracking for s",
+          218
+        ]
+      ]
+    },
+    {
+      "file": "chap_245.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Programmable Vehicular Control",
+          30
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_246.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Reflective Spatial Heterodyne Spectrometer (RSHS)",
+          49
+        ]
+      ]
+    },
+    {
+      "file": "chap_247.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Benefits",
+          8
+        ],
+        [
+          "p",
+          "\u2022 Features hands-only",
+          21
+        ],
+        [
+          "p",
+          "operation for all vehicle functions \u2022 Fine motor control for",
+          60
+        ]
+      ]
+    },
+    {
+      "file": "chap_248.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Tri-rotor steering wheel prevents operator fatigue",
+          50
+        ]
+      ]
+    },
+    {
+      "file": "chap_249.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Using one piece of glass to create an RSHS interferometer",
+          57
+        ],
+        [
+          "p",
+          "precision operation \u2022 Fully programmable \u2022 Can be constructe",
+          425
+        ],
+        [
+          "p",
+          "Observing extreme ultraviolet radiation requires specialized",
+          393
+        ],
+        [
+          "p",
+          "from multiple materials",
+          23
+        ]
+      ]
+    },
+    {
+      "file": "chap_250.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Applications",
+          12
+        ],
+        [
+          "p",
+          "\u2022 Assistive technology \u2022 Manufacturing \u2022 Robotics \u2022 Automoti",
+          62
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_251.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Capacitive Microgravity Fluid Mass Gauge",
+          40
+        ]
+      ]
+    },
+    {
+      "file": "chap_252.xhtml",
+      "frags": [
+        [
+          "h2",
+          "An accurate method of measuring fluid or gas inside a vessel",
+          60
+        ],
+        [
+          "p",
+          "Measuring fluid mass in microgravity, where a fluid\u2019s behavi",
+          539
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "table",
+          "Benefits \u2022 Withstands heavyInsulation system for non-vacuum ",
+          835
+        ],
+        [
+          "p",
+          "compressive mechanical loading, compression of 75% of origin",
+          128
+        ]
+      ]
+    },
+    {
+      "file": "chap_253.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Langley",
+          7
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_254.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Sucrose-Treated Carbon Nanotubes and Graphene Yarns",
+          51
+        ]
+      ]
+    },
+    {
+      "file": "chap_255.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Benefits",
+          8
+        ],
+        [
+          "p",
+          "\u2022 Accurately measures fluid mass \u2022 Senses entire tank volume",
+          96
+        ]
+      ]
+    },
+    {
+      "file": "chap_256.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Carbon nanomaterial strengthening process",
+          41
+        ],
+        [
+          "p",
+          "Scientists at Langley Research Center have developed a metho",
+          316
+        ]
+      ]
+    },
+    {
+      "file": "chap_257.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Applications",
+          12
+        ],
+        [
+          "p",
+          "\u2022 Tank and vessel transport \u2022 Gas and liquid systems \u2022 Cryog",
+          130
+        ],
+        [
+          "table",
+          "Benefits Applications\u2022 Produces more tensile materials\u2022 Stru",
+          255
+        ]
+      ]
+    },
+    {
+      "file": "chap_258.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Layered Composite Insulation for Extreme Conditions",
+          51
+        ]
+      ]
+    },
+    {
+      "file": "chap_259.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Benefits",
+          8
+        ]
+      ]
+    },
+    {
+      "file": "chap_260.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Sensory Metallic Materials",
+          26
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "\u2022 Increased structural reliability \u2022 Increased intervals of",
+          59
+        ]
+      ]
+    },
+    {
+      "file": "chap_261.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Shape memory alloy particles improve nondestructive evaluati",
+          63
+        ],
+        [
+          "p",
+          "component replacement \u2022 Ability to detect damage at its To e",
+          533
+        ],
+        [
+          "p",
+          "earliest stage",
+          14
+        ]
+      ]
+    },
+    {
+      "file": "chap_262.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Applications",
+          12
+        ],
+        [
+          "p",
+          "\u2022 Aerospace vehicles \u2022 Aircraft \u2022 Construction",
+          46
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_263.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Marshall",
+          8
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_264.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Rapid Identification of Contaminated Plants",
+          43
+        ]
+      ]
+    },
+    {
+      "file": "chap_265.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Support for identifying a prevalent groundwater toxin",
+          53
+        ],
+        [
+          "p",
+          "Working with other organizations, Marshall Space Flight Cent",
+          398
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "table",
+          "Benefits Applications\u2022 Low cost: uses standard components\u2022 F",
+          314
+        ],
+        [
+          "p",
+          "infrared camera in extreme environments",
+          39
+        ]
+      ]
+    },
+    {
+      "file": "chap_266.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Stennis",
+          7
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_267.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Benefits",
+          8
+        ],
+        [
+          "p",
+          "\u2022 Nondestructive surface scan,",
+          30
+        ],
+        [
+          "p",
+          "eliminating plant damage \u2022 Anticipated to provide near-real-",
+          60
+        ]
+      ]
+    },
+    {
+      "file": "chap_268.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Benefits",
+          8
+        ],
+        [
+          "p",
+          "time TCE presence/absence estimates \u2022 Anticipated to cost le",
+          105
+        ],
+        [
+          "p",
+          "wide range of temperatures \u2022 Zero leakage \u2022 Simple design",
+          57
+        ]
+      ]
+    },
+    {
+      "file": "chap_269.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Cryogenic Butterfly Cam Valve",
+          29
+        ],
+        [
+          "p",
+          "methods",
+          7
+        ]
+      ]
+    },
+    {
+      "file": "chap_270.xhtml",
+      "frags": [
+        [
+          "h2",
+          "No-leak valve performs in broad range of temperatures",
+          53
+        ]
+      ]
+    },
+    {
+      "file": "chap_271.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Applications",
+          12
+        ]
+      ]
+    },
+    {
+      "file": "chap_272.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Applications",
+          12
+        ],
+        [
+          "p",
+          "\u2022 Screening sites for contamination \u2022 Verifying wetland heal",
+          605
+        ],
+        [
+          "p",
+          "remediation \u2022 Monitoring phytoremediation projects",
+          50
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_273.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Ruggedized Infrared Camera",
+          26
+        ]
+      ]
+    },
+    {
+      "file": "chap_274.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Remote Sensing Toolkit",
+          22
+        ]
+      ]
+    },
+    {
+      "file": "chap_275.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Space-rated camera system for harsh environments",
+          48
+        ]
+      ]
+    },
+    {
+      "file": "chap_276.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Online portal offers easy access to NASA Earth-observation d",
+          63
+        ],
+        [
+          "p",
+          "Based on a FLIR Systems Boson Model 640, this modified camer",
+          394
+        ],
+        [
+          "p",
+          "NASA\u2019s Technology Transfer program created an online resourc",
+          460
+        ]
+      ]
+    },
+    {
+      "file": "chap_277.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Benefits",
+          8
+        ]
+      ]
+    },
+    {
+      "file": "chap_278.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Applications",
+          12
+        ],
+        [
+          "p",
+          "\u2022 Free and easy to use \u2022 Centralized online repository with ",
+          263
+        ]
+      ]
+    },
+    {
+      "file": "chap_279.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Will the next spinoff be yours?",
+          31
+        ],
+        [
+          "p",
+          "Our technology is ready for you at technology.nasa.gov",
+          54
+        ]
+      ]
+    },
+    {
+      "file": "chap_280.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Our portfolio includes:",
+          23
+        ],
+        [
+          "p",
+          "\u2022 More than 1,100 patented technologies \u2022 Hundreds of innova",
+          121
+        ]
+      ]
+    },
+    {
+      "file": "chap_281.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Whether you\u2019re looking to start a new company using NASA tec",
+          76
+        ],
+        [
+          "p",
+          "an existing product, or create a new product line, you can g",
+          145
+        ]
+      ]
+    },
+    {
+      "file": "chap_282.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Aerospace Communications Electrical Environment Medicine/Bio",
+          64
+        ]
+      ]
+    },
+    {
+      "file": "chap_283.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Mechanical/ Fluid Systems Materials/ Coatings Manufacturing ",
+          87
+        ]
+      ]
+    },
+    {
+      "file": "chap_284.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Sensors Robotics Propulsion Power Generation Optics",
+          51
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "notes.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Notes",
+          5
+        ],
+        [
+          "p",
+          "NP-2024-08-3276-HQ A full moon is seen from Launch Complex 3",
+          10029
+        ]
+      ]
+    }
+  ],
+  "stats": {
+    "asides": 0,
+    "chapters": 285,
+    "columns": 4,
+    "footnotes": 69,
+    "grid_tables": 10,
+    "headings": 284,
+    "images": 154,
+    "pages": 56,
+    "raster_figures": 0,
+    "raster_tables": 0,
+    "title": "NASA Spinoff 2025"
+  },
+  "toc": [
+    [
+      1,
+      "Abstract"
+    ],
+    [
+      1,
+      "2025"
+    ],
+    [
+      2,
+      "On the cover"
+    ],
+    [
+      1,
+      "2025"
+    ],
+    [
+      1,
+      "NASA Technology Transfer Program"
+    ],
+    [
+      2,
+      "NASA Headquarters"
+    ],
+    [
+      2,
+      "Spinoff Staff"
+    ],
+    [
+      1,
+      "Contents"
+    ],
+    [
+      2,
+      "27 Spinoff Features"
+    ],
+    [
+      2,
+      "28 NASA Data Helps Beavers Build Back Streams"
+    ],
+    [
+      2,
+      "32 Seeing Is Communicating"
+    ],
+    [
+      2,
+      "34 Home-Grown Housing"
+    ],
+    [
+      2,
+      "38 A Better Backup Plan for the Unthinkable"
+    ],
+    [
+      2,
+      "40 Better Data for Bodies in Motion"
+    ],
+    [
+      2,
+      "42 Folding NASA Experience into an Origamist\u2019s Toolkit"
+    ],
+    [
+      2,
+      "46 Space-Based Tech for Home Health Monitoring"
+    ],
+    [
+      2,
+      "48 Scaling Up Hydrogen"
+    ],
+    [
+      2,
+      "50 Cosmic Experiments Make Cosmetic Nutrients"
+    ],
+    [
+      2,
+      "52 3D Printed Engines Propel Next Industrial Revolution"
+    ],
+    [
+      2,
+      "58 Space Tech Gives Treadmill Users a \u2018Boost\u2019"
+    ],
+    [
+      2,
+      "60 Coral Expertise Finds Broad Application"
+    ],
+    [
+      2,
+      "62 Measuring Buzz, Hum, and Rattle"
+    ],
+    [
+      2,
+      "64 NASA Sets Standard for Nutritional Health Products"
+    ],
+    [
+      2,
+      "68 Out-of-This-World Organs"
+    ],
+    [
+      2,
+      "71 NASA Hydrogen History Informs World\u2019s Hydrogen Future"
+    ],
+    [
+      2,
+      "74 Toxin-Eating Plants"
+    ],
+    [
+      2,
+      "77 Instant Innovation for Plastic Products"
+    ],
+    [
+      2,
+      "80 Intelligent Machines Remove Humans from the Loop"
+    ],
+    [
+      2,
+      "83 Hubble Battery Tech Holds Power on Earth"
+    ],
+    [
+      2,
+      "86 Spinoff Technology Across the Nation"
+    ],
+    [
+      2,
+      "89 Technology Transfer Program"
+    ],
+    [
+      2,
+      "90 Students Help Create NASA Tech Prototypes"
+    ],
+    [
+      2,
+      "93 Spinoffs of Tomorrow"
+    ],
+    [
+      1,
+      "Introduction"
+    ],
+    [
+      2,
+      "Clayton Turner"
+    ],
+    [
+      1,
+      "SPINOFF Capsules"
+    ],
+    [
+      1,
+      "Equalizing Internet Access"
+    ],
+    [
+      1,
+      "Spraying for Food Safety"
+    ],
+    [
+      2,
+      "Making websites user-friendly for everyone with an easy-to-use plugin"
+    ],
+    [
+      2,
+      "Industry benefits from NASA-designed electrostatic spray nozzle"
+    ],
+    [
+      1,
+      "Giving Sensors Good Optics"
+    ],
+    [
+      1,
+      "Launch, Return, Repeat"
+    ],
+    [
+      2,
+      "Fiber-optic sensing technology improved by NASA is now available for industry"
+    ],
+    [
+      2,
+      "A NASA thermal protection system enables reuse of commercial spacecraft"
+    ],
+    [
+      1,
+      "Commercial Sales Flow from NASA Valves"
+    ],
+    [
+      1,
+      "From Mars Rovers to Factory Assembly Lines"
+    ],
+    [
+      2,
+      "NASA-funded AI technology enabling autonomous rovers and drones now keeps an eye on conveyor belts"
+    ],
+    [
+      2,
+      "Valves developed for NASA programs meet needs of commercial space, other industries"
+    ],
+    [
+      1,
+      "Cloud Software for Above the Clouds"
+    ],
+    [
+      1,
+      "Controlled Propulsion for Gentle Landings"
+    ],
+    [
+      2,
+      "NASA-licensed software enables detailed planning for commercial space"
+    ],
+    [
+      2,
+      "A valve designed for NASA rover landings enables aerospace companies to fly safely"
+    ],
+    [
+      1,
+      "Cutting-Edge Computing Goes Spaceborne"
+    ],
+    [
+      1,
+      "From Cockpit Controls to Dashboard Data"
+    ],
+    [
+      2,
+      "Spaceborne Computer missions demonstrate faster, easier protection against space radiation"
+    ],
+    [
+      2,
+      "NASA feedback enables better display systems for aircraft, more"
+    ],
+    [
+      1,
+      "Hard(ware) to the Core"
+    ],
+    [
+      2,
+      "NASA-developed open-source software forms basis of spacecraft emulator"
+    ],
+    [
+      1,
+      "NASA and Education Make Quite the Pear"
+    ],
+    [
+      2,
+      "NASA partnership makes interactive educational resources for teachers nationwide"
+    ],
+    [
+      1,
+      "Intelligent Processing at the Edge"
+    ],
+    [
+      1,
+      "Make Way for Satellites"
+    ],
+    [
+      2,
+      "Faster space computing improves disaster response time"
+    ],
+    [
+      2,
+      "Space traffic coordination system helps make sure satellites stay in their lane"
+    ],
+    [
+      1,
+      "Using AI to Predict the Sky"
+    ],
+    [
+      1,
+      "Bringing Hybrid Power to the Rescue"
+    ],
+    [
+      2,
+      "NASA-funded hybrid power system makes drones more capable in disasters"
+    ],
+    [
+      1,
+      "NASA \u2018RAMPT\u2019 Up 3D Printed Engine Size"
+    ],
+    [
+      1,
+      "Innovation Comes Out of the Wool Work"
+    ],
+    [
+      2,
+      "Initiative advances, validates technology for 3D printing big, complex parts"
+    ],
+    [
+      2,
+      "NASA takes wool filters where no sheep has gone before"
+    ],
+    [
+      1,
+      "View from the Sky Helps Predict Crop Yields"
+    ],
+    [
+      1,
+      "Tweaking Analysis Tools to Give SAGE Advice"
+    ],
+    [
+      2,
+      "NASA Harvest brings satellite data, crop prediction function to farming app"
+    ],
+    [
+      2,
+      "Sound predictive simulations can significantly cut development costs"
+    ],
+    [
+      1,
+      "Dust-Powered 3D Printing"
+    ],
+    [
+      1,
+      "Flipping NASA Tech and Sticking the Landing"
+    ],
+    [
+      2,
+      "NASA tech adds gecko grip to phone accessory"
+    ],
+    [
+      2,
+      "Planetary construction technology makes large-scale 3D printing more accessible on Earth"
+    ],
+    [
+      1,
+      "SPINOFF Features"
+    ],
+    [
+      1,
+      "NASA Data Helps Beavers Build Back Streams"
+    ],
+    [
+      2,
+      "Nature\u2019s engineers, beavers get help from NASA to mitigate drought, wildfire"
+    ],
+    [
+      2,
+      "Leveling the Pond"
+    ],
+    [
+      2,
+      "Jodi Brandt, Boise State University"
+    ],
+    [
+      2,
+      "Buck-Toothed Ecosystem Engineers"
+    ],
+    [
+      1,
+      "\u201cYou\u2019re basically outsmarting the beavers by using a pipe to make a"
+    ],
+    [
+      2,
+      "Filling Data Gaps"
+    ],
+    [
+      2,
+      "Sarah Koenigsberg, Utah State University"
+    ],
+    [
+      2,
+      "Cindy Schmidt, Ames Research Center"
+    ],
+    [
+      1,
+      "Seeing Is Communicating"
+    ],
+    [
+      2,
+      "Eye-tracking technology makes \u2018talking\u2019 possible for people who can\u2019t"
+    ],
+    [
+      2,
+      "Visual Surfing"
+    ],
+    [
+      2,
+      "The Right to Speak"
+    ],
+    [
+      1,
+      "Home-Grown Housing"
+    ],
+    [
+      2,
+      "Cultivating mushrooms to build housing on Earth, the Moon, and Mars"
+    ],
+    [
+      2,
+      "Mycotecture"
+    ],
+    [
+      2,
+      "Moon-Shrooms"
+    ],
+    [
+      1,
+      "\u201cHad it not been"
+    ],
+    [
+      2,
+      "A Bit of Home"
+    ],
+    [
+      1,
+      "A Better Backup Plan for the Unthinkable"
+    ],
+    [
+      2,
+      "Autonomous self-destruct technology eliminates the cost of human error"
+    ],
+    [
+      2,
+      "Multiple Launches, Multiple Sites"
+    ],
+    [
+      2,
+      "Just Turn Off the Motor"
+    ],
+    [
+      1,
+      "Better Data for Bodies in Motion"
+    ],
+    [
+      2,
+      "A wearable device to monitor astronauts\u2019 tumultuous return to Earth is helping industry"
+    ],
+    [
+      2,
+      "Parachute Drops and Car Crashes"
+    ],
+    [
+      2,
+      "\u201cA development project like this"
+    ],
+    [
+      2,
+      "Mike Beckage, Diversified"
+    ],
+    [
+      2,
+      "Technical Systems"
+    ],
+    [
+      2,
+      "Astronaut Safety"
+    ],
+    [
+      1,
+      "Folding NASA Experience into an Origamist\u2019s Toolkit"
+    ],
+    [
+      2,
+      "Math for designing lasers becomes artist\u2019s key to creating complex crease patterns"
+    ],
+    [
+      1,
+      "\u201cOver the years of solving mathematical problems"
+    ],
+    [
+      2,
+      "Robert Lang"
+    ],
+    [
+      2,
+      "It\u2019s All About the Numbers"
+    ],
+    [
+      2,
+      "Engineered Origami Leads back to NASA"
+    ],
+    [
+      1,
+      "Space-Based Tech for Home Health Monitoring"
+    ],
+    [
+      2,
+      "Contactless monitoring for vital signs uses radio-frequency technology created by NASA"
+    ],
+    [
+      2,
+      "Our Vibrating Bodies"
+    ],
+    [
+      2,
+      "\u2018Transforming the World\u2019"
+    ],
+    [
+      2,
+      "Horse-Sense Technology"
+    ],
+    [
+      1,
+      "Scaling Up Hydrogen"
+    ],
+    [
+      2,
+      "NASA tech for measuring insulation efficiency is helping expand the hydrogen industry"
+    ],
+    [
+      2,
+      "The Vision to Carry It Forward"
+    ],
+    [
+      2,
+      "Keeping Up Standards"
+    ],
+    [
+      2,
+      "\u2018We\u2019re Doing This Because We Should\u2019"
+    ],
+    [
+      1,
+      "\u201cThe field of cryogenics is foundational to some of the most"
+    ],
+    [
+      2,
+      "Adam Swanger, Kennedy Space Center"
+    ],
+    [
+      1,
+      "Cosmic Experiments Make Cosmetic Nutrients"
+    ],
+    [
+      2,
+      "Antigravity bioreactor grows"
+    ],
+    [
+      2,
+      "Grounded, NASA Brings Space Environment to Earthlings"
+    ],
+    [
+      2,
+      "Rejuvenating a Skin Care Spinoff"
+    ],
+    [
+      2,
+      "Healing Babies, Courting Brands"
+    ],
+    [
+      1,
+      "3D Printed Engines Propel Next Industrial Revolution"
+    ],
+    [
+      2,
+      "Converging efforts to 3D print engines promise major savings in rocketry and beyond"
+    ],
+    [
+      2,
+      "Engine Printing Takes Off"
+    ],
+    [
+      2,
+      "The Next Industrial Revolution"
+    ],
+    [
+      2,
+      "Rocket Tech RAMs Its Way into New Markets"
+    ],
+    [
+      1,
+      "\u201cWe\u2019re not just building for rocket industries,"
+    ],
+    [
+      1,
+      "We\u2019re building materials and alloys that can"
+    ],
+    [
+      2,
+      "Anthony Manerbino, Elementum 3D"
+    ],
+    [
+      1,
+      "Space Tech Gives Treadmill Users a \u2018Boost\u2019"
+    ],
+    [
+      2,
+      "Creators of the original antigravity treadmill continue to advance technology, affordability with new company"
+    ],
+    [
+      2,
+      "Setbacks Burst Engineer\u2019s Bubble"
+    ],
+    [
+      2,
+      "Space Idea Becomes Home Reality"
+    ],
+    [
+      2,
+      "Antigravity Concept Continues to Soar"
+    ],
+    [
+      1,
+      "Coral Expertise Finds Broad Application"
+    ],
+    [
+      2,
+      "Remote sensing company helps customers navigate data, guided by NASA know-how"
+    ],
+    [
+      2,
+      "James Goodman, HySpeed Computing"
+    ],
+    [
+      2,
+      "Automating a Reliable Approach"
+    ],
+    [
+      2,
+      "Space Computing"
+    ],
+    [
+      2,
+      "Complicated and Diverse Systems"
+    ],
+    [
+      1,
+      "Measuring Buzz, Hum, and Rattle"
+    ],
+    [
+      2,
+      "Wireless microphone array quickly, cheaply, accurately maps noise from aircraft and much more"
+    ],
+    [
+      2,
+      "Bugging Bugs"
+    ],
+    [
+      2,
+      "Neither Rain nor Snow"
+    ],
+    [
+      1,
+      "NASA Sets Standard for Nutritional Health Products"
+    ],
+    [
+      2,
+      "Early NASA partnership becomes foundation of reborn dietary health company"
+    ],
+    [
+      2,
+      "Answering NASA\u2019s Call"
+    ],
+    [
+      1,
+      "\u201cEvery time we"
+    ],
+    [
+      2,
+      "Carlos Montesinos, Nugevity"
+    ],
+    [
+      2,
+      "Pill-Based Space Tech"
+    ],
+    [
+      2,
+      "Reaching New Markets, Reviving Old Partnership"
+    ],
+    [
+      1,
+      "Out-of-This-World Organs"
+    ],
+    [
+      2,
+      "Commercial spaceborne research platform grows drug crystals, human tissue, more"
+    ],
+    [
+      2,
+      "A Series of Successes"
+    ],
+    [
+      2,
+      "Why Print in Space"
+    ],
+    [
+      2,
+      "History of ADSEP"
+    ],
+    [
+      1,
+      "NASA Hydrogen History Informs World\u2019s Hydrogen Future"
+    ],
+    [
+      2,
+      "World\u2019s largest liquid hydrogen tank is a model for much bigger things to come"
+    ],
+    [
+      2,
+      "Rich Boling, Redwire"
+    ],
+    [
+      1,
+      "\u201cThe work at NASA really helped develop and demonstrate"
+    ],
+    [
+      2,
+      "Mark Butts, CB&I"
+    ],
+    [
+      2,
+      "Meeting the Challenges of Scaling Up"
+    ],
+    [
+      2,
+      "The Capacity for Change"
+    ],
+    [
+      1,
+      "Toxin-Eating Plants"
+    ],
+    [
+      2,
+      "NASA research makes choosing houseplants to remove indoor air pollution easy"
+    ],
+    [
+      1,
+      "\u201cNASA published"
+    ],
+    [
+      2,
+      "James Crosby, McCann London"
+    ],
+    [
+      1,
+      "Instant Innovation for Plastic Products"
+    ],
+    [
+      2,
+      "New family of composite plastics offers multiple benefits for countless applications"
+    ],
+    [
+      2,
+      "\u2018The Best of Both Worlds\u2019"
+    ],
+    [
+      2,
+      "Many Problems, One Solution"
+    ],
+    [
+      2,
+      "Martha Williams, Kennedy Space Center, retired"
+    ],
+    [
+      1,
+      "Intelligent Machines Remove Humans from the Loop"
+    ],
+    [
+      2,
+      "Autonomous artificial intelligence lets machines communicate without human intervention"
+    ],
+    [
+      1,
+      "\u201cThe biggest things we got from"
+    ],
+    [
+      2,
+      "Geoffrey Barnard, Machine-to-Machine Intelligence"
+    ],
+    [
+      2,
+      "From the Space Agency to the High Seas"
+    ],
+    [
+      2,
+      "Rooting Out Problems, Managing Risk"
+    ],
+    [
+      1,
+      "Hubble Battery Tech Holds Power on Earth"
+    ],
+    [
+      2,
+      "Nickel-hydrogen technology is safe, durable, and long-lasting \u2014 now it\u2019s affordable too"
+    ],
+    [
+      2,
+      "Space Station Power"
+    ],
+    [
+      2,
+      "Lowering the Cost"
+    ],
+    [
+      2,
+      "Lasting Forever"
+    ],
+    [
+      1,
+      "\u201cWe believe it\u2019s the best battery for"
+    ],
+    [
+      2,
+      "Jorg Heinemann, EnerVenue"
+    ],
+    [
+      1,
+      "Spinoff Technology Across the Nation"
+    ],
+    [
+      2,
+      "92518"
+    ],
+    [
+      2,
+      "7 17 52"
+    ],
+    [
+      2,
+      "12 71"
+    ],
+    [
+      2,
+      "6 46"
+    ],
+    [
+      2,
+      "50 60"
+    ],
+    [
+      2,
+      "10 15"
+    ],
+    [
+      1,
+      "Technology Transfer Program"
+    ],
+    [
+      1,
+      "Students Create Assistive Technology Prototypes"
+    ],
+    [
+      2,
+      "New demo tools help transfer NASA technology to industry"
+    ],
+    [
+      1,
+      "Spinoffs of Tomorrow"
+    ],
+    [
+      1,
+      "Ames"
+    ],
+    [
+      1,
+      "Adaptive Wind Estimation for Small Drones"
+    ],
+    [
+      2,
+      "A unified approach to autonomous flights of multi-rotor"
+    ],
+    [
+      2,
+      "Benefits"
+    ],
+    [
+      2,
+      "Applications"
+    ],
+    [
+      1,
+      "Armstrong"
+    ],
+    [
+      1,
+      "Improved Fiber-Optic Shape Sensing"
+    ],
+    [
+      2,
+      "Enables flexible aircraft wings, improved structural design tools"
+    ],
+    [
+      1,
+      "Aeroelastic Wing Shaping"
+    ],
+    [
+      2,
+      "Method for aeroelastic wing shaping using distributed propulsion"
+    ],
+    [
+      1,
+      "Interactive Sonic Boom Display"
+    ],
+    [
+      2,
+      "Benefits"
+    ],
+    [
+      2,
+      "Provides pilots with real-time sonic boom information"
+    ],
+    [
+      2,
+      "Applications"
+    ],
+    [
+      1,
+      "Glenn"
+    ],
+    [
+      1,
+      "Portable Laser-Guided Robotic Metrology (PLGRM)"
+    ],
+    [
+      2,
+      "Benefits"
+    ],
+    [
+      2,
+      "Benefits"
+    ],
+    [
+      1,
+      "Goddard"
+    ],
+    [
+      1,
+      "Pyramid Image Quality Indicator"
+    ],
+    [
+      2,
+      "Improved X-ray analysis tool"
+    ],
+    [
+      2,
+      "Benefits"
+    ],
+    [
+      2,
+      "Applications"
+    ],
+    [
+      1,
+      "Thermal Management for Aircraft Propulsion Systems"
+    ],
+    [
+      2,
+      "Waste heat power generation"
+    ],
+    [
+      1,
+      "Gear Bearings"
+    ],
+    [
+      2,
+      "Specialized moving parts for motors"
+    ],
+    [
+      2,
+      "Benefits"
+    ],
+    [
+      2,
+      "Applications"
+    ],
+    [
+      1,
+      "Autonomous Vehicle Control in \u2018Egospace\u2019"
+    ],
+    [
+      2,
+      "Autonomous navigation around static and mobile objects"
+    ],
+    [
+      2,
+      "Benefits"
+    ],
+    [
+      2,
+      "Applications"
+    ],
+    [
+      1,
+      "Johnson"
+    ],
+    [
+      1,
+      "RFID Inventory Tracking"
+    ],
+    [
+      2,
+      "Smart enclosures help track in-stock items"
+    ],
+    [
+      1,
+      "Programmable Vehicular Control"
+    ],
+    [
+      1,
+      "Reflective Spatial Heterodyne Spectrometer (RSHS)"
+    ],
+    [
+      2,
+      "Benefits"
+    ],
+    [
+      2,
+      "Tri-rotor steering wheel prevents operator fatigue"
+    ],
+    [
+      2,
+      "Using one piece of glass to create an RSHS interferometer"
+    ],
+    [
+      2,
+      "Applications"
+    ],
+    [
+      1,
+      "Capacitive Microgravity Fluid Mass Gauge"
+    ],
+    [
+      2,
+      "An accurate method of measuring fluid or gas inside a vessel"
+    ],
+    [
+      1,
+      "Langley"
+    ],
+    [
+      1,
+      "Sucrose-Treated Carbon Nanotubes and Graphene Yarns"
+    ],
+    [
+      2,
+      "Benefits"
+    ],
+    [
+      2,
+      "Carbon nanomaterial strengthening process"
+    ],
+    [
+      2,
+      "Applications"
+    ],
+    [
+      1,
+      "Layered Composite Insulation for Extreme Conditions"
+    ],
+    [
+      2,
+      "Benefits"
+    ],
+    [
+      1,
+      "Sensory Metallic Materials"
+    ],
+    [
+      2,
+      "Shape memory alloy particles improve nondestructive evaluations"
+    ],
+    [
+      2,
+      "Applications"
+    ],
+    [
+      1,
+      "Marshall"
+    ],
+    [
+      1,
+      "Rapid Identification of Contaminated Plants"
+    ],
+    [
+      2,
+      "Support for identifying a prevalent groundwater toxin"
+    ],
+    [
+      1,
+      "Stennis"
+    ],
+    [
+      2,
+      "Benefits"
+    ],
+    [
+      2,
+      "Benefits"
+    ],
+    [
+      1,
+      "Cryogenic Butterfly Cam Valve"
+    ],
+    [
+      2,
+      "No-leak valve performs in broad range of temperatures"
+    ],
+    [
+      2,
+      "Applications"
+    ],
+    [
+      2,
+      "Applications"
+    ],
+    [
+      1,
+      "Ruggedized Infrared Camera"
+    ],
+    [
+      1,
+      "Remote Sensing Toolkit"
+    ],
+    [
+      2,
+      "Space-rated camera system for harsh environments"
+    ],
+    [
+      2,
+      "Online portal offers easy access to NASA Earth-observation data"
+    ],
+    [
+      2,
+      "Benefits"
+    ],
+    [
+      2,
+      "Applications"
+    ],
+    [
+      1,
+      "Will the next spinoff be yours?"
+    ],
+    [
+      2,
+      "Our portfolio includes:"
+    ],
+    [
+      2,
+      "Whether you\u2019re looking to start a new company using NASA technology, enhance"
+    ],
+    [
+      2,
+      "Aerospace Communications Electrical Environment Medicine/Biotech"
+    ],
+    [
+      2,
+      "Mechanical/ Fluid Systems Materials/ Coatings Manufacturing Instrumentation IT/Software"
+    ],
+    [
+      2,
+      "Sensors Robotics Propulsion Power Generation Optics"
+    ],
+    [
+      1,
+      "Notes"
+    ]
+  ]
+}

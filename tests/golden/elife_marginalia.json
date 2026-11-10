@@ -1,0 +1,1549 @@
+{
+  "spine": [
+    {
+      "file": "chap_1.xhtml",
+      "frags": [
+        [
+          "p",
+          "TOOLS AND RESOURCES",
+          19
+        ],
+        [
+          "h1",
+          "Whole-\u00adbrain in situ mapping of neuronal activation in Droso",
+          117
+        ],
+        [
+          "p",
+          "Kiichi Watanabe1\u2020, \u2021, Hui Chiu1\u00a7, David J Anderson1,2* 1Divi",
+          279
+        ]
+      ]
+    },
+    {
+      "file": "chap_2.xhtml",
+      "frags": [
+        [
+          "h2",
+          "eLife Assessment",
+          16
+        ],
+        [
+          "p",
+          "This work reports an important new method for activity-\u00addepe",
+          449
+        ]
+      ]
+    },
+    {
+      "file": "chap_3.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Abstract Monitoring neuronal activity at single-\u00adcell resolu",
+          92
+        ],
+        [
+          "p",
+          "engaged in social behaviors is challenging because of their ",
+          1815
+        ]
+      ]
+    },
+    {
+      "file": "chap_4.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Introduction",
+          12
+        ],
+        [
+          "p",
+          "Monitoring neuronal activity during specific actions or acti",
+          5726
+        ],
+        [
+          "aside",
+          "*For correspondence: wuwei@caltech.eduPresent address: \u2020Inte",
+          938
+        ],
+        [
+          "p",
+          "A",
+          1
+        ],
+        [
+          "p",
+          "HI-FISH optoHI-FISH",
+          19
+        ],
+        [
+          "p",
+          "Hr38 expression analysis Optogenetic stimulation of Chrimson",
+          1237
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Hr38 in situ HCR",
+          16
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Hr38 in situ HCR or R Hr38 mRNA vs vs vs vs vs vs vs vs vs v",
+          323
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Figure 1. Mapping neuronal activities using Hr38 fluorescenc",
+          902
+        ],
+        [
+          "p",
+          "The online version of this article includes the following fi",
+          231
+        ]
+      ]
+    },
+    {
+      "file": "chap_5.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Results",
+          7
+        ]
+      ]
+    },
+    {
+      "file": "chap_6.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Brain-wide expression of Hr38 detected by HI-FISH",
+          49
+        ],
+        [
+          "p",
+          "The HCR3.0 method provides greater sensitivity, specificity,",
+          2301
+        ]
+      ]
+    },
+    {
+      "file": "chap_7.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Mapping of neurons activated by social behaviors",
+          48
+        ],
+        [
+          "p",
+          "As an initial proof-\u00adof-\u00adconcept application of HI-\u00adFISH, we",
+          4234
+        ],
+        [
+          "p",
+          "A",
+          1
+        ],
+        [
+          "p",
+          "P1a Hr38 Tk Hr38 aSP2 Hr38",
+          26
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_8.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Male",
+          4
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_9.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Female",
+          6
+        ]
+      ]
+    },
+    {
+      "file": "chap_10.xhtml",
+      "frags": [
+        [
+          "h2",
+          "aSP2 neurons",
+          12
+        ],
+        [
+          "p",
+          "Negative (\u2264 2\u03c3) Borderline Positive (> 3\u03c3) 0 b b b b a a 0 0",
+          2108
+        ],
+        [
+          "p",
+          "The online version of this article includes the following fi",
+          173
+        ],
+        [
+          "p",
+          "1). Thus the activation of P1a, Tk, or aSP2 neurons does not",
+          1735
+        ]
+      ]
+    },
+    {
+      "file": "chap_11.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Detection of Hr38+ cells induced by optogenetic stimulation ",
+          66
+        ],
+        [
+          "p",
+          "neurons in the male brain Optogenetic and thermogenetic stim",
+          2230
+        ],
+        [
+          "p",
+          "A B C",
+          5
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "optoHI-FISH Photostimulation of P1a Neurons 50Hz 30s x 2 Cou",
+          173
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "P1a Hr38 E F Control P1a > Chrimson Anterior View Posterior ",
+          64
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "PAM MB Hr38 Brp High Low pC Hr38 P1 activated Control G",
+          55
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "41A01 Hr38 OK107 Hr38 0273 Hr38 Ddc Hr38",
+          40
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Figure 3 continued P1a-\u00adactivated brains. Five individual br",
+          664
+        ],
+        [
+          "p",
+          "The online version of this article includes the following fi",
+          206
+        ],
+        [
+          "p",
+          "all three cell populations, although the signal was difficul",
+          1684
+        ]
+      ]
+    },
+    {
+      "file": "chap_12.xhtml",
+      "frags": [
+        [
+          "h2",
+          "HI-catFISH reveals distinct fighting- and mating-activated P",
+          69
+        ],
+        [
+          "p",
+          "subsets Previous reports showed that artificial activation o",
+          2415
+        ],
+        [
+          "p",
+          "A B",
+          3
+        ],
+        [
+          "p",
+          "% Hr38 Positive Neurons Neuronal Types Hr38 signal pattern H",
+          80
+        ],
+        [
+          "p",
+          "1st Behavior Male (Aggression) / Female (Courtship)",
+          51
+        ],
+        [
+          "p",
+          "2nd Behavior Male (Aggression) / Female (Courtship)",
+          51
+        ],
+        [
+          "p",
+          "HCR Analysis Hr38 Expression Intron / Exon Probes",
+          49
+        ],
+        [
+          "p",
+          "2nd Behav 1st Behav Hr38 HCR Hr38INT Experimental Fly Hr38EX",
+          206
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Time (min) 0 30 60 90 120",
+          25
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "60 (85 cells /4 individuals) (112 cells / 7 individuals) Mal",
+          96
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "N.R. Nuc Cyto Both N.R. Nuc Cyto Both 60 (71 cells /4 indivi",
+          134
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "0 N.R. Nuc Cyto Both N.R. Nuc Cyto Both Hr38 signal pattern ",
+          124
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "a naive experimental male fly was placed into a behavioral a",
+          2591
+        ]
+      ]
+    },
+    {
+      "file": "chap_13.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Discussion",
+          10
+        ],
+        [
+          "p",
+          "Drosophila is a powerful model system for identifying and ch",
+          2094
+        ]
+      ]
+    },
+    {
+      "file": "chap_14.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Monitoring neuronal activities during social behaviors",
+          54
+        ],
+        [
+          "p",
+          "Previous studies reported that male-\u00adspecific P1a, Tk, and a",
+          1799
+        ]
+      ]
+    },
+    {
+      "file": "chap_15.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Identification of downstream target neurons of genetically l",
+          66
+        ],
+        [
+          "p",
+          "neurons by opto-HI-FISH Artificial activation of P1a neurons",
+          1454
+        ]
+      ]
+    },
+    {
+      "file": "chap_16.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Functional heterogeneity of P1a populations during social be",
+          67
+        ],
+        [
+          "p",
+          "In addition to identifying functional downstream targets of ",
+          4774
+        ]
+      ]
+    },
+    {
+      "file": "chap_17.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Materials and methods",
+          21
+        ]
+      ]
+    },
+    {
+      "file": "chap_18.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Fly stocks",
+          10
+        ],
+        [
+          "p",
+          "Detailed fly genotypes used for each figure are listed in Su",
+          814
+        ]
+      ]
+    },
+    {
+      "file": "chap_19.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Optogenetic activation in behaving flies",
+          40
+        ],
+        [
+          "p",
+          "A detailed description of the setup used for optogenetic act",
+          700
+        ]
+      ]
+    },
+    {
+      "file": "chap_20.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Behavioral assays",
+          17
+        ],
+        [
+          "p",
+          "Flies were maintained at 9AM:9PM Light:Dark cycle. For male\u2013",
+          606
+        ]
+      ]
+    },
+    {
+      "file": "chap_21.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Two-photon calcium imaging",
+          26
+        ],
+        [
+          "p",
+          "Calcium imaging with optogenetic activation was performed as",
+          942
+        ]
+      ]
+    },
+    {
+      "file": "chap_22.xhtml",
+      "frags": [
+        [
+          "h2",
+          "IHC and HCR FISH",
+          16
+        ],
+        [
+          "p",
+          "In situ HCR was performed as previously described with minor",
+          4066
+        ]
+      ]
+    },
+    {
+      "file": "chap_23.xhtml",
+      "frags": [
+        [
+          "h2",
+          "catFISH",
+          7
+        ],
+        [
+          "p",
+          "To prepare target flies, four to six particles of small iron",
+          1181
+        ]
+      ]
+    },
+    {
+      "file": "chap_24.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Statistical analysis",
+          20
+        ],
+        [
+          "p",
+          "Statistical analyses were performed using MATLAB (MathWorks,",
+          267
+        ]
+      ]
+    },
+    {
+      "file": "chap_25.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Calcium imaging data analysis",
+          29
+        ],
+        [
+          "p",
+          "T-\u00adseries images were manually screened and omitted from fur",
+          1482
+        ]
+      ]
+    },
+    {
+      "file": "chap_26.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Acknowledgements",
+          16
+        ],
+        [
+          "p",
+          "We thank NA Pierce and M Schwarzkopf for advice on HCR techn",
+          529
+        ]
+      ]
+    },
+    {
+      "file": "chap_27.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Additional information",
+          22
+        ]
+      ]
+    },
+    {
+      "file": "chap_28.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Funding",
+          7
+        ]
+      ]
+    },
+    {
+      "file": "chap_29.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Funder Grant reference number Author",
+          36
+        ],
+        [
+          "p",
+          "National Institute on Drug Abuse DA031389 David J Anderson H",
+          237
+        ],
+        [
+          "p",
+          "Author contributions Kiichi Watanabe, Conceptualization, Res",
+          424
+        ],
+        [
+          "p",
+          "\u200d http://orcid.org/0000-0001-6505-8535 Hui Chiu \u200d",
+          49
+        ],
+        [
+          "p",
+          "\u200d https://orcid.org/0000-0002-1820-8411 David J Anderson \u200d \u200d",
+          319
+        ]
+      ]
+    },
+    {
+      "file": "chap_30.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Additional files",
+          16
+        ],
+        [
+          "p",
+          "Supplementary files \u2022 Supplementary file 1. The table provid",
+          252
+        ],
+        [
+          "p",
+          "\u2022 MDAR checklist Data availability The data and code used fo",
+          374
+        ],
+        [
+          "p",
+          "The following dataset was generated:",
+          36
+        ]
+      ]
+    },
+    {
+      "file": "chap_31.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Author(s) Year Dataset title Dataset URL Database and Identi",
+          64
+        ],
+        [
+          "p",
+          "Watanabe et al 2024 Data from: Whole brain in situ mapping o",
+          245
+        ]
+      ]
+    },
+    {
+      "file": "chap_32.xhtml",
+      "frags": [
+        [
+          "h2",
+          "References",
+          10
+        ],
+        [
+          "p",
+          "Anderson DJ. 2016. Circuit modules linking internal states a",
+          1551
+        ],
+        [
+          "p",
+          "doi.org/10.1038/nn1233, PMID: 15114356 Cachero S, Ostrovsky ",
+          12960
+        ],
+        [
+          "p",
+          "https://archive.softwareheritage.org/swh:1:dir:0f3ce8c06196c",
+          1795
+        ]
+      ]
+    },
+    {
+      "file": "chap_33.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Appendix 1",
+          10
+        ]
+      ]
+    },
+    {
+      "file": "chap_34.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Supplementary protocol",
+          22
+        ]
+      ]
+    },
+    {
+      "file": "chap_35.xhtml",
+      "frags": [
+        [
+          "h2",
+          "HI-FISH with Hr38 probe (from sample preparation)",
+          49
+        ]
+      ]
+    },
+    {
+      "file": "chap_36.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Sample preparation and fixation",
+          31
+        ],
+        [
+          "p",
+          "Reagents Ethanol PBS Fixative: 4% PFA/PBS (prepare on the da",
+          80
+        ],
+        [
+          "p",
+          "1. Habituating flies in the arena for the experiments. As me",
+          304
+        ],
+        [
+          "p",
+          "2. Perform photostimulation or behavioral assay to induce Hr",
+          74
+        ],
+        [
+          "p",
+          "3. For simple Hr38 detection with the exonic probe, wait ~30",
+          106
+        ],
+        [
+          "p",
+          "4. Prefix the samples. (This procedure can be omitted if the",
+          630
+        ],
+        [
+          "p",
+          "5. Dissect fly brains as quickly as possible. Transfer one f",
+          301
+        ],
+        [
+          "p",
+          "6. Fixation (rotating/shaking, at 4\u00b0C for at least 2 hr ~O/N",
+          62
+        ]
+      ]
+    },
+    {
+      "file": "chap_37.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Immunostaining (if desired)",
+          27
+        ],
+        [
+          "p",
+          "(In cases where HCR3.0 in situ is combined with immunostaini",
+          528
+        ],
+        [
+          "p",
+          "Nuclease-\u00adfree water Thermo Fisher AM9932 Phosphate-\u00adbuffere",
+          115
+        ],
+        [
+          "p",
+          "For reagents or buffers that are difficult to be prepared wh",
+          234
+        ]
+      ]
+    },
+    {
+      "file": "chap_38.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Pre-treatment",
+          13
+        ],
+        [
+          "p",
+          "Reagents (RNase free) PBS PBS 0.1% Triton X-\u00ad100 PBS 0.5% Tw",
+          94
+        ],
+        [
+          "p",
+          "1. 4% PFAWash samples 3 \u00d7 5 min with PBS/0.1% Triton X-\u00ad100 ",
+          103
+        ],
+        [
+          "p",
+          "2. Permeabilization with PBS/0.5% Tween-\u00ad20 at room temperat",
+          75
+        ],
+        [
+          "p",
+          "3. Rinse with PBS \u00d7 2.",
+          22
+        ],
+        [
+          "p",
+          "4. Treat samples with ice-\u00adcold 2% acetic acid for 1 min (*)",
+          61
+        ],
+        [
+          "p",
+          "5. Rinse with PBS \u00d7 2.",
+          22
+        ],
+        [
+          "p",
+          "6. Post-\u00adfix with 4% PFA for 20 min on ice.",
+          43
+        ],
+        [
+          "p",
+          "7. Wash samples 3 \u00d7 5 min with PBS/0.1% Triton X-\u00ad100 at roo",
+          74
+        ],
+        [
+          "p",
+          "8. Proceed to HCR v3.0 procedure.",
+          33
+        ],
+        [
+          "p",
+          "* For most of applications targeting cytoplasmic mRNA detect",
+          491
+        ],
+        [
+          "p",
+          "HCR3.0 Follow the protocol from Molecular Technologies with ",
+          558
+        ],
+        [
+          "table",
+          "8 M ureaMerck U488320\u00d7 SSCThermo Fisher AM9763Citric acid mo",
+          224
+        ],
+        [
+          "p",
+          "Hybridization reactions are performed in a 1.5-\u00adml Eppendorf",
+          167
+        ]
+      ]
+    },
+    {
+      "file": "chap_39.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Sample mounting",
+          15
+        ],
+        [
+          "p",
+          "We prefer to use Histodenz mounting solution, adopted from t",
+          119
+        ]
+      ]
+    },
+    {
+      "file": "notes.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Notes",
+          5
+        ],
+        [
+          "p",
+          "Figure 3. Investigation of downstream neurons activated by o",
+          664
+        ],
+        [
+          "p",
+          "0 N.R. Nuc Cyto Both (55 cells / 5 individuals)",
+          47
+        ],
+        [
+          "p",
+          "0 N.R. Nuc Cyto Both Hr38 signal pattern Figure 4. Drosophil",
+          2510
+        ]
+      ]
+    }
+  ],
+  "stats": {
+    "asides": 1,
+    "chapters": 40,
+    "columns": 1,
+    "footnotes": 12,
+    "grid_tables": 1,
+    "headings": 39,
+    "images": 102,
+    "pages": 20,
+    "raster_figures": 0,
+    "raster_tables": 3,
+    "title": "Whole-\u00adbrain in situ mapping of neuronal activation in Drosophila during social behaviors and optogenetic\u00a0stimulation"
+  },
+  "toc": [
+    [
+      1,
+      "Whole-\u00adbrain in situ mapping of neuronal activation in Drosophila during social behaviors and optogenetic stimulation"
+    ],
+    [
+      2,
+      "eLife Assessment"
+    ],
+    [
+      2,
+      "Abstract Monitoring neuronal activity at single-\u00adcell resolution in freely moving Drosophila"
+    ],
+    [
+      2,
+      "Introduction"
+    ],
+    [
+      2,
+      "Results"
+    ],
+    [
+      2,
+      "Brain-wide expression of Hr38 detected by HI-FISH"
+    ],
+    [
+      2,
+      "Mapping of neurons activated by social behaviors"
+    ],
+    [
+      2,
+      "Male"
+    ],
+    [
+      2,
+      "Female"
+    ],
+    [
+      2,
+      "aSP2 neurons"
+    ],
+    [
+      2,
+      "Detection of Hr38+ cells induced by optogenetic stimulation of P1a"
+    ],
+    [
+      2,
+      "HI-catFISH reveals distinct fighting- and mating-activated P1a neuron"
+    ],
+    [
+      2,
+      "Discussion"
+    ],
+    [
+      2,
+      "Monitoring neuronal activities during social behaviors"
+    ],
+    [
+      2,
+      "Identification of downstream target neurons of genetically labeled"
+    ],
+    [
+      2,
+      "Functional heterogeneity of P1a populations during social behaviors"
+    ],
+    [
+      2,
+      "Materials and methods"
+    ],
+    [
+      2,
+      "Fly stocks"
+    ],
+    [
+      2,
+      "Optogenetic activation in behaving flies"
+    ],
+    [
+      2,
+      "Behavioral assays"
+    ],
+    [
+      2,
+      "Two-photon calcium imaging"
+    ],
+    [
+      2,
+      "IHC and HCR FISH"
+    ],
+    [
+      2,
+      "catFISH"
+    ],
+    [
+      2,
+      "Statistical analysis"
+    ],
+    [
+      2,
+      "Calcium imaging data analysis"
+    ],
+    [
+      2,
+      "Acknowledgements"
+    ],
+    [
+      2,
+      "Additional information"
+    ],
+    [
+      2,
+      "Funding"
+    ],
+    [
+      2,
+      "Funder Grant reference number Author"
+    ],
+    [
+      2,
+      "Additional files"
+    ],
+    [
+      2,
+      "Author(s) Year Dataset title Dataset URL Database and Identifier"
+    ],
+    [
+      2,
+      "References"
+    ],
+    [
+      2,
+      "Appendix 1"
+    ],
+    [
+      2,
+      "Supplementary protocol"
+    ],
+    [
+      2,
+      "HI-FISH with Hr38 probe (from sample preparation)"
+    ],
+    [
+      2,
+      "Sample preparation and fixation"
+    ],
+    [
+      2,
+      "Immunostaining (if desired)"
+    ],
+    [
+      2,
+      "Pre-treatment"
+    ],
+    [
+      2,
+      "Sample mounting"
+    ],
+    [
+      1,
+      "Notes"
+    ]
+  ]
+}

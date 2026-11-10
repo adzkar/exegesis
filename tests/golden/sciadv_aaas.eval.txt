@@ -1,0 +1,27 @@
+# epub-eval: sciadv_aaas.pdf
+
+**Verdict:** 0 high-severity findings — clean; verbatim word coverage 97.3% (8628/8869, epub emitted 8756 words after rejoins)
+
+## Checks
+- A container: PASS — 13 members, 2 chapters, 4 images
+- B metadata: title='Science Journals — AAAS'
+- C coverage: rejoined 236, furniture 358, rasterized table cells 0, superscript splits 5, genuine loss 0
+- D toc: 3 entries, h1=1 h2=1, dupes=none
+- G figures: pdf rasters=4, embedded=4, vector pages=[]
+
+## Findings (severity-ranked)
+| Sev | Check | Finding |
+|-----|-------|---------|
+| Med | G | Fig. 2: legend absent from EPUB |
+| Med | G | Fig. 3: legend absent from EPUB |
+| Low | G | chap_1.xhtml: <img> missing caption alt text |
+| Low | G | chap_1.xhtml: <img> missing caption alt text |
+
+## Classified word loss
+| class | words | top examples |
+|-------|-------|--------------|
+| rejoined hyphenation | 236 | ing, gen, erative, writ, re, in, par, ticipants |
+| stripped furniture | 358 | e, c, s, a, r, 2024, i, n |
+| rasterized table cells | 0 |  |
+| superscript splits | 5 | doshi1, hauser2, 1department, 2department, 3institute |
+| genuine loss | 0 |  |

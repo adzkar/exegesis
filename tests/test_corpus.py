@@ -21,11 +21,24 @@ GOLDEN = Path(__file__).parent / "golden"
 EVAL = ROOT / "scripts" / "eval_epub.py"
 
 CORPUS = [
-    "2000_Biobehavioral-responses-to-stress-in-females_tend-and-befriend.pdf",
-    "A Wandering Mind Is an Unhappy Mind.pdf",
-    "Negativity_Bias_Negativity_Dominance_and_Contagion.pdf",
-    "Polizzi-Lynn2021_Article_RegulatingEmotionalityToManage.pdf",
-    pytest.param("Things Left Behind.pdf", marks=pytest.mark.slow),
+    "acp_copernicus.pdf",
+    "arxiv_latnet_1705.09036.pdf",
+    "arxiv_revtex.pdf",
+    "Bed-Sharing in Couples Is Associated With Increased and Stabilized REM Sleep and Sleep- Stage Synchronization.pdf",
+    "bmjopen_medical.pdf",
+    "bundesges_de.pdf",
+    "elife_marginalia.pdf",
+    "frontiers_2col.pdf",
+    "iscience_cell.pdf",
+    "jbigdata_springer.pdf",
+    "mdpi_2col.pdf",
+    pytest.param("NASA_Spinoff_2025.pdf", marks=pytest.mark.slow),
+    "peerj_oa.pdf",
+    "plosone_marginalia.pdf",
+    "sciadv_aaas.pdf",
+    "scirep_nature.pdf",
+    pytest.param("UNESCO_Courier_2023_3.pdf", marks=pytest.mark.slow),
+    "wiley_ee.pdf",
 ]
 
 

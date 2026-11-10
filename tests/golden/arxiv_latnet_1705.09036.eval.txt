@@ -1,0 +1,31 @@
+# epub-eval: arxiv_latnet_1705.09036.pdf
+
+**Verdict:** 0 high-severity findings — clean; verbatim word coverage 99.0% (5127/5180, epub emitted 5223 words after rejoins)
+
+## Checks
+- A container: PASS — 27 members, 8 chapters, 12 images
+- B metadata: title='Lat-Net: Compressing Lattice Boltzmann Flow Simulations usin'
+- C coverage: rejoined 8, furniture 16, rasterized table cells 0, superscript splits 0, genuine loss 45
+- D toc: 8 entries, h1=1 h2=7, dupes=none
+- G figures: pdf rasters=12, embedded=12, vector pages=[3]
+
+## Findings (severity-ranked)
+| Sev | Check | Finding |
+|-----|-------|---------|
+| Med | C | genuine word loss 45: [('gt', 8), ('fi', 7), ('nx', 7), ('ny', 7), ('nz', 4), ('ft', 3), ('ci', 2), ('bmul', 2), ('badd', 2), ('cifi', 1)] |
+| Low | G | chap_5.xhtml: <img> missing caption alt text |
+| Low | G | chap_5.xhtml: <img> missing caption alt text |
+| Low | G | chap_6.xhtml: <img> missing caption alt text |
+| Low | G | chap_6.xhtml: <img> missing caption alt text |
+| Low | G | chap_6.xhtml: <img> missing caption alt text |
+| Low | G | chap_6.xhtml: <img> missing caption alt text |
+| Low | G | chap_6.xhtml: <img> missing caption alt text |
+
+## Classified word loss
+| class | words | top examples |
+|-------|-------|--------------|
+| rejoined hyphenation | 8 | applica, tions, convo, lutional, computa, tion, incompress, ible |
+| stripped furniture | 16 | 2, 4, arxiv, 1705, 09036v1, stat, ml, 25 |
+| rasterized table cells | 0 |  |
+| superscript splits | 0 |  |
+| genuine loss | 45 | gt, fi, nx, ny, nz, ft, ci, bmul |

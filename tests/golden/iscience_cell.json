@@ -1,0 +1,326 @@
+{
+  "spine": [
+    {
+      "file": "chap_1.xhtml",
+      "frags": [
+        [
+          "h1",
+          "iScience",
+          8
+        ],
+        [
+          "p",
+          "Perspective Soil salinization in agriculture: Mitigation and",
+          134
+        ]
+      ]
+    },
+    {
+      "file": "chap_2.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Paolo Tarolli,1,* Jian Luo,2 Edward Park,3 Gianni Barcaccia,",
+          80
+        ],
+        [
+          "p",
+          "SUMMARY Soil salinization is among the most critical threats",
+          1103
+        ]
+      ]
+    },
+    {
+      "file": "chap_3.xhtml",
+      "frags": [
+        [
+          "h2",
+          "INTRODUCTION",
+          12
+        ],
+        [
+          "p",
+          "According to the UN 2030 Agenda for Sustainable Development,",
+          2705
+        ],
+        [
+          "p",
+          "In Africa, coastal deltas from Egypt to Senegal face similar",
+          565
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Figure 1. Saltwater intrusion effects (yellow and bare soil ",
+          203
+        ],
+        [
+          "p",
+          "around the globe highlight the pressing issue of salinity in",
+          2769
+        ],
+        [
+          "p",
+          "SALTWATER INTRUSION ALONG COASTS Natural barriers Nature-bas",
+          2278
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Figure 2. Conceptual framework illustrating sustainable solu",
+          747
+        ],
+        [
+          "p",
+          "Wetlands in deltas Inland delta wetland restoration presents",
+          2124
+        ],
+        [
+          "p",
+          "Buffer zones along canals and ditches The adoption of buffer",
+          1710
+        ],
+        [
+          "p",
+          "Conversion to aquaculture Farmers in delta regions worldwide",
+          2108
+        ],
+        [
+          "p",
+          "SALTWATER IN INLAND ARID LANDS Straw incorporation Strategie",
+          3844
+        ],
+        [
+          "p",
+          "Organic fertilizers Using organic fertilizers offers an effe",
+          5098
+        ],
+        [
+          "p",
+          "Water storage and irrigation Water management is crucial in ",
+          3050
+        ]
+      ]
+    },
+    {
+      "file": "chap_4.xhtml",
+      "frags": [
+        [
+          "h2",
+          "BREEDING FOR SALT TOLERANCE IN CROP PLANTS",
+          42
+        ],
+        [
+          "p",
+          "Salinity is one of the most important environmental stresses",
+          529
+        ],
+        [
+          "p",
+          "Nowadays, in the era of structural and functional genomics, ",
+          6041
+        ]
+      ]
+    },
+    {
+      "file": "chap_5.xhtml",
+      "frags": [
+        [
+          "h2",
+          "CONCLUDING REMARKS",
+          18
+        ],
+        [
+          "p",
+          "In this perspective, two approaches to mitigate the growing ",
+          832
+        ]
+      ]
+    },
+    {
+      "file": "chap_6.xhtml",
+      "frags": [
+        [
+          "h2",
+          "ACKNOWLEDGMENTS",
+          15
+        ],
+        [
+          "p",
+          "P.T., G.B., and R.M. would like to acknowledge Agritech Nati",
+          666
+        ]
+      ]
+    },
+    {
+      "file": "chap_7.xhtml",
+      "frags": [
+        [
+          "h2",
+          "DECLARATION OF INTERESTS",
+          24
+        ],
+        [
+          "p",
+          "The authors declare no competing interests.",
+          43
+        ],
+        [
+          "p",
+          "REFERENCES",
+          10
+        ],
+        [
+          "table",
+          "1. Wang, W., Pijl, A., and Tarolli, P. (2022).Resources. Wat",
+          5087
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "migration. The Innovation Geoscience 1, 100002.",
+          47
+        ],
+        [
+          "p",
+          "74. Yang, P., Wu, L., Cheng, M., Fan, J., Li, S., Wang, H., ",
+          187
+        ],
+        [
+          "p",
+          "75. Dong, S., Wang, G., Kang, Y., Ma, Q., and Wan, S. (2022)",
+          242
+        ],
+        [
+          "p",
+          "76. Wang, Y., Gao, M., Chen, H., Fu, X., Wang, L., and Wang,",
+          205
+        ],
+        [
+          "p",
+          "77. Afzal, M., Hindawi, S.E.S., Alghamdi, S.S., Migdadi, H.H",
+          179
+        ],
+        [
+          "p",
+          "in life sciences. BioTechnology (Rajkot, India) 10, 14.",
+          55
+        ],
+        [
+          "p",
+          "82. Miladinovic, D., Antunes, D., Yildirim, K., Bakhsh, A., ",
+          282
+        ],
+        [
+          "p",
+          "83. Barcaccia, G., D\u2019Agostino, V., Zotti, A., and Cozzi, B. ",
+          254
+        ],
+        [
+          "p",
+          "84. Pirrello, C., Magon, G., Palumbo, F., Farinati, S., Lucc",
+          261
+        ],
+        [
+          "p",
+          "improving salt tolerance in crop plants. J. Plant Growth Reg",
+          78
+        ],
+        [
+          "p",
+          "78. Guo, J., Shan, C., Zhang, Y., Wang, X., Tian, H., Han, G",
+          217
+        ],
+        [
+          "p",
+          "79. Singh, R.K., Kota, S., and Flowers, T.J. (2021). Salt to",
+          169
+        ],
+        [
+          "p",
+          "80. Simko, I., Jia, M., Venkatesh, J., Kang, B.-C., Weng, Y.",
+          225
+        ],
+        [
+          "p",
+          "81. Tavakoli, K., Pour-Aboughadareh, A., Kianersi, F., Pocza",
+          172
+        ]
+      ]
+    },
+    {
+      "file": "notes.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Notes",
+          5
+        ],
+        [
+          "p",
+          "1Department of Land, Environment, Agriculture and Forestry, ",
+          843
+        ]
+      ]
+    }
+  ],
+  "stats": {
+    "asides": 0,
+    "chapters": 8,
+    "columns": 1,
+    "footnotes": 2,
+    "grid_tables": 1,
+    "headings": 7,
+    "images": 3,
+    "pages": 9,
+    "raster_figures": 0,
+    "raster_tables": 1,
+    "title": "Soil salinization in agriculture: Mitigation and adaptation strategies combining nature-based solutions and bioengineering"
+  },
+  "toc": [
+    [
+      1,
+      "iScience"
+    ],
+    [
+      2,
+      "Paolo Tarolli,1,* Jian Luo,2 Edward Park,3 Gianni Barcaccia,4 and Roberta Masin4"
+    ],
+    [
+      2,
+      "INTRODUCTION"
+    ],
+    [
+      2,
+      "BREEDING FOR SALT TOLERANCE IN CROP PLANTS"
+    ],
+    [
+      2,
+      "CONCLUDING REMARKS"
+    ],
+    [
+      2,
+      "ACKNOWLEDGMENTS"
+    ],
+    [
+      2,
+      "DECLARATION OF INTERESTS"
+    ],
+    [
+      1,
+      "Notes"
+    ]
+  ]
+}

@@ -1,0 +1,524 @@
+{
+  "spine": [
+    {
+      "file": "chap_1.xhtml",
+      "frags": [
+        [
+          "p",
+          "\u00a9 Author(s) 2024. This work is distributed under the Creativ",
+          94
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "h1",
+          "Seasonal variations in photooxidant formation and light abso",
+          107
+        ],
+        [
+          "p",
+          "Lan Ma1,a, Reed Worland1,b, Laura Heinlein1, Chrystal Guzman",
+          148
+        ],
+        [
+          "p",
+          "1Department of Land, Air and Water Resources, University of ",
+          711
+        ],
+        [
+          "blockquote",
+          "Abstract. Fog/cloud drops and aerosol liquid water are impor",
+          1648
+        ],
+        [
+          "aside",
+          "Correspondence: Cort Anastasio (canastasio@ucdavis.edu)Recei",
+          193
+        ],
+        [
+          "p",
+          "1 Introduction Atmospheric waters, including fog/cloud drops",
+          715
+        ],
+        [
+          "p",
+          "2) (Ervens et al., 2014; Herrmann, 2003; McNeill and Canonic",
+          274
+        ],
+        [
+          "p",
+          "2. Concentrations of qOH in fog and cloud waters, as well as",
+          163
+        ],
+        [
+          "p",
+          "to 10\u221215 M (Anastasio and McGregor, 2001; Arakaki et al., 20",
+          4315
+        ],
+        [
+          "p",
+          "2) is also higher in samples with lower average",
+          47
+        ],
+        [
+          "p",
+          "molecular weight DOM, as seen for 3C\u2217(Berg et al., 2019; Mai",
+          3100
+        ],
+        [
+          "p",
+          "\u226518.2 M\u007fcm) that was pretreated with a Barnstead activated c",
+          76
+        ],
+        [
+          "p",
+          "2.2 Particle collection and extraction More detailed descrip",
+          3016
+        ],
+        [
+          "p",
+          "2.3 Sample illumination and chemical analysis Illumination e",
+          1132
+        ],
+        [
+          "p",
+          "2.4 Photooxidant measurements Photooxidant methods are detai",
+          483
+        ],
+        [
+          "p",
+          "2.4.1 Hydroxyl radical ( qOH) qOH concentration was quanti\ufb01e",
+          2608
+        ],
+        [
+          "p",
+          "2.4.2 Singlet molecular oxygen (1O\u2217 2) To determine 1O\u2217 2 co",
+          1096
+        ],
+        [
+          "p",
+          "2.4.3 Oxidizing triplet excited states of organic matter (3C",
+          2325
+        ],
+        [
+          "p",
+          "2.4.4 Extrapolating extract results to aerosol liquid water ",
+          643
+        ]
+      ]
+    },
+    {
+      "file": "chap_2.xhtml",
+      "frags": [
+        [
+          "h2",
+          "3 Results and discussion",
+          24
+        ],
+        [
+          "p",
+          "3.1 General extract characteristics To investigate the seaso",
+          2140
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Figure 1. Average PM2.5 concentrations (circles) during each",
+          669
+        ],
+        [
+          "p",
+          "indicate that FBB samples are dominated by biomass burning o",
+          2866
+        ],
+        [
+          "p",
+          "3.2 Light absorption in particle extracts DOC-normalized mas",
+          1575
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Figure 2. Average DOC-normalized mass absorption coef\ufb01cients",
+          247
+        ],
+        [
+          "p",
+          "termined in previous water extracts of Davis winter particle",
+          1884
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Figure 3. Mass absorption coef\ufb01cients of dissolved organic c",
+          195
+        ],
+        [
+          "p",
+          "ABB (12.5 (\u00b1 2.3)), which suggests that organic molecules in",
+          2474
+        ],
+        [
+          "p",
+          "3.3 Photooxidant concentrations 3.3.1 Normalization by sampl",
+          1573
+        ],
+        [
+          "p",
+          "3.3.2 Hydroxyl radical ( qOH) As shown in Fig. 4a, normalize",
+          904
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Figure 4. Steady-state concentrations of (a) the hydroxyl ra",
+          562
+        ],
+        [
+          "p",
+          "2015; Wong et al., 2019). Win-Spr has a similar average [ qO",
+          2687
+        ],
+        [
+          "p",
+          "3.3.3 Singlet molecular oxygen (1O\u2217 2) Winter-solstice-sunli",
+          508
+        ],
+        [
+          "p",
+          "45) \u00d7 10\u221215 M (Manfrin et al., 2019). Our higher 1O\u2217 2 conce",
+          894
+        ],
+        [
+          "p",
+          "respectively. The higher Win-Spr concentrations are probably",
+          1537
+        ],
+        [
+          "p",
+          "3.3.4 Oxidizing triplet excited states of brown carbon (3C\u2217)",
+          1470
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Figure 5. Steady-state concentrations of (a) the hydroxyl ra",
+          736
+        ],
+        [
+          "p",
+          "vides an estimate of the fraction of oxidizing 3C\u2217consisting",
+          3283
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Figure 6. The ratio of oxidizing triplet excited state conce",
+          157
+        ],
+        [
+          "p",
+          "2023b; Wenk et al., 2011), as shown in Fig. S19b. The \ufb01tted ",
+          1051
+        ],
+        [
+          "p",
+          "12) \u00d7 107 L(molC)\u22121 s\u22121) (Ma et al., 2023a) but in the range",
+          161
+        ],
+        [
+          "p",
+          "malized photooxidant concentrations to the corresponding sun",
+          858
+        ],
+        [
+          "p",
+          "3.4 Apparent quantum yields for photooxidants 3.4.1 Hydroxyl",
+          1915
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Figure 7. Apparent quantum yields of (a) the hydroxyl radica",
+          356
+        ],
+        [
+          "p",
+          "Our calculated apparent quantum yields of qOH are shown in F",
+          574
+        ],
+        [
+          "p",
+          "3.4.2 Singlet molecular oxygen To calculate the apparent qua",
+          531
+        ],
+        [
+          "p",
+          "2) by multiplying the rate of 1O\u2217 2 loss by wa-",
+          47
+        ],
+        [
+          "p",
+          "ter (k\u2032 H2O) by [1O\u2217 2]. As shown in Fig. 7b, 81O\u2217 2 ranges ",
+          1789
+        ],
+        [
+          "p",
+          "2. It has been suggested that DOM with a high lignin content",
+          532
+        ],
+        [
+          "p",
+          "piani et al., 2017), which is 26 % higher than the value we ",
+          449
+        ],
+        [
+          "p",
+          "3.4.3 Oxidizing triplet excited states To calculate the prod",
+          2411
+        ],
+        [
+          "p",
+          "We next use our quantum yields to estimate the fraction of t",
+          327
+        ],
+        [
+          "p",
+          "2. Therefore, the fraction of triplets that are oxidizing ca",
+          1452
+        ],
+        [
+          "p",
+          "3.5 Extrapolation of photooxidant concentrations to aerosol ",
+          2934
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Figure 8. Predicted photooxidant concentrations for each sam",
+          506
+        ],
+        [
+          "p",
+          "(Fig. 8). Win-Spr is characterized by its high 1O\u2217 2 quantum",
+          150
+        ],
+        [
+          "p",
+          "2. In contrast, FBB and ABB have more brown carbon (and ther",
+          88
+        ],
+        [
+          "p",
+          "2) but high DOC, which leads to greater sinks for triplets a",
+          1600
+        ],
+        [
+          "p",
+          "tor of approximately 20, while ALW concentrations for FBB an",
+          238
+        ],
+        [
+          "p",
+          "3.6 Impact of photooxidants on organic fates in an aerosol T",
+          3321
+        ]
+      ]
+    },
+    {
+      "file": "chap_3.xhtml",
+      "frags": [
+        [
+          "h2",
+          "4 Conclusions, implications, and uncertainties",
+          46
+        ],
+        [
+          "p",
+          "In this work, we measured concentrations of three photooxida",
+          2151
+        ],
+        [
+          "p",
+          "Based on our results in dilute PM extracts (as well as past ",
+          4056
+        ],
+        [
+          "p",
+          "Data availability. All data are available upon request.",
+          55
+        ],
+        [
+          "p",
+          "Supplement. The supplement related to this article is availa",
+          124
+        ],
+        [
+          "p",
+          "Author contributions. CA and LM developed the research goals",
+          496
+        ],
+        [
+          "p",
+          "Competing interests. The contact author has declared that no",
+          106
+        ],
+        [
+          "p",
+          "ality in aqueous PM10 is driven by biomass burning and anthr",
+          3341
+        ],
+        [
+          "p",
+          "Financial support. This research has been supported by the N",
+          368
+        ],
+        [
+          "p",
+          "Review statement. This paper was edited by Ryan Sullivan and",
+          98
+        ]
+      ]
+    },
+    {
+      "file": "chap_4.xhtml",
+      "frags": [
+        [
+          "h2",
+          "References",
+          10
+        ],
+        [
+          "p",
+          "Alfarra, M. R., Prevot, A. S. H., Szidat, S., Sandradewi, J.",
+          2650
+        ],
+        [
+          "p",
+          "Chem. Phys., 11, 11069\u201311102, https://doi.org/10.5194/acp-11",
+          3207
+        ],
+        [
+          "p",
+          "state of organic compounds, Water Res., 45, 6535\u20136544, https",
+          3228
+        ],
+        [
+          "p",
+          "Leresche, F., McKay, G., Kurtz, T., von Gunten, U., Canonica",
+          3384
+        ],
+        [
+          "p",
+          "photoproduction of reactive intermediates, Chemosphere, 155,",
+          3290
+        ],
+        [
+          "p",
+          "C., S\u00f6rgel, M., and Williams, J.: Total OH reactivity over t",
+          3197
+        ],
+        [
+          "p",
+          "Tilgner, A. and Herrmann, H.: Tropospheric aqueous-phase OH ",
+          3380
+        ],
+        [
+          "p",
+          "Wenk, J., Eustis, S. N., McNeill, K., and Canonica, S.: Quen",
+          1349
+        ],
+        [
+          "p",
+          "Zeinali, N., Oluwoye, I., Altarawneh, M. K., Almatarneh, M. ",
+          1416
+        ]
+      ]
+    },
+    {
+      "file": "notes.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Notes",
+          5
+        ],
+        [
+          "p",
+          "Published by Copernicus Publications on behalf of the Europe",
+          3305
+        ]
+      ]
+    }
+  ],
+  "stats": {
+    "asides": 1,
+    "chapters": 5,
+    "columns": 2,
+    "footnotes": 10,
+    "grid_tables": 0,
+    "headings": 4,
+    "images": 9,
+    "pages": 21,
+    "raster_figures": 0,
+    "raster_tables": 0,
+    "title": "Seasonal variations in photooxidant formation and light absorption in aqueous extracts of ambient particles"
+  },
+  "toc": [
+    [
+      1,
+      "Seasonal variations in photooxidant formation and light absorption in aqueous extracts of ambient particles"
+    ],
+    [
+      2,
+      "3 Results and discussion"
+    ],
+    [
+      2,
+      "4 Conclusions, implications, and uncertainties"
+    ],
+    [
+      2,
+      "References"
+    ],
+    [
+      1,
+      "Notes"
+    ]
+  ]
+}

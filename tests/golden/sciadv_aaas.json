@@ -1,0 +1,436 @@
+{
+  "spine": [
+    {
+      "file": "chap_1.xhtml",
+      "frags": [
+        [
+          "p",
+          "CO M P U T E R S C I E N C E",
+          28
+        ],
+        [
+          "h1",
+          "Generative AI enhances individual creativity but reduces the",
+          98
+        ],
+        [
+          "p",
+          "Copyright \u00a9 2024 The Authors, some rights reserved; exclusiv",
+          237
+        ],
+        [
+          "p",
+          "Anil R. Doshi1* and Oliver P. Hauser2,3* Creativity is core ",
+          1103
+        ],
+        [
+          "p",
+          "INTRODUCTION Creativity is fundamental to innovation and hum",
+          4849
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Fig. 1. Visual representation of experimental design. (A) Pa",
+          1134
+        ],
+        [
+          "p",
+          "Hemingway highlights the creative power of a concise plot (1",
+          2290
+        ],
+        [
+          "p",
+          "RESULTS Baseline versus generative AI conditions As part of ",
+          3049
+        ],
+        [
+          "p",
+          "Exploratory analyses: Emotional characteristics Next, we tur",
+          545
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "As illustrated in Fig. 2B, we find that stories written by w",
+          1125
+        ],
+        [
+          "p",
+          "Heterogeneity by inherent creativity Because our human write",
+          910
+        ],
+        [
+          "p",
+          "First, we look at whether different writers engaged with gen",
+          2178
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "of how well the story was written increase by up to 26.6%, e",
+          402
+        ],
+        [
+          "p",
+          "Similarity of stories Thus far, we have focused on the subje",
+          1574
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Fig. 4. Comparison of similarity of writer stories to genera",
+          367
+        ],
+        [
+          "p",
+          "compare the cosine similarity of the story embedding to that",
+          976
+        ],
+        [
+          "p",
+          "fundamental to all human behavior, which is of both economic",
+          12142
+        ],
+        [
+          "p",
+          "MATERIALS AND METHODS Writer study and experimental conditio",
+          4379
+        ],
+        [
+          "p",
+          "Evaluator study For the evaluator study, the 293 total stori",
+          2393
+        ],
+        [
+          "p",
+          "Outcome variables For our preregistered indices, we followed",
+          3481
+        ],
+        [
+          "p",
+          "Statistical analysis Unless otherwise noted, we ran regressi",
+          610
+        ],
+        [
+          "p",
+          "Preregistration and ethics approval The study was preregiste",
+          375
+        ]
+      ]
+    },
+    {
+      "file": "chap_2.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Supplementary Materials",
+          23
+        ],
+        [
+          "p",
+          "This PDF file includes: Sections S1 to S9 Tables S1 to S18 F",
+          94
+        ],
+        [
+          "p",
+          "1. R. J. Sternberg,Handbook of Creativity(Cambridge Univ. Pr",
+          71
+        ],
+        [
+          "p",
+          "2. Z. Epstein, A. Hertzmann, Art and the science of generati",
+          96
+        ],
+        [
+          "p",
+          "3. P. Yanardag, M. Cebrian, I. Rahwan, Shelley: A crowd-\u00adsou",
+          211
+        ],
+        [
+          "p",
+          "4. S. Noy, W. Zhang, Experimental evidence on the productivi",
+          137
+        ],
+        [
+          "p",
+          "5. E. Brynjolfsson, D. Li, L. R. Raymond,Generative AI at Wo",
+          107
+        ],
+        [
+          "p",
+          "6. N. Jia, X. Luo, Z. Fang, C. Liao, When and how artificial",
+          136
+        ],
+        [
+          "p",
+          "7. S. Peng, E. Kalliamvakou, P. Cihon, M. Demirer, M. The im",
+          160
+        ],
+        [
+          "p",
+          "8 of 9",
+          6
+        ],
+        [
+          "p",
+          "8. S. C. Matz, J. D. Teeny, S. S. Vaid, G. M. Harari, M. Cer",
+          157
+        ],
+        [
+          "p",
+          "9. U. Wolfradt, J. E. Pretz, Individual differences in creat",
+          140
+        ],
+        [
+          "p",
+          "10. G. Charness, D. Grieco, Creativity and incentives.J. Eur",
+          94
+        ],
+        [
+          "p",
+          "11. T. M. Amabile, Social psychology of creativity: A consen",
+          129
+        ],
+        [
+          "p",
+          "12. S. Harvey, J. Berry, Toward a meta-\u00adtheory of creativity",
+          150
+        ],
+        [
+          "p",
+          "13. S. G. Harkins, R. E. Petty, Effects of task difficulty a",
+          141
+        ],
+        [
+          "p",
+          "14. R. S. Nickerson, Enhancing creativity, inHandbook of Cre",
+          110
+        ],
+        [
+          "p",
+          "15. W. Kenower, W. The cold open: Facing the blank page. Wri",
+          163
+        ],
+        [
+          "p",
+          "16. G. Charness, B. Jabarian, J. A. List, \u201cGeneration next: ",
+          117
+        ],
+        [
+          "p",
+          "17. W. Nelles, Microfiction: What makes a very short story v",
+          98
+        ],
+        [
+          "p",
+          "18. M. Redi, N. O'Hare, R. Schifanella, M. Trevisiol, A. Jai",
+          95
+        ],
+        [
+          "p",
+          "Creativity in micro-\u00advideos, inProceedings of the IEEE Confe",
+          136
+        ],
+        [
+          "p",
+          "19. D. Fishelov, The poetics of six-\u00adword stories.Narrative ",
+          77
+        ],
+        [
+          "p",
+          "20. M. Raj, J. Berg, R. Seamans, Art-\u00adificial intelligence: ",
+          156
+        ],
+        [
+          "p",
+          "21. J. K. Eshraghian, Human ownership of artificial creativi",
+          100
+        ],
+        [
+          "p",
+          "22. Z. Epstein, S. Levine, D. G. Rand, I. Rahwan, Who gets c",
+          115
+        ],
+        [
+          "p",
+          "23. Z. Epstein, A. A. Arechar, D. Rand, What label should be",
+          183
+        ],
+        [
+          "p",
+          "24. R. Jauss, Literary history as a challenge to literary th",
+          128
+        ],
+        [
+          "p",
+          "25. J. A. Olson, J. Nahas, D. Chmoulevitch, S. J. Cropper, M",
+          168
+        ],
+        [
+          "p",
+          "26. E. Ash, S. Hansen, Text algorithms in economics.Annu. Re",
+          90
+        ],
+        [
+          "p",
+          "27. E. Felten, M. Raj, R. Seamans, How will language modeler",
+          144
+        ],
+        [
+          "p",
+          "28. T. Eloundou, S. Manning, P. Mishkin, D. Rock, GPTs are G",
+          176
+        ],
+        [
+          "p",
+          "29. E. van Inwegen, Z. T. Munyikwa, J. J. Horton,Algorithmic",
+          176
+        ],
+        [
+          "p",
+          "30. N. Agarwal, A. Moehring, P. Rajpurkar, T. Salz,Combining",
+          201
+        ],
+        [
+          "p",
+          "31. H. Wang, T. Fu, Y. Du, W. Gao, K. Huang, Z. Liu, P. Chan",
+          277
+        ],
+        [
+          "p",
+          "L. Zhang, C. W. Coley, Y. Bengio, M. Zitnik, Scientific disc",
+          129
+        ],
+        [
+          "p",
+          "32. R. Koster, J. Balaguer, A. Tacchetti, A. Weinstein, T. Z",
+          87
+        ],
+        [
+          "p",
+          "L. Campbell-\u00adGillingham, P. Thacker, M. Botvinick, C. Summer",
+          155
+        ],
+        [
+          "p",
+          "33. R. Koster, M. Pislar, A. Tacchetti, J. Balaguer, L. Liu,",
+          282
+        ],
+        [
+          "p",
+          "34. A. Lee, I. Inceoglu, O. P. Hauser, M. Greene, Determinin",
+          215
+        ],
+        [
+          "p",
+          "35. A. Agrawal, J. S. Gans, A. Goldfarb, Do we want less aut",
+          96
+        ],
+        [
+          "p",
+          "36. A. Korinek,Language Models and Cognitive Automation for ",
+          135
+        ],
+        [
+          "p",
+          "37. M. R. Frank, D. Autor, J. E. Bessen, E. Brynjolfsson, M.",
+          272
+        ],
+        [
+          "p",
+          "38. M. Lysyakov, S. Viswanathan, Threatened by AI: Analyzing",
+          174
+        ],
+        [
+          "p",
+          "39. K. Girotra, L. Meincke, C. Terwiesch, K. T. Ulrich, Idea",
+          184
+        ],
+        [
+          "p",
+          "40. A. R. Doshi, J. J. Bell, E. Mirzayev, B. Vanneste, Gener",
+          172
+        ],
+        [
+          "p",
+          "41. S. Palan, C. Schitter, Prolific.ac\u2014A subject pool for on",
+          117
+        ],
+        [
+          "p",
+          "42. G. Hardin, The tragedy of the commons.Science 162, 1243\u2013",
+          72
+        ],
+        [
+          "p",
+          "Acknowledgments:We are grateful to S. Vincent for excellent ",
+          1292
+        ],
+        [
+          "p",
+          "Submitted 14 December 2023 Accepted 7 June 2024 Published 12",
+          93
+        ]
+      ]
+    },
+    {
+      "file": "notes.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Notes",
+          5
+        ],
+        [
+          "p",
+          "1Department of Strategy and Entrepreneurship, UCL School of ",
+          1078
+        ]
+      ]
+    }
+  ],
+  "stats": {
+    "asides": 0,
+    "chapters": 3,
+    "columns": 2,
+    "footnotes": 7,
+    "grid_tables": 0,
+    "headings": 2,
+    "images": 4,
+    "pages": 9,
+    "raster_figures": 0,
+    "raster_tables": 0,
+    "title": "Science Journals \u2014 AAAS"
+  },
+  "toc": [
+    [
+      1,
+      "Generative AI enhances individual creativity but reduces the collective diversity of novel content"
+    ],
+    [
+      2,
+      "Supplementary Materials"
+    ],
+    [
+      1,
+      "Notes"
+    ]
+  ]
+}

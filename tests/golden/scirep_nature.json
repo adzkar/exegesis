@@ -1,0 +1,1321 @@
+{
+  "spine": [
+    {
+      "file": "chap_1.xhtml",
+      "frags": [
+        [
+          "h1",
+          "A shape-changing haptic navigation interface for vision impa",
+          66
+        ],
+        [
+          "p",
+          "OPEN",
+          4
+        ],
+        [
+          "p",
+          "Robert Quinn1, Stephen Murtough2, Henry de Winton1, Brandon ",
+          1595
+        ],
+        [
+          "p",
+          "Individuals with vision impairment (VI) rely on navigation a",
+          1507
+        ],
+        [
+          "p",
+          "In recent years, the technology required to localise a perso",
+          533
+        ],
+        [
+          "p",
+          "Auditory interfaces have long been investigated to provide n",
+          657
+        ],
+        [
+          "p",
+          "Alternatively, directions and warning signals can be provide",
+          483
+        ],
+        [
+          "p",
+          "A promising option is to provide spatial information in the ",
+          807
+        ],
+        [
+          "p",
+          "In this paper, we build on our previous work and present a n",
+          1165
+        ],
+        [
+          "p",
+          "We ultimately intend for Shape to be a comprehensive VI navi",
+          1459
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Fig. 1. A summary of the Shape haptic device. The Shape hapt",
+          830
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Fig. 2. A summary of the experiment design. Schematic depict",
+          974
+        ],
+        [
+          "p",
+          "shape-changing haptic devices may play in navigation for peo",
+          189
+        ]
+      ]
+    },
+    {
+      "file": "chap_2.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Results",
+          7
+        ],
+        [
+          "p",
+          "We recruited 10 participants with VI and 10 sighted particip",
+          827
+        ]
+      ]
+    },
+    {
+      "file": "chap_3.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Assessing time taken to locate virtual targets",
+          46
+        ],
+        [
+          "p",
+          "First, we assessed time taken to locate targets for each par",
+          1221
+        ],
+        [
+          "table",
+          "Table 1. A summary of trial participant information. M Male,",
+          597
+        ],
+        [
+          "p",
+          "With visual impairment Sighted",
+          30
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Fig. 3. Time taken to complete tasks for participants and de",
+          660
+        ]
+      ]
+    },
+    {
+      "file": "chap_4.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Measuring how efficiently participants located virtual targe",
+          62
+        ],
+        [
+          "p",
+          "Next, we designed a metric to measure how efficiently partic",
+          726
+        ],
+        [
+          "p",
+          "All participants located tasks significantly more efficientl",
+          448
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Fig. 4. Angular distance rotation efficiency for participant",
+          645
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Fig. 5. Representative targeting examples for all task condi",
+          922
+        ],
+        [
+          "p",
+          "elevated for Shape, relative to Vibration, for both sample g",
+          720
+        ],
+        [
+          "p",
+          "Representative examples for locating targets were generated ",
+          924
+        ]
+      ]
+    },
+    {
+      "file": "chap_5.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Evaluating participant user experience for the different dev",
+          74
+        ],
+        [
+          "p",
+          "Participants\u2019 experiences of the different device types were",
+          636
+        ],
+        [
+          "p",
+          "For participants with VI, Shape was generally scored more fa",
+          689
+        ],
+        [
+          "p",
+          "To quantify these data further, we designed a \u2018Positive Expe",
+          1102
+        ],
+        [
+          "p",
+          "Within the survey, participants had the opportunity to write",
+          336
+        ],
+        [
+          "p",
+          "\u201cMainly using the noise [of the device] to locate the target",
+          382
+        ],
+        [
+          "p",
+          "\u201c[The device was] fairly quick to learn, fairly sensitive, a",
+          256
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Fig. 6. Mean Likert scores for participant user experience. ",
+          906
+        ]
+      ]
+    },
+    {
+      "file": "chap_6.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Discussion",
+          10
+        ],
+        [
+          "p",
+          "Findings presented here build on our previous work and exper",
+          517
+        ],
+        [
+          "p",
+          "This trial represents a first spatial guidance assessment of",
+          715
+        ],
+        [
+          "p",
+          "Looking ahead, we aim to assess how Shape performs at naviga",
+          751
+        ],
+        [
+          "p",
+          "A key aspect of this study is the evidence provided for shap",
+          757
+        ]
+      ]
+    },
+    {
+      "file": "chap_7.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Limitations and future work",
+          27
+        ],
+        [
+          "p",
+          "The work presented in this manuscript aimed to evaluate the ",
+          740
+        ]
+      ]
+    },
+    {
+      "file": "chap_8.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Perception system limitations",
+          29
+        ],
+        [
+          "p",
+          "Our study currently involves the sequential presentation of ",
+          225
+        ],
+        [
+          "p",
+          "Such a system could be a device-mounted camera that identifi",
+          979
+        ],
+        [
+          "p",
+          "By using the HTC Vive Pro virtual reality system for localis",
+          434
+        ],
+        [
+          "p",
+          "Static vs. mobile studies In the presented study, participan",
+          583
+        ],
+        [
+          "p",
+          "Now that we have collected data on Shape in controlled condi",
+          562
+        ]
+      ]
+    },
+    {
+      "file": "chap_9.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Multiple targets",
+          16
+        ],
+        [
+          "p",
+          "While the virtual targets in this study are presented indivi",
+          652
+        ]
+      ]
+    },
+    {
+      "file": "chap_10.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Combining shape and vibration",
+          29
+        ],
+        [
+          "p",
+          "Our study compares user behaviour when guided by the haptic ",
+          789
+        ],
+        [
+          "p",
+          "An alternative use of vibration could be to alert users to u",
+          269
+        ]
+      ]
+    },
+    {
+      "file": "chap_11.xhtml",
+      "frags": [
+        [
+          "h2",
+          "DOF of shape and vibration modalities",
+          37
+        ],
+        [
+          "p",
+          "In this work, we have comparatively evaluated 2-DOF shape-ch",
+          607
+        ],
+        [
+          "p",
+          "As such, modality choice was not based explicitly on DOF, wh",
+          234
+        ],
+        [
+          "p",
+          "A further factor that influenced our study design was keepin",
+          442
+        ]
+      ]
+    },
+    {
+      "file": "chap_12.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Methods",
+          7
+        ]
+      ]
+    },
+    {
+      "file": "chap_13.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Device hardware",
+          15
+        ],
+        [
+          "p",
+          "The goal of the Shape interface is to communicate 3D vectors",
+          874
+        ],
+        [
+          "p",
+          "The device is designed to be used with an \u201cinline\u201d grip, lik",
+          364
+        ],
+        [
+          "p",
+          "The cross-section of the device is square with rounded corne",
+          532
+        ]
+      ]
+    },
+    {
+      "file": "chap_14.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Shape hardware",
+          14
+        ],
+        [
+          "p",
+          "The 2 degree of freedom joint is driven by a tendon mechanis",
+          249
+        ],
+        [
+          "p",
+          "The handle is linked to the head via a flexible spline. This",
+          867
+        ],
+        [
+          "p",
+          "The functional components of the device were constructed fro",
+          689
+        ]
+      ]
+    },
+    {
+      "file": "chap_15.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Vibration hardware",
+          18
+        ],
+        [
+          "p",
+          "To provide the vibration modality a Linear Resonant Actuator",
+          1058
+        ],
+        [
+          "p",
+          "The input signal amplitude is independent of its frequency f",
+          366
+        ]
+      ]
+    },
+    {
+      "file": "chap_16.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Virtual reality system",
+          22
+        ],
+        [
+          "p",
+          "The device is controlled by a HTC Vive Pro virtual reality s",
+          727
+        ],
+        [
+          "p",
+          "The targets for all trials are virtual spheres, that exist o",
+          435
+        ]
+      ]
+    },
+    {
+      "file": "chap_17.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Tilt compensation",
+          17
+        ],
+        [
+          "p",
+          "The position of the target is estimated relative to the devi",
+          367
+        ]
+      ]
+    },
+    {
+      "file": "chap_18.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Device behaviour",
+          16
+        ],
+        [
+          "p",
+          "The device was given three modes to allow evaluation of Shap",
+          92
+        ]
+      ]
+    },
+    {
+      "file": "chap_19.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Shape behaviour",
+          15
+        ],
+        [
+          "p",
+          "The device bends the head of the device to point towards its",
+          440
+        ]
+      ]
+    },
+    {
+      "file": "chap_20.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Vibration behaviour",
+          19
+        ],
+        [
+          "p",
+          "The LRA was used to provide a Vibration of increasing freque",
+          276
+        ],
+        [
+          "p",
+          "Numbness or discomfort caused by exposure to vibration is we",
+          501
+        ],
+        [
+          "p",
+          "The relatively low frequency of our vibration stimulus suits",
+          785
+        ],
+        [
+          "p",
+          "Once pointed at the target the rhythm of the vibration would",
+          270
+        ],
+        [
+          "p",
+          "A multi vibration approach was considered, however this does",
+          509
+        ]
+      ]
+    },
+    {
+      "file": "chap_21.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Sight",
+          5
+        ],
+        [
+          "p",
+          "The sighted tasks were performed using the VR Headset, allow",
+          479
+        ]
+      ]
+    },
+    {
+      "file": "chap_22.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Trial design",
+          12
+        ],
+        [
+          "p",
+          "Virtual targets were generated on a spherical frustrum of ra",
+          845
+        ],
+        [
+          "p",
+          "As described in Fig. 2, each participant was equipped with t",
+          839
+        ],
+        [
+          "p",
+          "While standing within a clear 2 m \u00d7 2 m area, the participan",
+          1105
+        ]
+      ]
+    },
+    {
+      "file": "chap_23.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Ethical approval",
+          16
+        ],
+        [
+          "p",
+          "The study was approved by the internal head of department an",
+          341
+        ]
+      ]
+    },
+    {
+      "file": "chap_24.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Participant recruitment",
+          23
+        ],
+        [
+          "p",
+          "Participants were recruited to the study through MakeSense T",
+          1032
+        ]
+      ]
+    },
+    {
+      "file": "chap_25.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Data and statistical analysis",
+          29
+        ],
+        [
+          "p",
+          "Data were processed in R (v.4.3.1), MATLAB (R2023b) and Pyth",
+          511
+        ],
+        [
+          "p",
+          "To assess average time taken to complete tasks, data were vi",
+          272
+        ],
+        [
+          "p",
+          "To assess rotation efficiency, the angular distance was meas",
+          754
+        ],
+        [
+          "p",
+          "Heatmaps were generated from mean Likert scores using ggplot",
+          744
+        ],
+        [
+          "p",
+          "Quaternion rotation values for individual tasks were plotted",
+          267
+        ]
+      ]
+    },
+    {
+      "file": "chap_26.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Data availability",
+          17
+        ],
+        [
+          "p",
+          "The datasets generated and analysed during the current study",
+          375
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_27.xhtml",
+      "frags": [
+        [
+          "h2",
+          "References",
+          10
+        ],
+        [
+          "p",
+          "1. Jeamwatthanachai, W., Wald, M. & Wills, G. Indoor navigat",
+          130
+        ],
+        [
+          "p",
+          "buildings. Br. J. Vis. Impair. 37 (2), 140\u2013153. https://doi.",
+          96
+        ],
+        [
+          "p",
+          "2. Y. Wei, X. Kou, and M. C. Lee. A new vision and navigatio",
+          131
+        ],
+        [
+          "p",
+          "ASME International Conference on Advanced Intelligent Mechat",
+          127
+        ],
+        [
+          "p",
+          "3. Spiers, A. J. & Dollar, A. M. Design and evaluation of sh",
+          133
+        ],
+        [
+          "p",
+          "Trans. Haptics 10 (1), 17\u201328. https://doi.org/10.1109/toh.20",
+          78
+        ],
+        [
+          "p",
+          "4. Spiers, A., Young, E. & Kuchenbecker, K. J. The S-BAN: In",
+          134
+        ],
+        [
+          "p",
+          "pedestrian navigation. ACM Trans. Comput. Hum. Interact. htt",
+          96
+        ],
+        [
+          "p",
+          "5. Audrestch, H. M. et al. Recognizing the value of assistan",
+          160
+        ],
+        [
+          "p",
+          "6\u200b/\u200bj\u200b.\u200bd\u200bh\u200bj\u200bo\u200b.\u200b2\u200b0\u200b1\u200b5\u200b.\u200b0\u200b7\u200b.\u200b0\u200b0\u200b1\u200b (2015).",
+          48
+        ],
+        [
+          "p",
+          "6. Craigon, P. J. et al. \u201cShe\u2019s a dog at the end of the day\u201d",
+          134
+        ],
+        [
+          "p",
+          "ONE 12 (4), e0176018. https://doi.org/10.1371/journal.pone.0",
+          74
+        ],
+        [
+          "p",
+          "7. Gitlin, L. N., Mount, J., Lucas, W., Weirich, L. C. & Gra",
+          133
+        ],
+        [
+          "p",
+          "persons who are visually impaired or blind. J. Vis. Impair. ",
+          134
+        ],
+        [
+          "p",
+          "8. Sanders, C. R. The impact of guide dogs on the identity o",
+          143
+        ],
+        [
+          "p",
+          "i\u200b.\u200bo\u200br\u200bg\u200b/\u200b1\u200b0\u200b.\u200b2\u200b7\u200b5\u200b2\u200b/\u200b0\u200b8\u200b9\u200b2\u200b7\u200b9\u200b3\u200b0\u200b0\u200b7\u200b8\u200b6\u200b9\u200b9\u200b9\u200b8\u200b",
+          72
+        ],
+        [
+          "p",
+          "9. Guide Dogs, Annual Report & Accounts 2022. \u200bh\u200bt\u200bt\u200bp\u200bs\u200b:\u200b/",
+          199
+        ],
+        [
+          "p",
+          "d\u200b-\u200ba\u200bn\u200bn\u200bu\u200ba\u200bl\u200b-\u200br\u200be\u200bv\u200bi\u200be\u200bw\u200bs\u200b/\u200b (2022).",
+          42
+        ],
+        [
+          "p",
+          "10. RNIB, Key statistics about sight loss. \u200bh\u200bt\u200bt\u200bp\u200bs\u200b:\u200b/\u200b/\u200b",
+          220
+        ],
+        [
+          "p",
+          "g\u200be\u200b-\u200ba\u200bn\u200bd\u200b-\u200br\u200be\u200bs\u200be\u200ba\u200br\u200bc\u200bh\u200b-\u200bh\u200bu\u200bb\u200b/\u200bk\u200be\u200by\u200b-\u200bi\u200bn\u200bf\u200bo\u200br\u200bm\u200b",
+          353
+        ],
+        [
+          "p",
+          "11. Alkendi, Y., Seneviratne, L. & Zweiri, Y. State of the a",
+          137
+        ],
+        [
+          "p",
+          "IEEE Access 9, 76847\u201376874. https://doi.org/10.1109/ACCESS.2",
+          79
+        ],
+        [
+          "p",
+          "12. Bilal Salih, H. E. et al. Use of auditory cues and other",
+          139
+        ],
+        [
+          "p",
+          "when navigating unfamiliar environments. Int. J. Environ. Re",
+          137
+        ],
+        [
+          "p",
+          "13. Karcher, S. M., Fenzlaff, S., Hartmann, D., Nagel, S. K.",
+          137
+        ],
+        [
+          "p",
+          "https://doi.org/10.3389/fnhum.2012.00037 (2012).",
+          48
+        ],
+        [
+          "p",
+          "14. J. Borenstein and I. Ulrich, The GuideCane-a computerize",
+          134
+        ],
+        [
+          "p",
+          "of International Conference on Robotics and Automation 2 128",
+          117
+        ],
+        [
+          "p",
+          "15. Bradley, N. A. & Dunlop, M. D. An experimental investiga",
+          127
+        ],
+        [
+          "p",
+          "Ubiquitous Comput. 9 (6), 395\u2013403. https://doi.org/10.1007/s",
+          84
+        ],
+        [
+          "p",
+          "16. Vel\u00e1zquez, R. Wearable assistive devices for the blind. ",
+          127
+        ],
+        [
+          "p",
+          "Environment: Issues and Characterization (eds Lay-Ekuakille,",
+          112
+        ],
+        [
+          "p",
+          "17. S. K\u00e4rcher, S. Fenzlaff, D. Hartmann, S. Nagel, and P. K",
+          143
+        ],
+        [
+          "p",
+          "d\u200bo\u200bi\u200b.\u200bo\u200br\u200bg\u200b/\u200b1\u200b0\u200b.\u200b3\u200b3\u200b8\u200b9\u200b/\u200bf\u200bn\u200bh\u200bu\u200bm\u200b.\u200b2\u200b0\u200b1\u200b2\u200b.\u200b0\u200b0\u200b0\u200b",
+          72
+        ],
+        [
+          "p",
+          "18. J. V. S. Luces, K. Ishida, and Y. Hirata, \"Human positio",
+          128
+        ],
+        [
+          "p",
+          "sensation. In: 2019 IEEE International Conference on Cyborg ",
+          195
+        ],
+        [
+          "p",
+          "19. M. Aggravi, S. Scheggi, and D. Prattichizzo, Evaluation ",
+          128
+        ],
+        [
+          "p",
+          "feedback. In: 2015 IEEE/RSJ International Conference on Inte",
+          197
+        ],
+        [
+          "p",
+          "20. Dim, N. K. & Ren, X. Investigation of suitable body part",
+          129
+        ],
+        [
+          "p",
+          "Comput. Stud. 97, 34\u201344. https://doi.org/10.1016/j.ijhcs.201",
+          76
+        ],
+        [
+          "p",
+          "21. D. Dobbelstein, P. Henzler, and E. Rukzio, Unconstrained",
+          125
+        ],
+        [
+          "p",
+          "wristband of a smartwatch. Presented at the Proceedings of t",
+          147
+        ],
+        [
+          "p",
+          "22. Liao, Z., Luces, J. V. S. & Hirata, Y. Human navigation ",
+          132
+        ],
+        [
+          "p",
+          "Autom. Lett. 5 (4), 5732\u20135739. https://doi.org/10.1109/LRA.2",
+          79
+        ],
+        [
+          "p",
+          "23. Z. Liao, J. Salazar, and Y. Hirata, Robotic guidance sys",
+          135
+        ],
+        [
+          "p",
+          "2021 IEEE/RSJ International Conference on Intelligent Robots",
+          194
+        ],
+        [
+          "p",
+          "24. Oakley, I. & Park, J. Did you feel something? Distracter",
+          134
+        ],
+        [
+          "p",
+          "354\u2013363. https://doi.org/10.1016/j.intcom.2007.11.003 (2008)",
+          61
+        ],
+        [
+          "p",
+          "25. Choi, S. & Kuchenbecker, K. J. Vibrotactile display: Per",
+          129
+        ],
+        [
+          "p",
+          "https://doi.org/10.1109/JPROC.2012.2221071 (2013).",
+          50
+        ],
+        [
+          "p",
+          "26. A. J. Spiers and A. M. Dollar, Outdoor pedestrian naviga",
+          129
+        ],
+        [
+          "p",
+          "with a vibrotactile device. In: 2016 IEEE Haptics Symposium ",
+          130
+        ],
+        [
+          "p",
+          "27. Nagel, S. K., Carl, C., Kringe, T., Martin, R. & Konig, ",
+          138
+        ],
+        [
+          "p",
+          "R13-26. https://doi.org/10.1088/1741-2560/2/4/r02 (2005).",
+          57
+        ],
+        [
+          "p",
+          "28. Y. Zheng and J. B. Morrell, Haptic actuator design param",
+          134
+        ],
+        [
+          "p",
+          "(HAPTICS), 463\u2013470, https://doi.org/10.1109/HAPTIC.2012.6183",
+          71
+        ],
+        [
+          "p",
+          "29. Spiers, A. J. et al. Testing a shape-changing haptic nav",
+          133
+        ],
+        [
+          "p",
+          "theater setting. IEEE Trans. Hum. Mach. Syst. 48 (6), 614\u201362",
+          112
+        ],
+        [
+          "p",
+          "30. Gaunet, F., Ittyerah, M. & Rossetti, Y. Pointing at targ",
+          136
+        ],
+        [
+          "p",
+          "(2), 167\u2013179. https://doi.org/10.1007/s00221-006-0720-3 (200",
+          63
+        ],
+        [
+          "p",
+          "31. McKenzie, G., Hegarty, M., Barrett, T. & Goodchild, M. A",
+          131
+        ],
+        [
+          "p",
+          "positional uncertainty. Int. J. Geogr. Inf. Sci. 30 (2), 221",
+          119
+        ],
+        [
+          "p",
+          "32. Texas Instruments, Application Note Haptic Energy Consum",
+          109
+        ],
+        [
+          "p",
+          "33. Niehorster, D. C., Li, L. & Lappe, M. The accuracy and p",
+          137
+        ],
+        [
+          "p",
+          "system for scientific research. Iperception 8 (3), 204166951",
+          117
+        ],
+        [
+          "p",
+          "34. T. Amemiya and H. Sugiyama, Haptic handheld wayfinder wi",
+          127
+        ],
+        [
+          "p",
+          "Presented at the Proceedings of the 11th international ACM S",
+          190
+        ],
+        [
+          "p",
+          "35. Morioka, M. & Griffin, M. J. Thresholds for the percepti",
+          132
+        ],
+        [
+          "p",
+          "location. Somatosens. Mot. Res. 22 (4), 281\u2013297. https://doi",
+          98
+        ],
+        [
+          "p",
+          "36. Mirbod, S. M. et al. Assessment of hand-arm vibration ex",
+          129
+        ],
+        [
+          "p",
+          "Health 70 (1), 22\u201328. https://doi.org/10.1007/s004200050182 ",
+          67
+        ],
+        [
+          "p",
+          "37. Lofvenberg, J. & Johansson, R. S. Regional differences a",
+          139
+        ],
+        [
+          "p",
+          "of the human hand. Brain Res. 301 (1), 65\u201372. https://doi.or",
+          98
+        ],
+        [
+          "p",
+          "38. Bernard, C., Monnoyer, J., Wiertlewski, M. & Ystad, S. R",
+          131
+        ],
+        [
+          "p",
+          "4188. https://doi.org/10.1038/s41598-022-08152-w (2022).",
+          56
+        ],
+        [
+          "p",
+          "39. Boone, W. J., Staver, J. R. & Yale, M. S. Rasch Analysis",
+          109
+        ]
+      ]
+    },
+    {
+      "file": "chap_28.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Author contributions",
+          20
+        ],
+        [
+          "p",
+          "RQ co-wrote the manuscript, co-developed the device, co-desi",
+          836
+        ]
+      ]
+    },
+    {
+      "file": "chap_29.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Funding",
+          7
+        ],
+        [
+          "p",
+          "Innovate UK provided funding for this study via a UK SMART G",
+          144
+        ]
+      ]
+    },
+    {
+      "file": "chap_30.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Declarations",
+          12
+        ]
+      ]
+    },
+    {
+      "file": "chap_31.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Competing interests",
+          19
+        ],
+        [
+          "p",
+          "Several of the authors (RQ, HDW, BEF, SZ, JDS and AS) are as",
+          339
+        ]
+      ]
+    },
+    {
+      "file": "chap_32.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Additional information",
+          22
+        ],
+        [
+          "p",
+          "Supplementary Information The online version contains supple",
+          250
+        ],
+        [
+          "p",
+          "Reprints and permissions information is available at www.nat",
+          77
+        ],
+        [
+          "p",
+          "Publisher\u2019s note Springer Nature remains neutral with regard",
+          135
+        ],
+        [
+          "p",
+          "Open Access This article is licensed under a Creative Common",
+          850
+        ],
+        [
+          "p",
+          "\u00a9 The Author(s) 2024",
+          20
+        ]
+      ]
+    },
+    {
+      "file": "notes.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Notes",
+          5
+        ],
+        [
+          "p",
+          "1MakeSense Technology Ltd, London, UK. 2Manipulation and Tou",
+          324
+        ]
+      ]
+    }
+  ],
+  "stats": {
+    "asides": 0,
+    "chapters": 33,
+    "columns": 1,
+    "footnotes": 1,
+    "grid_tables": 1,
+    "headings": 32,
+    "images": 7,
+    "pages": 13,
+    "raster_figures": 0,
+    "raster_tables": 0,
+    "title": "A shape-changing haptic navigation interface for vision impairment"
+  },
+  "toc": [
+    [
+      1,
+      "A shape-changing haptic navigation interface for vision impairment"
+    ],
+    [
+      2,
+      "Results"
+    ],
+    [
+      2,
+      "Assessing time taken to locate virtual targets"
+    ],
+    [
+      2,
+      "Measuring how efficiently participants located virtual targets"
+    ],
+    [
+      2,
+      "Evaluating participant user experience for the different device interfaces"
+    ],
+    [
+      2,
+      "Discussion"
+    ],
+    [
+      2,
+      "Limitations and future work"
+    ],
+    [
+      2,
+      "Perception system limitations"
+    ],
+    [
+      2,
+      "Multiple targets"
+    ],
+    [
+      2,
+      "Combining shape and vibration"
+    ],
+    [
+      2,
+      "DOF of shape and vibration modalities"
+    ],
+    [
+      2,
+      "Methods"
+    ],
+    [
+      2,
+      "Device hardware"
+    ],
+    [
+      2,
+      "Shape hardware"
+    ],
+    [
+      2,
+      "Vibration hardware"
+    ],
+    [
+      2,
+      "Virtual reality system"
+    ],
+    [
+      2,
+      "Tilt compensation"
+    ],
+    [
+      2,
+      "Device behaviour"
+    ],
+    [
+      2,
+      "Shape behaviour"
+    ],
+    [
+      2,
+      "Vibration behaviour"
+    ],
+    [
+      2,
+      "Sight"
+    ],
+    [
+      2,
+      "Trial design"
+    ],
+    [
+      2,
+      "Ethical approval"
+    ],
+    [
+      2,
+      "Participant recruitment"
+    ],
+    [
+      2,
+      "Data and statistical analysis"
+    ],
+    [
+      2,
+      "Data availability"
+    ],
+    [
+      2,
+      "References"
+    ],
+    [
+      2,
+      "Author contributions"
+    ],
+    [
+      2,
+      "Funding"
+    ],
+    [
+      2,
+      "Declarations"
+    ],
+    [
+      2,
+      "Competing interests"
+    ],
+    [
+      2,
+      "Additional information"
+    ],
+    [
+      1,
+      "Notes"
+    ]
+  ]
+}

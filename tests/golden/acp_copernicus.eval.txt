@@ -1,0 +1,26 @@
+# epub-eval: acp_copernicus.pdf
+
+**Verdict:** 0 high-severity findings — clean; verbatim word coverage 95.3% (18131/19026, epub emitted 18670 words after rejoins)
+
+## Checks
+- A container: PASS — 20 members, 4 chapters, 9 images
+- B metadata: title='Seasonal variations in photooxidant formation and light abso'
+- C coverage: rejoined 763, furniture 547, rasterized table cells 0, superscript splits 18, genuine loss 114
+- D toc: 5 entries, h1=1 h2=3, dupes=none
+- G figures: pdf rasters=9, embedded=9, vector pages=[1]
+
+## Findings (severity-ranked)
+| Sev | Check | Finding |
+|-----|-------|---------|
+| Med | C | genuine word loss 114: [('81o', 24), ('in', 10), ('pho', 5), ('tooxidant', 5), ('chem', 3), ('acp', 3), ('light', 3), ('at', 3), ('forma', 3), ('mos', 3)] |
+| Low | G | vector graphics on pages [1] not capturable — verify content survived as text |
+| Low | G | chap_1.xhtml: <img> missing caption alt text |
+
+## Classified word loss
+| class | words | top examples |
+|-------|-------|--------------|
+| rejoined hyphenation | 763 | con, tion, ing, sam, tions, ox, re, centrations |
+| stripped furniture | 547 | 24, 2024, 21, 10, chem, phys, https, doi |
+| rasterized table cells | 0 |  |
+| superscript splits | 18 | 3c, 3dmb, o2, ma1, worland1, heinlein1, guzman1, jiang2 |
+| genuine loss | 114 | 81o, in, pho, tooxidant, chem, acp, light, at |

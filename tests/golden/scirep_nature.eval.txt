@@ -1,0 +1,27 @@
+# epub-eval: scirep_nature.pdf
+
+**Verdict:** 0 high-severity findings — clean; verbatim word coverage 99.5% (10185/10239, epub emitted 10284 words after rejoins)
+
+## Checks
+- A container: PASS — 46 members, 32 chapters, 7 images
+- B metadata: title='A shape-changing haptic navigation interface for vision impa'
+- C coverage: rejoined 4, furniture 237, rasterized table cells 0, superscript splits 47, genuine loss 3
+- D toc: 33 entries, h1=1 h2=31, dupes=none
+- G figures: pdf rasters=7, embedded=7, vector pages=[1, 4]
+
+## Findings (severity-ranked)
+| Sev | Check | Finding |
+|-----|-------|---------|
+| Low | C | genuine word loss 3: [('3d4', 1), ('values', 1), ('p', 1)] |
+| Low | G | vector-ruled table grids on pages [4] — cells emit as flat text, structure lost |
+| Low | G | vector graphics on pages [1] not capturable — verify content survived as text |
+| Low | G | chap_26.xhtml: <img> missing caption alt text |
+
+## Classified word loss
+| class | words | top examples |
+|-------|-------|--------------|
+| rejoined hyphenation | 4 | vision, two, based, sample |
+| stripped furniture | 237 | 10, 7, scientific, reports, 2024, 14, 29223, https |
+| rasterized table cells | 0 |  |
+| superscript splits | 47 | quinn1, murtough2, winton1, frew1, zane1, sousa1, kempapidis3, gomes3 |
+| genuine loss | 3 | 3d4, values, p |

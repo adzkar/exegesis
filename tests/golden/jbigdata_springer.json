@@ -1,0 +1,1331 @@
+{
+  "spine": [
+    {
+      "file": "chap_1.xhtml",
+      "frags": [
+        [
+          "p",
+          "Journal of Big Data",
+          19
+        ],
+        [
+          "p",
+          "Ghose and Jamil Journal of Big Data (2026) 13:59 https://doi",
+          91
+        ],
+        [
+          "p",
+          "RESEARCH Open Access",
+          20
+        ],
+        [
+          "h1",
+          "CardiaTics: An explainable AI integrated heart disease diagn",
+          125
+        ],
+        [
+          "p",
+          "Partho Ghose1 and Hasan Jamil2*",
+          31
+        ],
+        [
+          "p",
+          "*Correspondence: Hasan Jamil jamil@uidaho.edu 1Department of",
+          277
+        ]
+      ]
+    },
+    {
+      "file": "chap_2.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Abstract",
+          8
+        ],
+        [
+          "p",
+          "Heart disease is a leading global cause of morbidity and mor",
+          1667
+        ],
+        [
+          "p",
+          "Keywords Heart disease, Machine Learning, Ensemble Learning,",
+          102
+        ],
+        [
+          "blockquote",
+          "Introduction Cardiovascular diseases (CVDs) pose a significa",
+          462
+        ],
+        [
+          "p",
+          "Africa [4]. Even in the cases of non-fatal strokes, serious ",
+          142
+        ],
+        [
+          "p",
+          "Traditional diagnostics of heart diseases rely on archaic pr",
+          791
+        ],
+        [
+          "p",
+          "Among these ML approaches, an approach called ensembling [10",
+          551
+        ],
+        [
+          "p",
+          "Though ML based diagnoses approaches are powerful and promis",
+          306
+        ],
+        [
+          "p",
+          "In the context of heart disease prediction [13, 14], various",
+          340
+        ],
+        [
+          "p",
+          "Feature engineering is crucial for enhancing the performance",
+          481
+        ],
+        [
+          "p",
+          "Like most other methods, feature selection play a critical r",
+          595
+        ],
+        [
+          "p",
+          "In this paper, we employ three feature selection strategies ",
+          1072
+        ],
+        [
+          "p",
+          "1. With a view to enhance model\u2019s prediction, we apply three",
+          89
+        ],
+        [
+          "p",
+          "such as Pearson correlation, Chi-2 test, and Recursive Featu",
+          151
+        ],
+        [
+          "p",
+          "2. To understand the quality and effectiveness of CardiaTics",
+          87
+        ],
+        [
+          "p",
+          "metrics to measure performance, e.g., accuracy, precision, s",
+          197
+        ],
+        [
+          "p",
+          "3. We also incorporate model interpretability tools such as ",
+          83
+        ],
+        [
+          "p",
+          "CardiaTics for a deeper understanding of heart disease dynam",
+          130
+        ],
+        [
+          "p",
+          "The presentation of the remainder of the article is planned ",
+          411
+        ]
+      ]
+    },
+    {
+      "file": "chap_3.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Related research",
+          16
+        ],
+        [
+          "p",
+          "Though ML-based diagnostic approaches are powerful and promi",
+          308
+        ],
+        [
+          "p",
+          "Stacked ensemble learning models have emerged as a powerful ",
+          836
+        ],
+        [
+          "p",
+          "One of the voting ensemble methods [29] incorporates multipl",
+          641
+        ],
+        [
+          "p",
+          "The literature highlights the critical importance of selecti",
+          299
+        ],
+        [
+          "p",
+          "Abdar et al. [31] made a significant contribution by introdu",
+          503
+        ],
+        [
+          "p",
+          "Rahma et al. [29] proposed a voting ensemble method that inc",
+          266
+        ],
+        [
+          "p",
+          "Shah et al. [10] introduced a hybrid intelligent machine-lea",
+          327
+        ],
+        [
+          "p",
+          "Ali et al. [30] presented an intelligent healthcare monitori",
+          447
+        ],
+        [
+          "p",
+          "In line with these efforts, several recent studies also have",
+          2075
+        ],
+        [
+          "p",
+          "Table 1 summarizes the key contributions and limitations fro",
+          273
+        ]
+      ]
+    },
+    {
+      "file": "chap_4.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Methodology",
+          11
+        ],
+        [
+          "p",
+          "This research aims to develop an automated system for detect",
+          317
+        ],
+        [
+          "p",
+          "Data description The Heart Disease data used in this study i",
+          589
+        ],
+        [
+          "table",
+          "Table 1 Summary of recent works on heart disease prediction ",
+          878
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Fig. 1 Framework of heart disease detection model Table 2 De",
+          1637
+        ],
+        [
+          "p",
+          "Z = x \u2212\u00b5 \u03c3 (1)",
+          14
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Fig. 2 Distribution of heart disease and normal cases in the",
+          223
+        ],
+        [
+          "p",
+          "To normalize the data, we first encode categorical variables",
+          459
+        ],
+        [
+          "p",
+          "\u03c1new = \u03c1 \u2212min(\u03c1) max(\u03c1) \u2212min(\u03c1) (2) where \u03c1new = normalized ",
+          151
+        ],
+        [
+          "p",
+          "Feature selection techniques We follow a systematic explorat",
+          587
+        ],
+        [
+          "p",
+          "\u2211(Xi \u2212\u00afX)(Yi \u2212\u00afY ) \u221a\u2211(Xi \u2212\u00afX)2 \u2211(Yi \u2212\u00afY )2 (3) r = where, r ",
+          206
+        ],
+        [
+          "p",
+          "Chi-2 measures the independence between variables. It is oft",
+          171
+        ],
+        [
+          "p",
+          "\u2211(Oi \u2212Ei)2 Chi \u22122 = (4) Ei where, Oi is the observed frequen",
+          127
+        ],
+        [
+          "p",
+          "RFE is a feature selection method that recursively removes f",
+          884
+        ],
+        [
+          "p",
+          "Model building We now focus on the process of model construc",
+          498
+        ],
+        [
+          "p",
+          "Cross-validation and model selection We select various basel",
+          340
+        ],
+        [
+          "p",
+          "cvak = 1",
+          8
+        ],
+        [
+          "p",
+          "k \u2211 Accuracyi (5) k i=1 where, k is the number of folds, cva",
+          225
+        ],
+        [
+          "p",
+          "\u2200{x \u2208N, 0 < x < 10}, modelx = Omax...min(cva1, cva2, . . . ,",
+          218
+        ],
+        [
+          "p",
+          "Proposed model Stacking, also known as super learning, repre",
+          744
+        ],
+        [
+          "p",
+          "Based on the cross-validation accuracy performance of differ",
+          430
+        ],
+        [
+          "p",
+          "The training set is divided into ten initial segments, nine ",
+          704
+        ],
+        [
+          "p",
+          "To identify the optimal ensemble configuration, we employ a ",
+          811
+        ],
+        [
+          "p",
+          "This ensemble technique takes advantage of the collective wi",
+          363
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "( ( ))",
+          6
+        ],
+        [
+          "p",
+          "1 N",
+          3
+        ],
+        [
+          "p",
+          "1 k",
+          3
+        ],
+        [
+          "p",
+          "N \u2211",
+          3
+        ],
+        [
+          "p",
+          "k \u2211 \u02c6fCardiaT ics(x) = MLP wi,j \u00d7 \u02c6yi,j (7) i=1 j=1 Here, N ",
+          712
+        ],
+        [
+          "p",
+          "XAI Explainable Artificial Intelligence (XAI) has emerged as",
+          602
+        ],
+        [
+          "p",
+          "The importance of explainability has grown considerably in r",
+          720
+        ],
+        [
+          "p",
+          "The need for explainable AI is even more pronounced in healt",
+          700
+        ],
+        [
+          "p",
+          "In response to these challenges, a wide array of XAI techniq",
+          635
+        ],
+        [
+          "p",
+          "However, the proliferation of XAI methods presents a new cha",
+          862
+        ],
+        [
+          "p",
+          "Above all, as AI continues to permeate decision-critical sec",
+          286
+        ],
+        [
+          "p",
+          "Various interpretability techniques are available, each with",
+          1413
+        ],
+        [
+          "p",
+          "In contrast, Shapley Additive Explanations (SHAP) and ELI5 o",
+          1255
+        ],
+        [
+          "p",
+          "Model evaluation metrics We largely adopt the standard metri",
+          154
+        ],
+        [
+          "p",
+          "Accuracy = TP + TN TP + TN + FP + FN (8) Sensitivity = TP TP",
+          188
+        ],
+        [
+          "p",
+          "F1 \u2212Score = 2 \u00d7 Precision \u00d7 Recall Precision + Recall (12) F",
+          106
+        ],
+        [
+          "p",
+          "MCC = TP \u00d7 TN \u2212FP \u00d7 FN \u221a (TP + FP) \u00d7 (TP + FN) \u00d7 (TN + FP) \u00d7",
+          207
+        ],
+        [
+          "p",
+          "LogLossi = \u22121 N \u2211 (Ai \u00d7 ln Pi + (1 \u2212Ai) \u00d7 ln (1 \u2212Pi)) (14) N",
+          399
+        ]
+      ]
+    },
+    {
+      "file": "chap_5.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Experiments, results and discussions",
+          36
+        ],
+        [
+          "p",
+          "Our goal is to help identify individuals with cardiac issues",
+          260
+        ],
+        [
+          "p",
+          "Base models selection for cardiaTics The base models in ense",
+          395
+        ],
+        [
+          "table",
+          "Table 3 valuation of base models with hyperparameter configu",
+          2600
+        ],
+        [
+          "table",
+          "Table 3 (continued)ModelHyperparametersAccuracyLossRationale",
+          965
+        ],
+        [
+          "table",
+          "Table 4 Model performances before feature selection is appli",
+          496
+        ],
+        [
+          "p",
+          "RF 0.889362 0.864662 0.934959 0.839286 0.898438 0.887123 3.8",
+          917
+        ],
+        [
+          "p",
+          "Pre feature engineering model evaluation We present an initi",
+          891
+        ],
+        [
+          "p",
+          "From Fig. 4, we can see the highest average AUC of 0.951 is ",
+          278
+        ],
+        [
+          "p",
+          "Feature importance analysis As alluded to before, we used th",
+          349
+        ],
+        [
+          "p",
+          "The distribution of feature contributions across six methods",
+          638
+        ],
+        [
+          "p",
+          "Post feature engineering model evaluation Once the most infl",
+          289
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "table",
+          "Table 5 Feature selection through Pearson correlation, Chi-2",
+          611
+        ],
+        [
+          "table",
+          "Table 6 Comparison of different models after feature selecti",
+          496
+        ],
+        [
+          "p",
+          "RF 0.897872 0.872180 0.943089 0.848214 0.906250 0.895652 3.5",
+          487
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Fig. 6 Accuracy comparison different models",
+          43
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "table",
+          "Table 7 Friedman test before feature engineering\u03c72dfp-value1",
+          74
+        ],
+        [
+          "table",
+          "Table 8 Friedman test after feature engineering\u03c72dfp-value15",
+          74
+        ],
+        [
+          "table",
+          "Table 9 Friedman effect size before feature engineeringynEff",
+          105
+        ],
+        [
+          "table",
+          "Table 10 Friedman effect size after feature engineeringynEff",
+          105
+        ],
+        [
+          "table",
+          "Table 11 Nemenyi test before feature engineeringAccuracyPrec",
+          99
+        ],
+        [
+          "table",
+          "Table 12 Nemenyi test after feature engineeringAccuracyPreci",
+          104
+        ],
+        [
+          "p",
+          "From Table 7 and Table 8 we notice that in both cases the p-",
+          716
+        ],
+        [
+          "p",
+          "Explainabilty in cardiaTics We measure explainability of pre",
+          475
+        ],
+        [
+          "p",
+          "Global Explainabilty with ELI5 The ELI5 tool is used to iden",
+          917
+        ],
+        [
+          "p",
+          "Features listed higher in the list are considered more impor",
+          306
+        ],
+        [
+          "p",
+          "Global explainability with SHAP The SHAP library allows for ",
+          426
+        ],
+        [
+          "p",
+          "Fig. 8 shows the average impact of the selected features on ",
+          367
+        ],
+        [
+          "table",
+          "Table 13 Feature importance of models\u2019 predictionsFeatureWei",
+          738
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Fig. 8 This bar plot displays the mean absolute SHAP values ",
+          489
+        ],
+        [
+          "p",
+          "In Fig. 10, the 15 most important features significantly imp",
+          1127
+        ],
+        [
+          "p",
+          "Local interpretability using SHAP While global explainabilit",
+          602
+        ],
+        [
+          "p",
+          "In Figure 9, local feature importance is illustrated using S",
+          264
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Fig. 9 This SHAP force plot visualizes how individual featur",
+          464
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Fig. 10 This SHAP summary plot shows how each feature contri",
+          988
+        ],
+        [
+          "p",
+          "Partial Dependence Plot (PDP): A PDP illustrates how changes",
+          272
+        ],
+        [
+          "p",
+          "Figure 11 and Figure 12 present SHAP-based partial dependenc",
+          526
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Fig. 11 SHAP partial dependence plot for st_slope_upsloping,",
+          143
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "table",
+          "Table 14 Performance Comparison with other existing modelsRe",
+          747
+        ],
+        [
+          "p",
+          "Comparison with existing works Table 14 compares CardiaTics ",
+          728
+        ],
+        [
+          "p",
+          "Ketu et al. (2022) utilized a range of models, including SVM",
+          532
+        ],
+        [
+          "p",
+          "Barhoom et al. (2022) achieved a high accuracy of 92% using ",
+          518
+        ],
+        [
+          "p",
+          "The CardiaTics model stands out by employing an ensembling a",
+          345
+        ],
+        [
+          "p",
+          "Our optimized model outperforms (marked in bold) in heart di",
+          334
+        ]
+      ]
+    },
+    {
+      "file": "chap_6.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Limitations and future plans",
+          28
+        ],
+        [
+          "p",
+          "Although CardiaTics demonstrates strong predictive performan",
+          1080
+        ],
+        [
+          "p",
+          "In terms of future work, the framework can be extended by ev",
+          1007
+        ]
+      ]
+    },
+    {
+      "file": "chap_7.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Implementation challenges and advantages",
+          40
+        ],
+        [
+          "p",
+          "The CardiaTics image analysis system is hosted on the Univer",
+          809
+        ],
+        [
+          "p",
+          "CardiaTics is also evaluating a HIPAA-compliant image sharin",
+          700
+        ]
+      ]
+    },
+    {
+      "file": "chap_8.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Conclusion",
+          10
+        ],
+        [
+          "p",
+          "In this paper, introduced a stacked machine learning ensembl",
+          1125
+        ],
+        [
+          "p",
+          "As we move forward, it is important to continue refining and",
+          543
+        ]
+      ]
+    },
+    {
+      "file": "chap_9.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Acknowledgements",
+          16
+        ],
+        [
+          "p",
+          "This research was supported in part by the National Institut",
+          156
+        ],
+        [
+          "p",
+          "Author contributions P.G: Conceptualization of this study, D",
+          225
+        ]
+      ]
+    },
+    {
+      "file": "chap_10.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Funding",
+          7
+        ],
+        [
+          "p",
+          "This research was supported in part by the National Institut",
+          156
+        ],
+        [
+          "p",
+          "Data availability No datasets were generated or analysed dur",
+          82
+        ],
+        [
+          "p",
+          "Materials availability Not applicable.",
+          38
+        ],
+        [
+          "p",
+          "Code availability The data and code will be made available u",
+          72
+        ]
+      ]
+    },
+    {
+      "file": "chap_11.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Declarations",
+          12
+        ],
+        [
+          "p",
+          "Ethics approval and consent to participate Not applicable.",
+          58
+        ],
+        [
+          "p",
+          "Consent for publication Not applicable.",
+          39
+        ],
+        [
+          "p",
+          "Competing interests The authors declare no competing interes",
+          63
+        ],
+        [
+          "p",
+          "Received: 11 November 2024 / Accepted: 17 February 2026",
+          55
+        ],
+        [
+          "p",
+          "",
+          0
+        ]
+      ]
+    },
+    {
+      "file": "chap_12.xhtml",
+      "frags": [
+        [
+          "h2",
+          "References",
+          10
+        ],
+        [
+          "p",
+          "1. Heartatt95:online: Heart attack - NHS. Article. (Accessed",
+          1498
+        ],
+        [
+          "p",
+          "10. Shah D, Patel S, Bharti SK. Heart disease prediction usi",
+          139
+        ],
+        [
+          "p",
+          "r\u200bg\u200b/\u200b1\u200b0\u200b.\u200b1\u200b0\u200b0\u200b7\u200b/\u200bs\u200b4\u200b2\u200b9\u200b7\u200b9\u200b-\u200b0\u200b2\u200b0\u200b-\u200b0\u200b0\u200b3\u200b6\u200b5\u200b-\u200by\u200b.\u200b",
+          60
+        ],
+        [
+          "p",
+          "11. Ullah F, Chen X, Rajab K, Reshan A, Saleh M, Shaikh A, H",
+          123
+        ],
+        [
+          "p",
+          "model based on improved features selections for early and ac",
+          150
+        ],
+        [
+          "p",
+          "12. Plati DK, Tripoliti EE, Bechlioulis A, Rammos A, Dimou I",
+          124
+        ],
+        [
+          "p",
+          "failure diagnosis. Diagnostics. 2021;11(10):1863.",
+          49
+        ],
+        [
+          "p",
+          "13. Ghose P, Alavi M, Tabassum M, Uddin A, Biswas M, Mahbub ",
+          122
+        ],
+        [
+          "p",
+          "and ct scan via single transfer learning-driven approach. Fr",
+          86
+        ],
+        [
+          "p",
+          "14. Ghose, P., Sharmin, S., Gaur, L., Zhao, Z.: Grid-search ",
+          127
+        ],
+        [
+          "p",
+          "detection. In: 2022 IEEE International Conference on Bioinfo",
+          118
+        ],
+        [
+          "p",
+          "15. Ghose P, Biswas M, Gaur L. Brainsegnet: A lightweight br",
+          119
+        ],
+        [
+          "p",
+          "neuron expansion. In: International Conference on Brain Info",
+          97
+        ],
+        [
+          "p",
+          "16. Ghose P, Uddin MA, Islam MM, Islam M, Acharjee UK. A bre",
+          120
+        ],
+        [
+          "p",
+          "2022 25th International Conference on Computer and Informati",
+          107
+        ],
+        [
+          "p",
+          "17. Barhoom AM, Almasri A, Abu-Nasser BS, Abu-Naser SS. Pred",
+          122
+        ],
+        [
+          "p",
+          "learning algorithms 2022.",
+          25
+        ],
+        [
+          "p",
+          "18. Bhavekar GS, Goswami AD. A hybrid model for heart diseas",
+          118
+        ],
+        [
+          "p",
+          "term memory. Int J Inf Technol. 2022;14(4):1781\u20139.",
+          50
+        ],
+        [
+          "p",
+          "19. Ansarullah SI, Saif SM, Kumar P, Kirmani MM. Significanc",
+          131
+        ],
+        [
+          "p",
+          "heart disease using different machine learning techniques. C",
+          164
+        ],
+        [
+          "p",
+          "20. Wei X, Rao C, Xiao X, Chen L, Goh M. Risk assessment of ",
+          121
+        ],
+        [
+          "p",
+          "Syst Appl. 2023;219:119648.",
+          27
+        ],
+        [
+          "p",
+          "21. Budholiya K, Shrivastava SK, Sharma V. An optimized xgbo",
+          121
+        ],
+        [
+          "p",
+          "disease. J King Saud Univ. 2022;34(7):4514\u201323.",
+          46
+        ],
+        [
+          "p",
+          "22. Ghose P, Uddin MA, Acharjee UK, Sharmin S. Deep viewing ",
+          122
+        ],
+        [
+          "p",
+          "x-ray image using CNN based architecture. Int Syst Appl. 202",
+          72
+        ],
+        [
+          "p",
+          "23. Rehman A, Mahmood T, Saba T. Robust kidney carcinoma pro",
+          117
+        ],
+        [
+          "p",
+          "with multi-model transfer learning. Appl Soft Comput. 2025;1",
+          70
+        ],
+        [
+          "p",
+          "24. Al Badarin FJ, Malhotra S. Diagnosis and prognosis of co",
+          119
+        ],
+        [
+          "p",
+          "2019;21:1\u201311.",
+          13
+        ],
+        [
+          "p",
+          "25. Ghose P, Joni SA, Rahat R, Tasnin N, Biswas M. An effect",
+          120
+        ],
+        [
+          "p",
+          "keypox detection from dermatographic image. In: Internationa",
+          150
+        ],
+        [
+          "p",
+          "26. Liu N, Lin Z, Cao J, Koh Z, Zhang T, Huang G-B, et al. A",
+          126
+        ],
+        [
+          "p",
+          "prediction. IEEE Trans Inf Technol Biomed. 2012;16(6):1324\u20133",
+          62
+        ],
+        [
+          "p",
+          "27. Kahramanli H, Allahverdi N. Design of a hybrid system fo",
+          112
+        ],
+        [
+          "p",
+          "2008;35(1\u20132):82\u20139.",
+          18
+        ],
+        [
+          "p",
+          "28. Minou J, Mantas J, Malamateniou F, Kaitelidou D. Classif",
+          124
+        ],
+        [
+          "p",
+          "machine learning. Med Arch. 2020;74(1):39.",
+          42
+        ],
+        [
+          "p",
+          "29. Atallah R, Al-Mousa A. Heart disease detection using mac",
+          119
+        ],
+        [
+          "p",
+          "International Conference on New Trends in Computing Sciences",
+          90
+        ],
+        [
+          "p",
+          "30. Ali F, El-Sappagh S, Islam SR, Kwak D, Ali A, Imran M, e",
+          128
+        ],
+        [
+          "p",
+          "tion based on ensemble deep learning and feature fusion. Inf",
+          92
+        ],
+        [
+          "p",
+          "31. Abdar M, Ksi\u0105\u017cek W, Acharya UR, Tan R-S, Makarenkov V, P",
+          118
+        ],
+        [
+          "p",
+          "diagnosis of coronary artery disease. Comput Methods Program",
+          86
+        ],
+        [
+          "p",
+          "32. Rehman MU, Naseem S, Butt AUR, Mahmood T, Khan AR, Khan ",
+          117
+        ],
+        [
+          "p",
+          "machine learning classifiers for improved cardiovascular ris",
+          100
+        ],
+        [
+          "p",
+          "33. Teja MD, Rayalu GM. Optimizing heart disease diagnosis w",
+          113
+        ],
+        [
+          "p",
+          "predictive performance. BMC Cardiovasc Disord. 2025;25(1):21",
+          62
+        ],
+        [
+          "p",
+          "34. Ashfaq MT, Javaid N, Alrajeh N, Ali SS. An explainable A",
+          122
+        ],
+        [
+          "p",
+          "prediction at early stages. Evol Syst. 2025;16(1):33.",
+          53
+        ],
+        [
+          "p",
+          "35. Ghose P, Oliullah K, Mahbub MK, Biswas M, Uddin KN, Jami",
+          121
+        ],
+        [
+          "p",
+          "effective feature engineering and stacked ensemble learning.",
+          95
+        ],
+        [
+          "p",
+          "36. Khdair H. Exploring machine learning techniques for coro",
+          95
+        ],
+        [
+          "p",
+          "37. Janosi A, Steinbrunn W, Pfisterer M, Detrano R. Uci mach",
+          127
+        ],
+        [
+          "p",
+          "Sci., Univ. California, Irvine, CA, USA 1988.",
+          45
+        ],
+        [
+          "p",
+          "38. Oliullah K, Rasel MH, Islam MM, Islam MR, Wadud MAH, Wha",
+          108
+        ],
+        [
+          "p",
+          "approach for the prediction of diabetes. Journal of Diabetes",
+          94
+        ],
+        [
+          "p",
+          "39. Mushtaq E, Zameer A, Khan A. A two-stage stacked ensembl",
+          120
+        ],
+        [
+          "p",
+          "mlp with optimal feature selection. Microprocess Microsyst. ",
+          75
+        ],
+        [
+          "p",
+          "40. Srinivasu PN, Sirisha U, Sandeep K, Praveen SP, Maguluri",
+          129
+        ],
+        [
+          "p",
+          "stroke prediction. Diagnostics. 2024;14(2):128.",
+          47
+        ],
+        [
+          "p",
+          "41. Pagallo U, O\u2019Sullivan S, Nevejans N, Holzinger A, Friebe",
+          127
+        ],
+        [
+          "p",
+          "Opportunity costs, success stories, risks and recommendation",
+          93
+        ],
+        [
+          "p",
+          "42. GhoshRoy D, Alvi PA, Santosh K. Explainable ai to predic",
+          123
+        ],
+        [
+          "p",
+          "smote. Electronics. 2022;12(1):15.",
+          34
+        ],
+        [
+          "p",
+          "43. Retzlaff CO, Angerschmid A, Saranti A, Schneeberger D, R",
+          127
+        ],
+        [
+          "p",
+          "design guidelines for data scientists. Cogn Syst Res. 2024;8",
+          69
+        ],
+        [
+          "p",
+          "44. St\u00f6ger K, Schneeberger D, Holzinger A. Medical artificia",
+          119
+        ],
+        [
+          "p",
+          "2021;64(11):34\u20136.",
+          17
+        ],
+        [
+          "p",
+          "45. Ignatiev A. Towards trustable explainable ai. In: Intern",
+          130
+        ],
+        [
+          "p",
+          "national Conference on Artificial Intelligence 2020; 2020. p",
+          140
+        ],
+        [
+          "p",
+          "46. Rani R, Jaiswal G, Nancy L, Bhushan S, Ullah F, Singh P,",
+          128
+        ],
+        [
+          "p",
+          "anced machine learning models-an empirical analysis of india",
+          121
+        ],
+        [
+          "p",
+          "47. Jamil HM, Bernitsas E, Gow A, Seyoum B. Empowering patie",
+          125
+        ],
+        [
+          "p",
+          "Conference on Health Information Science; 2021. pp. 112\u2013123.",
+          70
+        ],
+        [
+          "p",
+          "48. Jamil HM. Architecture of an intelligent personal health",
+          126
+        ],
+        [
+          "p",
+          "Conference on Digital Health (ICDH); 2021. pp. 1\u201310. IEEE.",
+          58
+        ],
+        [
+          "p",
+          "Publisher's Note Springer Nature remains neutral with regard",
+          135
+        ]
+      ]
+    },
+    {
+      "file": "notes.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Notes",
+          5
+        ],
+        [
+          "p",
+          "\u00a9 The Author(s) 2026.Open AccessThis article is licensed und",
+          4780
+        ]
+      ]
+    }
+  ],
+  "stats": {
+    "asides": 0,
+    "chapters": 13,
+    "columns": 1,
+    "footnotes": 14,
+    "grid_tables": 14,
+    "headings": 12,
+    "images": 13,
+    "pages": 27,
+    "raster_figures": 0,
+    "raster_tables": 0,
+    "title": "CardiaTics: An explainable AI integrated heart disease diagnosis model with feature engineering and stacked ensemble approach"
+  },
+  "toc": [
+    [
+      1,
+      "CardiaTics: An explainable AI integrated heart disease diagnosis model with feature engineering and stacked ensemble approach"
+    ],
+    [
+      2,
+      "Abstract"
+    ],
+    [
+      2,
+      "Related research"
+    ],
+    [
+      2,
+      "Methodology"
+    ],
+    [
+      2,
+      "Experiments, results and discussions"
+    ],
+    [
+      2,
+      "Limitations and future plans"
+    ],
+    [
+      2,
+      "Implementation challenges and advantages"
+    ],
+    [
+      2,
+      "Conclusion"
+    ],
+    [
+      2,
+      "Acknowledgements"
+    ],
+    [
+      2,
+      "Funding"
+    ],
+    [
+      2,
+      "Declarations"
+    ],
+    [
+      2,
+      "References"
+    ],
+    [
+      1,
+      "Notes"
+    ]
+  ]
+}

@@ -1,0 +1,25 @@
+# epub-eval: arxiv_revtex.pdf
+
+**Verdict:** 2 high-severity findings — needs attention; verbatim word coverage 89.2% (2053/2302, epub emitted 2590 words after rejoins)
+
+## Checks
+- A container: PASS — 8 members, 1 chapters, 0 images
+- B metadata: title='arxiv_revtex'
+- C coverage: rejoined 8, furniture 63, rasterized table cells 0, superscript splits 107, genuine loss 134
+- D toc: 2 entries, h1=0 h2=1, dupes=none
+- G figures: pdf rasters=0, embedded=0, vector pages=[]
+
+## Findings (severity-ranked)
+| Sev | Check | Finding |
+|-----|-------|---------|
+| High | C | genuine word loss 134 (>1%): [('23k', 11), ('22k', 10), ('ci', 9), ('ag', 8), ('ah', 6), ('md', 3), ('cg', 3), ('vi', 2), ('enda', 2), ('cmi', 2)] |
+| High | D | numbered section headings missing from TOC (3): ['1. INTRODUCTION', '2. PRELIMINARIES', '3. RESULTS'] |
+
+## Classified word loss
+| class | words | top examples |
+|-------|-------|--------------|
+| rejoined hyphenation | 8 | charac, ter, min, istry, gauthier, villars, pa, rameters |
+| stripped furniture | 63 | of, centralizer, two, permutation, groups, order, 1344, algebras |
+| rasterized table cells | 0 |  |
+| superscript splits | 107 | 2k, 7k, 3k, c1, c11, c2, c6, h1 |
+| genuine loss | 134 | 23k, 22k, ci, ag, ah, md, cg, vi |

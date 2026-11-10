@@ -1,0 +1,73 @@
+# epub-eval: UNESCO_Courier_2023_3.pdf
+
+**Verdict:** 0 high-severity findings — clean; verbatim word coverage 99.8% (21219/21264, epub emitted 21258 words after rejoins)
+
+## Checks
+- A container: PASS — 201 members, 147 chapters, 47 images
+- B metadata: title='The call of the forest'
+- C coverage: rejoined 33, furniture 259, rasterized table cells 0, superscript splits 11, genuine loss 1
+- D toc: 148 entries, h1=34 h2=113, dupes=['The call of the forest', 'Discover our offers', 'United States, 1954', 'United Kingdom, 1970']
+- G figures: pdf rasters=47, embedded=47, vector pages=[1, 54, 55, 56, 57, 59, 60]
+
+## Findings (severity-ranked)
+| Sev | Check | Finding |
+|-----|-------|---------|
+| Low | C | genuine word loss 1: [('world', 1)] |
+| Low | D | duplicate TOC titles: ['The call of the forest', 'Discover our offers', 'United States, 1954', 'United Kingdom, 1970'] |
+| Low | G | vector graphics on pages [1, 54, 55, 56, 57, 59, 60] not capturable — verify content survived as text |
+| Low | G | chap_3.xhtml: <img> missing caption alt text |
+| Low | G | chap_28.xhtml: <img> missing caption alt text |
+| Low | G | chap_28.xhtml: <img> missing caption alt text |
+| Low | G | chap_28.xhtml: <img> missing caption alt text |
+| Low | G | chap_28.xhtml: <img> missing caption alt text |
+| Low | G | chap_47.xhtml: <img> missing caption alt text |
+| Low | G | chap_50.xhtml: <img> missing caption alt text |
+| Low | G | chap_71.xhtml: <img> missing caption alt text |
+| Low | G | chap_86.xhtml: <img> missing caption alt text |
+| Low | G | chap_86.xhtml: <img> missing caption alt text |
+| Low | G | chap_87.xhtml: <img> missing caption alt text |
+| Low | G | chap_88.xhtml: <img> missing caption alt text |
+| Low | G | chap_89.xhtml: <img> missing caption alt text |
+| Low | G | chap_90.xhtml: <img> missing caption alt text |
+| Low | G | chap_92.xhtml: <img> missing caption alt text |
+| Low | G | chap_93.xhtml: <img> missing caption alt text |
+| Low | G | chap_94.xhtml: <img> missing caption alt text |
+| Low | G | chap_95.xhtml: <img> missing caption alt text |
+| Low | G | chap_97.xhtml: <img> missing caption alt text |
+| Low | G | chap_98.xhtml: <img> missing caption alt text |
+| Low | G | chap_99.xhtml: <img> missing caption alt text |
+| Low | G | chap_101.xhtml: <img> missing caption alt text |
+| Low | G | chap_101.xhtml: <img> missing caption alt text |
+| Low | G | chap_101.xhtml: <img> missing caption alt text |
+| Low | G | chap_102.xhtml: <img> missing caption alt text |
+| Low | G | chap_103.xhtml: <img> missing caption alt text |
+| Low | G | chap_105.xhtml: <img> missing caption alt text |
+| Low | G | chap_110.xhtml: <img> missing caption alt text |
+| Low | G | chap_116.xhtml: <img> missing caption alt text |
+| Low | G | chap_130.xhtml: <img> missing caption alt text |
+| Low | G | chap_130.xhtml: <img> missing caption alt text |
+| Low | G | chap_130.xhtml: <img> missing caption alt text |
+| Low | G | chap_130.xhtml: <img> missing caption alt text |
+| Low | G | chap_130.xhtml: <img> missing caption alt text |
+| Low | G | chap_130.xhtml: <img> missing caption alt text |
+| Low | G | chap_130.xhtml: <img> missing caption alt text |
+| Low | G | chap_139.xhtml: <img> missing caption alt text |
+| Low | G | chap_139.xhtml: <img> missing caption alt text |
+| Low | G | chap_139.xhtml: <img> missing caption alt text |
+| Low | G | chap_141.xhtml: <img> missing caption alt text |
+| Low | G | chap_141.xhtml: <img> missing caption alt text |
+| Low | G | chap_141.xhtml: <img> missing caption alt text |
+| Low | G | chap_141.xhtml: <img> missing caption alt text |
+| Low | G | chap_141.xhtml: <img> missing caption alt text |
+| Low | G | chap_141.xhtml: <img> missing caption alt text |
+| Low | G | chap_141.xhtml: <img> missing caption alt text |
+| Low | G | chap_147.xhtml: <img> missing caption alt text |
+
+## Classified word loss
+| class | words | top examples |
+|-------|-------|--------------|
+| rejoined hyphenation | 33 | non, indigenous, policy, jean, present, native, ever, year |
+| stripped furniture | 259 | unesco, 2023, the, courier, july, september, lillian, erud |
+| rasterized table cells | 0 |  |
+| superscript splits | 11 | co2, km2 |
+| genuine loss | 1 | world |

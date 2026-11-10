@@ -1,0 +1,523 @@
+{
+  "spine": [
+    {
+      "file": "chap_1.xhtml",
+      "frags": [
+        [
+          "p",
+          "Journal of Clinical Medicine",
+          28
+        ],
+        [
+          "p",
+          "Article",
+          7
+        ],
+        [
+          "h1",
+          "Evaluation of a Modified Mindfulness-Based Stress Reduction ",
+          181
+        ],
+        [
+          "p",
+          "Hayley Smithers-Sheedy 1,*, Emma Waight 1, Katherine L. Swin",
+          168
+        ]
+      ]
+    },
+    {
+      "file": "chap_2.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Abstract",
+          8
+        ],
+        [
+          "p",
+          "1 Cerebral Palsy Alliance Research Institute, Sydney Medical",
+          2637
+        ],
+        [
+          "p",
+          "Med. 2024, 13, 1. https://doi.org/ 10.3390/jcm13010001 Keywo",
+          157
+        ],
+        [
+          "p",
+          "1. Introduction",
+          15
+        ],
+        [
+          "p",
+          "Cerebral palsy (CP) is a lifelong condition characterised by",
+          3678
+        ],
+        [
+          "aside",
+          "Academic Editor: Giacomo ManciniReceived: 3 November 2023Rev",
+          168
+        ],
+        [
+          "p",
+          "2. Materials and Methods 2.1. Study Design and Participants",
+          59
+        ],
+        [
+          "p",
+          "This randomised control trial was conducted between May 2021",
+          1531
+        ],
+        [
+          "p",
+          "2.2. Randomisation and Blinding",
+          31
+        ],
+        [
+          "p",
+          "Participants were randomised into treatment or wait list con",
+          328
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Figure 1. Study timeline.",
+          25
+        ],
+        [
+          "p",
+          "2.3. Intervention",
+          17
+        ],
+        [
+          "p",
+          "The intervention was a 9-session modified MBSR program with ",
+          1244
+        ],
+        [
+          "p",
+          "6. Deepening your practice\u2014sitting meditation. 7. Meditation",
+          200
+        ],
+        [
+          "p",
+          "Participants were provided with a manual that included infor",
+          524
+        ],
+        [
+          "p",
+          "2.4. Outcome Measures",
+          21
+        ],
+        [
+          "p",
+          "Measures, all of which were self-reported, were collected pr",
+          259
+        ],
+        [
+          "table",
+          "Table 1. Measures.VariablesMeasureDescription A 12-item meas",
+          1801
+        ],
+        [
+          "table",
+          "Table 1. Cont.VariablesMeasureDescription Self-report survey",
+          1449
+        ],
+        [
+          "table",
+          "Table 2. Data collection and timepoints.Assessment/Procedure",
+          594
+        ],
+        [
+          "p",
+          "Covariates",
+          10
+        ]
+      ]
+    },
+    {
+      "file": "chap_3.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Outcomes",
+          8
+        ],
+        [
+          "p",
+          "The primary outcome measure was the mean between-group diffe",
+          434
+        ]
+      ]
+    },
+    {
+      "file": "chap_4.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Secondary outcomes were as follows:",
+          35
+        ],
+        [
+          "table",
+          "a.The mean between-group difference (MBSR vs Control) in CAM",
+          551
+        ],
+        [
+          "p",
+          "i. Brief Pain Inventory (BPI) short-form pain intensity and ",
+          237
+        ],
+        [
+          "p",
+          "2.5. Statistical Analysis",
+          25
+        ],
+        [
+          "p",
+          "We aimed to detect a large effect size equivalent to Cohen\u2019s",
+          2157
+        ],
+        [
+          "p",
+          "3. Results",
+          10
+        ],
+        [
+          "p",
+          "Of the n = 35 adults who satisfied the inclusion criteria du",
+          474
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Figure 2. Participant flow chart.",
+          33
+        ],
+        [
+          "p",
+          "There were no significant differences between the interventi",
+          726
+        ],
+        [
+          "p",
+          "Table 3. Socio-demographic characteristics at baseline.",
+          55
+        ],
+        [
+          "p",
+          "MBSR Intervention n = 16 Total n = 31",
+          37
+        ]
+      ]
+    },
+    {
+      "file": "chap_5.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Control n = 15 p-Value",
+          22
+        ],
+        [
+          "p",
+          "Age, years, mean (SD) 25.3 (3.9) 26.2 (4.3) 24.2 (3.2) 0.10 ",
+          716
+        ],
+        [
+          "p",
+          "MBSR Intervention n = 16 Control n = 15 p-Value",
+          47
+        ]
+      ]
+    },
+    {
+      "file": "chap_6.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Total n = 31",
+          12
+        ],
+        [
+          "p",
+          "Children, n (%) Yes 0 No 31 (100.0%) Receive care support fo",
+          1022
+        ]
+      ]
+    },
+    {
+      "file": "chap_7.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Total n = 31 Intervention n = 16 Control n = 15 p-Value",
+          55
+        ],
+        [
+          "p",
+          "Gross Motor Function (GMFCS), n (%) Level I\u2013III 24 (77.4%) 1",
+          884
+        ]
+      ]
+    },
+    {
+      "file": "chap_8.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Total n = 31 Intervention n = 16 Control n = 15 p-Value",
+          55
+        ],
+        [
+          "p",
+          "Depression, Anxiety and Stress Scale-21, mean (SD) Total 22.",
+          961
+        ],
+        [
+          "p",
+          "On average, the participants attended seven of the nine sess",
+          286
+        ],
+        [
+          "p",
+          "3.2. Modifications to Course Content during the Study Period",
+          60
+        ],
+        [
+          "p",
+          "There were no amendments made to the modified MBSR telehealt",
+          92
+        ],
+        [
+          "p",
+          "3.3. Primary Outcome Measure",
+          28
+        ],
+        [
+          "p",
+          "The primary outcome was the mean group difference in change ",
+          856
+        ],
+        [
+          "p",
+          "3.4. Secondary Outcome Measures",
+          31
+        ],
+        [
+          "p",
+          "Analysis of mindfulness (CAMS-R scores) between the baseline",
+          442
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "(a) (b) Figure 3. (a) Raw mean change in Cognitive and Affec",
+          303
+        ],
+        [
+          "p",
+          "All remaining secondary outcome measures pertain to evaluati",
+          507
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Figure 4. MBSR intervention group: within-group mean change ",
+          226
+        ],
+        [
+          "p",
+          "An analysis of the within-group changes for the MBSR interve",
+          1841
+        ],
+        [
+          "p",
+          "4. Discussion",
+          13
+        ],
+        [
+          "p",
+          "This study is the first randomised control study to evaluate",
+          2528
+        ],
+        [
+          "p",
+          "However, as emotion regulation and anxiety are so closely re",
+          2938
+        ],
+        [
+          "p",
+          "5. Conclusions",
+          14
+        ],
+        [
+          "p",
+          "Mood disorders and emotion regulation difficulties are over-",
+          602
+        ],
+        [
+          "p",
+          "Supplementary Materials: The following supporting informatio",
+          294
+        ],
+        [
+          "p",
+          "Author Contributions: Conceptualisation, H.S.-S., E.W., K.L.",
+          532
+        ],
+        [
+          "p",
+          "Funding: This research was supported via NHMRC APP 1171758-A",
+          217
+        ],
+        [
+          "p",
+          "Institutional Review Board Statement: Ethics approval was gr",
+          552
+        ],
+        [
+          "p",
+          "Informed Consent Statement: Informed consent was obtained fr",
+          98
+        ]
+      ]
+    },
+    {
+      "file": "chap_9.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Data Availability",
+          17
+        ],
+        [
+          "p",
+          "Statement: Please contact the corresponding author to reques",
+          88
+        ],
+        [
+          "p",
+          "Acknowledgments: Thank you to all the participants and their",
+          1009
+        ],
+        [
+          "p",
+          "Conflicts of Interest: The authors declare no conflict of in",
+          252
+        ]
+      ]
+    },
+    {
+      "file": "chap_10.xhtml",
+      "frags": [
+        [
+          "h2",
+          "References",
+          10
+        ],
+        [
+          "p",
+          "1. Rosenbaum, P.; Paneth, N.; Leviton, A.; Goldstein, M.; Ba",
+          10635
+        ]
+      ]
+    },
+    {
+      "file": "notes.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Notes",
+          5
+        ],
+        [
+          "p",
+          "Licensee MDPI, Basel, Switzerland. This article is an open a",
+          218
+        ]
+      ]
+    }
+  ],
+  "stats": {
+    "asides": 1,
+    "chapters": 11,
+    "columns": 1,
+    "footnotes": 7,
+    "grid_tables": 4,
+    "headings": 10,
+    "images": 6,
+    "pages": 15,
+    "raster_figures": 0,
+    "raster_tables": 0,
+    "title": "Evaluation of a Modified Mindfulness-Based Stress Reduction Intervention for Adults with Cerebral Palsy and Anxiety and/or Emotion Regulation Difficulties\u2014A Randomised Control Trial"
+  },
+  "toc": [
+    [
+      1,
+      "Evaluation of a Modified Mindfulness-Based Stress Reduction Intervention for Adults with Cerebral Palsy and Anxiety and/or Emotion Regulation Difficulties\u2014A Randomised Control Trial"
+    ],
+    [
+      2,
+      "Abstract"
+    ],
+    [
+      2,
+      "Outcomes"
+    ],
+    [
+      2,
+      "Secondary outcomes were as follows:"
+    ],
+    [
+      2,
+      "Control n = 15 p-Value"
+    ],
+    [
+      2,
+      "Total n = 31"
+    ],
+    [
+      2,
+      "Total n = 31 Intervention n = 16 Control n = 15 p-Value"
+    ],
+    [
+      2,
+      "Total n = 31 Intervention n = 16 Control n = 15 p-Value"
+    ],
+    [
+      2,
+      "Data Availability"
+    ],
+    [
+      2,
+      "References"
+    ],
+    [
+      1,
+      "Notes"
+    ]
+  ]
+}

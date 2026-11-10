@@ -1,0 +1,41 @@
+# epub-eval: frontiers_2col.pdf
+
+**Verdict:** 1 high-severity findings — needs attention; verbatim word coverage 99.8% (12907/12933, epub emitted 12924 words after rejoins)
+
+## Checks
+- A container: PASS — 29 members, 14 chapters, 6 images
+- B metadata: title='Naturalistic generative narratives reveal effects of social '
+- C coverage: rejoined 23, furniture 234, rasterized table cells 1143, superscript splits 2, genuine loss 1
+- D toc: 15 entries, h1=1 h2=13, dupes=none
+- G figures: pdf rasters=6, embedded=6, vector pages=[1, 3, 4, 5, 6, 8, 10, 13, 14]
+
+## Findings (severity-ranked)
+| Sev | Check | Finding |
+|-----|-------|---------|
+| High | D | numbered section headings missing from TOC (3): ['2.1. General design', '2.3. Participants', '2.4. Data analyses'] |
+| Med | F | Table 1: flattened to prose, no grid markup |
+| Med | F | Table 3: legend absent; grid data survives (83% coverage) |
+| Med | F | Table 4: legend absent; grid data survives (100% coverage) |
+| Low | C | genuine word loss 1: [('06', 1)] |
+| Low | F | Table 2: legend detached from grid markup (caption linkage failed) |
+| Low | F | Table 5: rasterized to image (cells not text-checkable) |
+| Low | F | Table 6: rasterized to image (cells not text-checkable) |
+| Low | G | vector-ruled table grids on pages [3, 4, 5, 6, 8, 10, 13, 14] — cells emit as flat text, structure lost |
+| Low | G | vector graphics on pages [1] not capturable — verify content survived as text |
+| Low | G | chap_5.xhtml: <img> missing caption alt text |
+| Low | G | chap_5.xhtml: <img> missing caption alt text |
+| Low | G | chap_5.xhtml: <img> missing caption alt text |
+| Low | G | chap_6.xhtml: <img> missing caption alt text |
+| Low | G | chap_6.xhtml: <img> missing caption alt text |
+| Low | G | chap_6.xhtml: <img> missing caption alt text |
+| Low | G | chap_6.xhtml: <img> missing caption alt text |
+| Low | G | chap_6.xhtml: <img> missing caption alt text |
+
+## Classified word loss
+| class | words | top examples |
+|-------|-------|--------------|
+| rejoined hyphenation | 23 | self, reported, dressed, poorly, decision, making, attitudes, about |
+| stripped furniture | 234 | frontiers, in, psychology, frontiersin, org, 2024, 10, wong |
+| rasterized table cells | 1143 | 0, 015, 012, 007, 009, 010, 016, 017 |
+| superscript splits | 2 | r2 |
+| genuine loss | 1 | 06 |

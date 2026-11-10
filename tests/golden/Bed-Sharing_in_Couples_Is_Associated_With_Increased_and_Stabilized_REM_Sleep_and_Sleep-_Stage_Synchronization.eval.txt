@@ -1,0 +1,30 @@
+# epub-eval: Bed-Sharing in Couples Is Associated With Increased and Stabilized REM Sleep and Sleep- Stage Synchronization.pdf
+
+**Verdict:** 0 high-severity findings — clean; verbatim word coverage 99.6% (9733/9775, epub emitted 9769 words after rejoins)
+
+## Checks
+- A container: PASS — 35 members, 19 chapters, 8 images
+- B metadata: title='Bed-Sharing in Couples Is Associated With Increased and Stab'
+- C coverage: rejoined 29, furniture 227, rasterized table cells 0, superscript splits 10, genuine loss 3
+- D toc: 20 entries, h1=1 h2=18, dupes=none
+- G figures: pdf rasters=8, embedded=8, vector pages=[1]
+
+## Findings (severity-ranked)
+| Sev | Check | Finding |
+|-----|-------|---------|
+| Low | C | genuine word loss 3: [('bed', 1), ('sharing', 1), ('in', 1)] |
+| Low | G | vector graphics on pages [1] not capturable — verify content survived as text |
+| Low | G | chap_12.xhtml: <img> missing caption alt text |
+| Low | G | chap_12.xhtml: <img> missing caption alt text |
+| Low | G | chap_13.xhtml: <img> missing caption alt text |
+| Low | G | chap_14.xhtml: <img> missing caption alt text |
+| Low | G | chap_14.xhtml: <img> missing caption alt text |
+
+## Classified word loss
+| class | words | top examples |
+|-------|-------|--------------|
+| rejoined hyphenation | 29 | co, sleep, cross, recurrence, partner, sleeping, lab, based |
+| stripped furniture | 227 | in, 11, psychiatry, frontiers, www, frontiersin, org, june |
+| rasterized table cells | 0 |  |
+| superscript splits | 10 | drews1, wallot2, brysch3, johannsen3, weinhold1, mitkidis4, baier1, lechinger1 |
+| genuine loss | 3 | bed, sharing, in |

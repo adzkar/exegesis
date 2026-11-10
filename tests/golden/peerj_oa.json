@@ -1,0 +1,783 @@
+{
+  "spine": [
+    {
+      "file": "chap_1.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Effects of chemical fertilizer application on soil propertie",
+          150
+        ],
+        [
+          "p",
+          "Sasipa Pruksangkul1, Teerasit Termsaithong2,3, Wuttichai Mhu",
+          115
+        ]
+      ]
+    },
+    {
+      "file": "chap_2.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Abstract",
+          8
+        ],
+        [
+          "p",
+          "1 Department of Biology, Faculty of Science, Mahidol Univers",
+          734
+        ]
+      ]
+    },
+    {
+      "file": "chap_3.xhtml",
+      "frags": [
+        [
+          "h2",
+          "ABSTRACT",
+          8
+        ],
+        [
+          "p",
+          "Due to climate change and increasing food demand, convention",
+          2081
+        ],
+        [
+          "aside",
+          "Submitted 11 March 2026 Accepted 28 September 2026 Published",
+          350
+        ],
+        [
+          "p",
+          "Subjects Agricultural Science, Genomics, Microbiology, Envir",
+          184
+        ]
+      ]
+    },
+    {
+      "file": "chap_4.xhtml",
+      "frags": [
+        [
+          "h2",
+          "INTRODUCTION",
+          12
+        ],
+        [
+          "p",
+          "Bananas (Musa spp.) are one of the most important fruit crop",
+          5739
+        ]
+      ]
+    },
+    {
+      "file": "chap_5.xhtml",
+      "frags": [
+        [
+          "h2",
+          "MATERIALS & METHODS",
+          19
+        ]
+      ]
+    },
+    {
+      "file": "chap_6.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Sampling sites",
+          14
+        ],
+        [
+          "p",
+          "The study area has been used for agricultural purposes for 2",
+          799
+        ],
+        [
+          "p",
+          "The selected fertilizer application rates were based on the ",
+          1770
+        ]
+      ]
+    },
+    {
+      "file": "chap_7.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Soil sample collection",
+          22
+        ],
+        [
+          "p",
+          "Surface soil samples (5\u201320 cm depth) were collected monthly ",
+          1541
+        ]
+      ]
+    },
+    {
+      "file": "chap_8.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Banana yield collection",
+          23
+        ],
+        [
+          "p",
+          "For each fertilizer treatment, bunch weight (kg), number of ",
+          969
+        ]
+      ]
+    },
+    {
+      "file": "chap_9.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Soil property analysis",
+          22
+        ],
+        [
+          "p",
+          "Total nitrogen (TN) was analyzed by nitrogen combustion acco",
+          618
+        ]
+      ]
+    },
+    {
+      "file": "chap_10.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Soil microbiome analysis",
+          24
+        ],
+        [
+          "p",
+          "Genomic DNA was extracted using a DNeasy Powersoil Pro Kit (",
+          1435
+        ]
+      ]
+    },
+    {
+      "file": "chap_11.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Statistical analysis",
+          20
+        ],
+        [
+          "p",
+          "The effects of fertilizer applications (N0, N1/2, N, and N2)",
+          1262
+        ]
+      ]
+    },
+    {
+      "file": "chap_12.xhtml",
+      "frags": [
+        [
+          "h2",
+          "RESULTS",
+          7
+        ]
+      ]
+    },
+    {
+      "file": "chap_13.xhtml",
+      "frags": [
+        [
+          "h2",
+          "E\ufb00ects of fertilizer treatments on soil properties",
+          50
+        ],
+        [
+          "p",
+          "The effects of fertilizer applications on total nitrogen (TN",
+          2010
+        ],
+        [
+          "p",
+          "N0 N1/2 N N2 T1 0.18 \u00b1 0.10a 0.13 \u00b1 0.05b 0.18 \u00b1 0.05a 0.18 ",
+          123
+        ],
+        [
+          "p",
+          "T3 0.20 \u00b1 0.08b 0.25 \u00b1 0.06a 0.20 \u00b1 0.08a 0.20 \u00b1 0.08ab Tota",
+          260
+        ],
+        [
+          "p",
+          "T3* 307.24\u00b1 20.77b 343.61\u00b1 41.23ab 349.05\u00b1 26.54a 324.60\u00b1 38",
+          292
+        ],
+        [
+          "p",
+          "T3 344.38\u00b1 82.96a 398.47\u00b1 99.92a 453.67\u00b1 41.74a 471.41\u00b1 41.2",
+          272
+        ],
+        [
+          "p",
+          "T3 2.22 \u00b1 0.11a 2.15 \u00b1 0.31a 2.29 \u00b1 0.19a 2.16 \u00b1 0.25a Organ",
+          247
+        ],
+        [
+          "p",
+          "T3** 7.32 \u00b1 0.16a 6.93 \u00b1 0.55a 6.10 \u00b1 0.36b 5.97 \u00b1 0.17b Soi",
+          121
+        ],
+        [
+          "p",
+          "Significant differences (p<0.10) across treatments are indic",
+          165
+        ],
+        [
+          "p",
+          "N (p = 0.003, 95% CI [\u2212225.549 to \u221265.471]) and N2 (p = 0.03",
+          1764
+        ],
+        [
+          "aside",
+          "Notes.",
+          6
+        ]
+      ]
+    },
+    {
+      "file": "chap_14.xhtml",
+      "frags": [
+        [
+          "h2",
+          "E\ufb00ects of fertilizer treatments on banana yields",
+          48
+        ],
+        [
+          "p",
+          "The effects of fertilizer treatments on banana yields, inclu",
+          1110
+        ]
+      ]
+    },
+    {
+      "file": "chap_15.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Soil microbiome dynamics under varying NPK fertilizer",
+          53
+        ],
+        [
+          "p",
+          "The soil microbiome in a total of 48 samples, collected from",
+          1793
+        ],
+        [
+          "p",
+          "Table 2 Banana yields under four NPK fertilizer treatments.",
+          59
+        ],
+        [
+          "p",
+          "N0 N1/2 N N2 T1 11.06 \u00b1 1.69b 13.74 \u00b1 2.40ab 12.52 \u00b1 1.86ab ",
+          131
+        ],
+        [
+          "p",
+          "T3a 7.40 \u00b1 1.41a 8.10 \u00b1 2.69a 4.38 \u00b1 6.19a 5.83 \u00b1 0.88a Bunc",
+          244
+        ],
+        [
+          "p",
+          "T3a 6.67 \u00b1 0.94a 7.00 \u00b1 1.41a 4.75 \u00b1 6.72a 6.00 \u00b1 0.00a Numb",
+          264
+        ],
+        [
+          "p",
+          "T3a 12.90 \u00b1 0.42ab 14.90 \u00b1 0.42a 7.80 \u00b1 11.03b 14.50 \u00b1 1.84a",
+          275
+        ],
+        [
+          "p",
+          "T3a 94.00 \u00b1 1.41a 94.50 \u00b1 4.95a 49.50 \u00b1 70.00b 93.50 \u00b1 2.12a",
+          251
+        ],
+        [
+          "p",
+          "T3a 3.32 \u00b1 0.02a 3.25 \u00b1 0.14ab 1.83 \u00b1 2.58b 3.28 \u00b1 0.15a Fin",
+          251
+        ],
+        [
+          "p",
+          "T3a 8.95 \u00b1 5.17ab 9.21 \u00b1 5.32a 4.57 \u00b1 4.57b 8.45 \u00b1 4.89ab Fi",
+          365
+        ],
+        [
+          "p",
+          "Other dominant taxa that were consistently present across al",
+          405
+        ]
+      ]
+    },
+    {
+      "file": "chap_16.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Relationship between soil properties and soil microbial taxa",
+          60
+        ],
+        [
+          "p",
+          "Multivariate analyses canonical correspondence analysis (CCA",
+          667
+        ],
+        [
+          "aside",
+          "Notes.",
+          6
+        ],
+        [
+          "p",
+          "N0 N1/2 N N2",
+          12
+        ],
+        [
+          "p",
+          "100 90 80 Relative abundance (%) 70 60 50 40 30 20 10 0 M1 M",
+          211
+        ],
+        [
+          "blockquote",
+          "Proteobacteria Actinobacteria Chloro\ufb02exi Acidobacteria Firmi",
+          174
+        ],
+        [
+          "p",
+          "Figure 1 Relative abundance of microbial communities at the ",
+          261
+        ],
+        [
+          "p",
+          "Full-size DOI: 10.7717/peerj.21912/fig-1 N0 N1/2 N N 2 M1 M2",
+          210
+        ],
+        [
+          "p",
+          "N0 N1/2 N N2",
+          12
+        ],
+        [
+          "p",
+          "1.4 1.2 Dimethylsulfoniopropionate (DMSP) degradation Sul\ufb01de",
+          980
+        ],
+        [
+          "p",
+          "Full-size DOI: 10.7717/peerj.21912/fig-3 Gaiellales (r = 0.3",
+          901
+        ]
+      ]
+    },
+    {
+      "file": "chap_17.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Microbial functions in long-term cultivated soils",
+          49
+        ],
+        [
+          "p",
+          "Genes related to the carbon, nitrogen, and sulfur cycles wer",
+          1597
+        ]
+      ]
+    },
+    {
+      "file": "chap_18.xhtml",
+      "frags": [
+        [
+          "h2",
+          "DISCUSSION",
+          10
+        ]
+      ]
+    },
+    {
+      "file": "chap_19.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Soil acidi\ufb01cation induced by fertilizer application without",
+          59
+        ],
+        [
+          "p",
+          "corresponding increases in banana yields Among soil properti",
+          7986
+        ]
+      ]
+    },
+    {
+      "file": "chap_20.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Alterations in soil microbiomes in response to fertilizer ap",
+          69
+        ],
+        [
+          "p",
+          "Key microbial phyla (e.g., Proteobacteria, Actinobacteria, C",
+          5209
+        ],
+        [
+          "p",
+          "Evidence also suggests that NPK fertilizers can enhance bene",
+          4913
+        ]
+      ]
+    },
+    {
+      "file": "chap_21.xhtml",
+      "frags": [
+        [
+          "h2",
+          "CONCLUSIONS",
+          11
+        ],
+        [
+          "p",
+          "Four levels of chemical fertilizer application (0, 119, 238,",
+          3121
+        ]
+      ]
+    },
+    {
+      "file": "chap_22.xhtml",
+      "frags": [
+        [
+          "h2",
+          "ACKNOWLEDGEMENTS",
+          16
+        ],
+        [
+          "p",
+          "We thank Philip D. Round for his English proofreading and co",
+          80
+        ]
+      ]
+    },
+    {
+      "file": "chap_23.xhtml",
+      "frags": [
+        [
+          "h2",
+          "ADDITIONAL INFORMATION AND DECLARATIONS",
+          39
+        ]
+      ]
+    },
+    {
+      "file": "chap_24.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Funding",
+          7
+        ],
+        [
+          "p",
+          "This work was supported by Mahidol University (Fundamental F",
+          265
+        ]
+      ]
+    },
+    {
+      "file": "chap_25.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Grant Disclosures",
+          17
+        ],
+        [
+          "p",
+          "The following grant information was disclosed by the authors",
+          174
+        ]
+      ]
+    },
+    {
+      "file": "chap_26.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Competing Interests",
+          19
+        ],
+        [
+          "p",
+          "The authors declare there are no competing interests.",
+          53
+        ]
+      ]
+    },
+    {
+      "file": "chap_27.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Author Contributions",
+          20
+        ],
+        [
+          "p",
+          "\u2022 Sasipa Pruksangkul conceived and designed the experiments,",
+          866
+        ]
+      ]
+    },
+    {
+      "file": "chap_28.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Data Availability",
+          17
+        ],
+        [
+          "p",
+          "The following information was supplied regarding data availa",
+          214
+        ]
+      ]
+    },
+    {
+      "file": "chap_29.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Supplemental Information",
+          24
+        ],
+        [
+          "p",
+          "Supplemental information for this article can be found onlin",
+          129
+        ]
+      ]
+    },
+    {
+      "file": "chap_30.xhtml",
+      "frags": [
+        [
+          "h2",
+          "REFERENCES",
+          10
+        ],
+        [
+          "p",
+          "Abdoussalami A, Hu Z, Islam ARMT, Wu Z. 2023. Climate change",
+          2210
+        ],
+        [
+          "p",
+          "LR, Torres PJ, Trinh P, Tripathi A, Turnbaugh PJ, Ul-Hasan S",
+          3097
+        ],
+        [
+          "p",
+          "Douglas GM, Maffei VJ, Zaneveld JR, Yurgel SN, Brown JR, Tay",
+          3145
+        ],
+        [
+          "p",
+          "microbial activity of banana in the subtropics. Applied Frui",
+          2979
+        ],
+        [
+          "p",
+          "Matus FJ. 2021. Fine silt and clay content is the main facto",
+          2932
+        ],
+        [
+          "p",
+          "Singh BR, Narwal RP, Jeng AS, Almas \u00c5. 1995. Crop uptake and",
+          2986
+        ],
+        [
+          "p",
+          "Yao Z, Khan A, Xu Y, Pan K, Zhang M. 2024. Profiling of rhiz",
+          1293
+        ]
+      ]
+    },
+    {
+      "file": "notes.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Notes",
+          5
+        ],
+        [
+          "p",
+          "How to cite this articlePruksangkul S, Termsaithong T, Mhuan",
+          306
+        ],
+        [
+          "p",
+          "0 uncultured Xanthobacteraceae Microvirga bacteriap25 uncult",
+          460
+        ],
+        [
+          "p",
+          "28 Figure 2 Heatmap showing the relative abundance of microb",
+          322
+        ]
+      ]
+    }
+  ],
+  "stats": {
+    "asides": 3,
+    "chapters": 31,
+    "columns": 1,
+    "footnotes": 6,
+    "grid_tables": 0,
+    "headings": 30,
+    "images": 0,
+    "pages": 25,
+    "raster_figures": 0,
+    "raster_tables": 0,
+    "title": "Effects of chemical fertilizer application on soil properties, banana (Musa paradisiaca) yields, and soil microbiomes in a long-term cultivation field"
+  },
+  "toc": [
+    [
+      1,
+      "Effects of chemical fertilizer application on soil properties, banana (Musa paradisiaca) yields, and soil microbiomes in a long-term cultivation field"
+    ],
+    [
+      2,
+      "Abstract"
+    ],
+    [
+      2,
+      "ABSTRACT"
+    ],
+    [
+      2,
+      "INTRODUCTION"
+    ],
+    [
+      2,
+      "MATERIALS & METHODS"
+    ],
+    [
+      2,
+      "Sampling sites"
+    ],
+    [
+      2,
+      "Soil sample collection"
+    ],
+    [
+      2,
+      "Banana yield collection"
+    ],
+    [
+      2,
+      "Soil property analysis"
+    ],
+    [
+      2,
+      "Soil microbiome analysis"
+    ],
+    [
+      2,
+      "Statistical analysis"
+    ],
+    [
+      2,
+      "RESULTS"
+    ],
+    [
+      2,
+      "E\ufb00ects of fertilizer treatments on soil properties"
+    ],
+    [
+      2,
+      "E\ufb00ects of fertilizer treatments on banana yields"
+    ],
+    [
+      2,
+      "Soil microbiome dynamics under varying NPK fertilizer"
+    ],
+    [
+      2,
+      "Relationship between soil properties and soil microbial taxa"
+    ],
+    [
+      2,
+      "Microbial functions in long-term cultivated soils"
+    ],
+    [
+      2,
+      "DISCUSSION"
+    ],
+    [
+      2,
+      "Soil acidi\ufb01cation induced by fertilizer application without"
+    ],
+    [
+      2,
+      "Alterations in soil microbiomes in response to fertilizer application"
+    ],
+    [
+      2,
+      "CONCLUSIONS"
+    ],
+    [
+      2,
+      "ACKNOWLEDGEMENTS"
+    ],
+    [
+      2,
+      "ADDITIONAL INFORMATION AND DECLARATIONS"
+    ],
+    [
+      2,
+      "Funding"
+    ],
+    [
+      2,
+      "Grant Disclosures"
+    ],
+    [
+      2,
+      "Competing Interests"
+    ],
+    [
+      2,
+      "Author Contributions"
+    ],
+    [
+      2,
+      "Data Availability"
+    ],
+    [
+      2,
+      "Supplemental Information"
+    ],
+    [
+      2,
+      "REFERENCES"
+    ],
+    [
+      1,
+      "Notes"
+    ]
+  ]
+}

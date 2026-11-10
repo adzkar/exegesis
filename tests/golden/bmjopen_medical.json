@@ -1,0 +1,387 @@
+{
+  "spine": [
+    {
+      "file": "chap_1.xhtml",
+      "frags": [
+        [
+          "p",
+          "Original research",
+          17
+        ],
+        [
+          "h1",
+          "Use of GLP1 receptor agonists in early pregnancy and reprodu",
+          190
+        ]
+      ]
+    },
+    {
+      "file": "chap_2.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Abstract",
+          8
+        ],
+        [
+          "blockquote",
+          "Kim Dao,1 Svetlana Shechtman,2 Corinna Weber-\u00adSchoendorfer,3",
+          410
+        ],
+        [
+          "p",
+          "ABSTRACT Objectives Glucagon-\u00adlike peptide 1 receptor agonis",
+          1992
+        ],
+        [
+          "p",
+          "To cite: Dao K, Shechtman S, Weber-\u00adSchoendorfer C, et al. U",
+          309
+        ],
+        [
+          "p",
+          "\u25baPrepublication history and additional supplemental material",
+          199
+        ],
+        [
+          "p",
+          "FRG and UW contributed equally.",
+          31
+        ],
+        [
+          "p",
+          "Received 22 December 2023 Accepted 08 April 2024",
+          48
+        ]
+      ]
+    },
+    {
+      "file": "chap_3.xhtml",
+      "frags": [
+        [
+          "h2",
+          "STRENGTHS AND LIMITATIONS OF THIS STUDY",
+          39
+        ],
+        [
+          "p",
+          "\u21d2This observational prospective multicentre study aimed to a",
+          778
+        ],
+        [
+          "p",
+          "INTRODUCTION Glucagon-\u00adlike peptide 1 receptor agonists (GLP",
+          3841
+        ],
+        [
+          "p",
+          "While previous studies did not detect an increased risk of m",
+          667
+        ],
+        [
+          "p",
+          "MATERIAL AND METHODS Study design and dataset description Th",
+          794
+        ],
+        [
+          "p",
+          "Health professionals and pregnant women spontaneously contac",
+          8375
+        ],
+        [
+          "p",
+          "The study protocol received approval from the ENTIS scientif",
+          305
+        ],
+        [
+          "p",
+          "Patient and public involvement Patients and/or the public we",
+          157
+        ],
+        [
+          "p",
+          "RESULTS In this study, we included 168 pregnant women who we",
+          279
+        ],
+        [
+          "p",
+          "Maternal characteristics Table 1 provides a summary of mater",
+          975
+        ],
+        [
+          "p",
+          "Drug exposure Liraglutide (n=99) was the most commonly presc",
+          1752
+        ],
+        [
+          "p",
+          "Pregnancy outcomes Table 2 presents the proportions of offsp",
+          1449
+        ],
+        [
+          "table",
+          "Table 1 Maternal/pregnancy characteristics in study groupsGL",
+          1490
+        ],
+        [
+          "p",
+          "*Inclusion criterion. \u2020Exclusion criterion. BMI, body mass i",
+          230
+        ],
+        [
+          "p",
+          "1.37 (95% CI, 0.36 to 5.23), and the adjusted OR was 0.99 (9",
+          308
+        ],
+        [
+          "p",
+          "A total of 483 women were included in the cumulative inciden",
+          327
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Figure 1 Cumulative incidences of pregnancy outcomes with li",
+          265
+        ],
+        [
+          "p",
+          "18%, respectively (figure 1). The corresponding estimates in",
+          1328
+        ],
+        [
+          "p",
+          "Follow-up Information on follow-\u00adup was obtained from health",
+          760
+        ],
+        [
+          "p",
+          "DISCUSSION This prospective multicentre observational study ",
+          829
+        ],
+        [
+          "p",
+          "The crude rate of major birth defects in the GLP1-\u00adRA-\u00ad expo",
+          509
+        ],
+        [
+          "table",
+          "Table 3 Pregnancy outcomesGLP1-\u00adRA group (n=168)Medical term",
+          567
+        ],
+        [
+          "p",
+          "Live-\u00adborn infants, n 113 126 117 Elective termination of pr",
+          737
+        ],
+        [
+          "p",
+          "lies between 5% and 10% among women with pregestational diab",
+          888
+        ],
+        [
+          "table",
+          "Table 4 Pregnancy outcomes\u2014Cox proportional hazard modelsHR ",
+          301
+        ]
+      ]
+    },
+    {
+      "file": "chap_4.xhtml",
+      "frags": [
+        [
+          "h2",
+          "GLP1-\u00adRA group vs diabetic reference group GLP1-\u00adRA group vs",
+          93
+        ],
+        [
+          "p",
+          "*Adjusted for maternal age, tobacco use, folate intake, past",
+          254
+        ],
+        [
+          "p",
+          "Reference group with diabetes (n=156) Overweight/obese refer",
+          723
+        ],
+        [
+          "p",
+          "Strengths and limitations of prospective observational pregn",
+          1290
+        ],
+        [
+          "p",
+          "CONCLUSION This study offers further reassurance in cases of",
+          247
+        ],
+        [
+          "p",
+          "Author affiliations 1Swiss Teratogen Information Service and",
+          1775
+        ]
+      ]
+    },
+    {
+      "file": "chap_5.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Acknowledgements",
+          16
+        ],
+        [
+          "p",
+          "The authors would like to thank pharmacists Sarit Carmi and ",
+          464
+        ],
+        [
+          "p",
+          "Contributors KD, SS, OD-\u00adC, AP, APS-\u00adW, UW contributed to th",
+          506
+        ]
+      ]
+    },
+    {
+      "file": "chap_6.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Funding",
+          7
+        ],
+        [
+          "p",
+          "This work was supported by Swiss National Science Foundation",
+          93
+        ],
+        [
+          "p",
+          "Competing interests None declared.",
+          34
+        ],
+        [
+          "p",
+          "Patient and public involvement Patients and/or the public we",
+          157
+        ],
+        [
+          "p",
+          "Patient consent for publication Not applicable.",
+          47
+        ],
+        [
+          "p",
+          "Ethics approval This study involves human participants and w",
+          421
+        ],
+        [
+          "p",
+          "Provenance and peer review Not commissioned; externally peer",
+          70
+        ],
+        [
+          "p",
+          "Data availability statement Data are available in a public, ",
+          160
+        ],
+        [
+          "p",
+          "Supplemental material This content has been supplied by the ",
+          713
+        ],
+        [
+          "p",
+          "Open access This is an open access article distributed in ac",
+          419
+        ],
+        [
+          "p",
+          "ORCID iDs Maya Berlin http://orcid.org/0000-0003-4731-742X A",
+          292
+        ],
+        [
+          "p",
+          "clinicaltrials.gov/ct2/show/NCT00579150?cond=%22Diabetes%2C+",
+          2445
+        ],
+        [
+          "p",
+          "21 Winterfeld U, Allignol A, Panchaud A, et al. Pregnancy ou",
+          1301
+        ],
+        [
+          "p",
+          "rd-platform.jrc.ec.europa.eu/eurocat/eurocat-data/prevalence",
+          1232
+        ]
+      ]
+    },
+    {
+      "file": "notes.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Notes",
+          5
+        ],
+        [
+          "p",
+          "\u00a9 Author(s) (or their employer(s)) 2024. Re-\u00aduse permitted u",
+          1227
+        ]
+      ]
+    }
+  ],
+  "stats": {
+    "asides": 0,
+    "chapters": 7,
+    "columns": 2,
+    "footnotes": 4,
+    "grid_tables": 3,
+    "headings": 6,
+    "images": 2,
+    "pages": 10,
+    "raster_figures": 0,
+    "raster_tables": 1,
+    "title": "Use of GLP1 receptor agonists in early pregnancy and reproductive safety: a multicentre, observational, prospective cohort study based on the databases of six Teratology Information\u00a0Services"
+  },
+  "toc": [
+    [
+      1,
+      "Use of GLP1 receptor agonists in early pregnancy and reproductive safety: a multicentre, observational, prospective cohort study based on the databases of six Teratology Information Services"
+    ],
+    [
+      2,
+      "Abstract"
+    ],
+    [
+      2,
+      "STRENGTHS AND LIMITATIONS OF THIS STUDY"
+    ],
+    [
+      2,
+      "GLP1-\u00adRA group vs diabetic reference group GLP1-\u00adRA group vs overweight/obese reference group"
+    ],
+    [
+      2,
+      "Acknowledgements"
+    ],
+    [
+      2,
+      "Funding"
+    ],
+    [
+      1,
+      "Notes"
+    ]
+  ]
+}

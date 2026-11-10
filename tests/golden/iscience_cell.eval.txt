@@ -1,0 +1,26 @@
+# epub-eval: iscience_cell.pdf
+
+**Verdict:** 0 high-severity findings — clean; verbatim word coverage 98.3% (6742/6856, epub emitted 6802 words after rejoins)
+
+## Checks
+- A container: PASS — 17 members, 7 chapters, 2 images
+- B metadata: title='Soil salinization in agriculture: Mitigation and adaptation '
+- C coverage: rejoined 94, furniture 96, rasterized table cells 1571, superscript splits 5, genuine loss 15
+- D toc: 8 entries, h1=1 h2=6, dupes=none
+- G figures: pdf rasters=2, embedded=2, vector pages=[1]
+
+## Findings (severity-ranked)
+| Sev | Check | Finding |
+|-----|-------|---------|
+| Med | C | genuine word loss 15: [('c', 2), ('mangrove', 1), ('long', 1), ('term', 1), ('micro', 1), ('irri', 1), ('gation', 1), ('res', 1), ('069', 1), ('masson', 1)] |
+| Low | G | vector graphics on pages [1] not capturable — verify content survived as text |
+| Low | G | chap_7.xhtml: <img> missing caption alt text |
+
+## Classified word loss
+| class | words | top examples |
+|-------|-------|--------------|
+| rejoined hyphenation | 94 | con, salt, envi, ronmental, com, compre, hensive, tion |
+| stripped furniture | 96 | iscience, open, access, ll, perspective, 16, 2024, 108830 |
+| rasterized table cells | 1571 | and, j, in, of, m, t, h, a |
+| superscript splits | 5 | 1department, 2inner, 3earth, 4department, sciences81 |
+| genuine loss | 15 | c, mangrove, long, term, micro, irri, gation, res |

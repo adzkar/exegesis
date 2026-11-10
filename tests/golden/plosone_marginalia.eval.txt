@@ -1,0 +1,33 @@
+# epub-eval: plosone_marginalia.pdf
+
+**Verdict:** 4 high-severity findings — needs attention; verbatim word coverage 97.8% (8911/9108, epub emitted 9029 words after rejoins)
+
+## Checks
+- A container: PASS — 26 members, 15 chapters, 4 images
+- B metadata: title='An analysis of the effects of sharing research data, code, a'
+- C coverage: rejoined 170, furniture 515, rasterized table cells 0, superscript splits 8, genuine loss 19
+- D toc: 16 entries, h1=1 h2=14, dupes=none
+- G figures: pdf rasters=4, embedded=4, vector pages=[1, 3, 5, 6, 7, 9, 10, 11, 12, 17, 18]
+
+## Findings (severity-ranked)
+| Sev | Check | Finding |
+|-----|-------|---------|
+| High | D | numbered section headings missing from TOC (3): ['2.2. Preprints', '4.2. Modeling', '5.1. Limitations'] |
+| High | F | Table 5: content largely absent (48% 4-gram coverage) |
+| High | F | Table 6: content largely absent (45% 4-gram coverage) |
+| High | G | Fig. 1: legend swept into notes.xhtml |
+| Med | C | genuine word loss 19: [('shar', 3), ('ing', 3), ('research', 2), ('pre', 2), ('prints', 2), ('data', 1), ('colavizzaid1', 1), ('cadwalladerid3', 1), ('laflammeid3', 1), ('lecorneyid4', 1)] |
+| Med | F | Table 2: legend absent; grid data survives (100% coverage) |
+| Med | F | Table 3: legend absent; grid data survives (100% coverage) |
+| Low | G | vector-ruled table grids on pages [5, 6, 7, 10, 11, 12] — cells emit as flat text, structure lost |
+| Low | G | vector graphics on pages [1, 3, 9, 17, 18] not capturable — verify content survived as text |
+| Low | G | chap_8.xhtml: <img> missing caption alt text |
+
+## Classified word loss
+| class | words | top examples |
+|-------|-------|--------------|
+| rejoined hyphenation | 170 | tion, pub, sci, dis, pre, ence, set, com |
+| stripped furniture | 515 | plos, one, 10, 19, org, https, doi, 1371 |
+| rasterized table cells | 0 |  |
+| superscript splits | 8 | r2, dozot4, rappo4 |
+| genuine loss | 19 | shar, ing, research, pre, prints, data, colavizzaid1, cadwalladerid3 |

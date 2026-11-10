@@ -1,0 +1,25 @@
+# epub-eval: peerj_oa.pdf
+
+**Verdict:** 0 high-severity findings — clean; verbatim word coverage 97.4% (11842/12154, epub emitted 12415 words after rejoins)
+
+## Checks
+- A container: PASS — 37 members, 30 chapters, 0 images
+- B metadata: title='Effects of chemical fertilizer application on soil propertie'
+- C coverage: rejoined 38, furniture 263, rasterized table cells 0, superscript splits 253, genuine loss 21
+- D toc: 31 entries, h1=1 h2=29, dupes=none
+- G figures: pdf rasters=0, embedded=0, vector pages=[7, 9, 10, 11]
+
+## Findings (severity-ranked)
+| Sev | Check | Finding |
+|-----|-------|---------|
+| Med | C | genuine word loss 21: [('t3a', 7), ('y1a', 7), ('nh4no3', 2), ('p2o5', 1), ('k2o', 1), ('t1a', 1), ('t2a', 1), ('occurrence', 1)] |
+| Low | G | vector graphics on pages [7, 9, 10, 11] not capturable — verify content survived as text |
+
+## Classified word loss
+| class | words | top examples |
+|-------|-------|--------------|
+| rejoined hyphenation | 38 | long, term, potas, sium, field, nutrient, sustain, manage |
+| stripped furniture | 263 | peerj, 2026, doi, 7717, 21912, et, al, pruksangkul |
+| rasterized table cells | 0 |  |
+| superscript splits | 253 | n0, n2, n1, 31a, 41a, 19a, 40a, ch4 |
+| genuine loss | 21 | t3a, y1a, nh4no3, p2o5, k2o, t1a, t2a, occurrence |

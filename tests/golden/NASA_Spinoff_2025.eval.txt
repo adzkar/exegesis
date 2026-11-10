@@ -1,0 +1,181 @@
+# epub-eval: NASA_Spinoff_2025.pdf
+
+**Verdict:** 0 high-severity findings — clean; verbatim word coverage 99.8% (47121/47193, epub emitted 47156 words after rejoins)
+
+## Checks
+- A container: PASS — 445 members, 284 chapters, 154 images
+- B metadata: title='NASA Spinoff 2025'
+- C coverage: rejoined 66, furniture 384, rasterized table cells 0, superscript splits 0, genuine loss 6
+- D toc: 285 entries, h1=93 h2=191, dupes=['2025', 'Benefits', 'Applications']
+- G figures: pdf rasters=154, embedded=154, vector pages=[1, 25, 26, 47, 51, 52, 53, 54, 55, 56]
+
+## Findings (severity-ranked)
+| Sev | Check | Finding |
+|-----|-------|---------|
+| Low | C | genuine word loss 6: [('and', 1), ('a', 1), ('89', 1), ('93', 1), ('88', 1), ('92', 1)] |
+| Low | D | duplicate TOC titles: ['2025', 'Benefits', 'Applications'] |
+| Low | G | vector graphics on pages [1, 25, 26, 47, 51, 52, 53, 54, 55, 56] not capturable — verify content survived as text |
+| Low | G | chap_2.xhtml: <img> missing caption alt text |
+| Low | G | chap_8.xhtml: <img> missing caption alt text |
+| Low | G | chap_12.xhtml: <img> missing caption alt text |
+| Low | G | chap_16.xhtml: <img> missing caption alt text |
+| Low | G | chap_16.xhtml: <img> missing caption alt text |
+| Low | G | chap_20.xhtml: <img> missing caption alt text |
+| Low | G | chap_23.xhtml: <img> missing caption alt text |
+| Low | G | chap_26.xhtml: <img> missing caption alt text |
+| Low | G | chap_29.xhtml: <img> missing caption alt text |
+| Low | G | chap_34.xhtml: <img> missing caption alt text |
+| Low | G | chap_35.xhtml: <img> missing caption alt text |
+| Low | G | chap_38.xhtml: <img> missing caption alt text |
+| Low | G | chap_39.xhtml: <img> missing caption alt text |
+| Low | G | chap_40.xhtml: <img> missing caption alt text |
+| Low | G | chap_40.xhtml: <img> missing caption alt text |
+| Low | G | chap_42.xhtml: <img> missing caption alt text |
+| Low | G | chap_43.xhtml: <img> missing caption alt text |
+| Low | G | chap_43.xhtml: <img> missing caption alt text |
+| Low | G | chap_44.xhtml: <img> missing caption alt text |
+| Low | G | chap_44.xhtml: <img> missing caption alt text |
+| Low | G | chap_44.xhtml: <img> missing caption alt text |
+| Low | G | chap_46.xhtml: <img> missing caption alt text |
+| Low | G | chap_47.xhtml: <img> missing caption alt text |
+| Low | G | chap_48.xhtml: <img> missing caption alt text |
+| Low | G | chap_48.xhtml: <img> missing caption alt text |
+| Low | G | chap_48.xhtml: <img> missing caption alt text |
+| Low | G | chap_48.xhtml: <img> missing caption alt text |
+| Low | G | chap_50.xhtml: <img> missing caption alt text |
+| Low | G | chap_51.xhtml: <img> missing caption alt text |
+| Low | G | chap_51.xhtml: <img> missing caption alt text |
+| Low | G | chap_52.xhtml: <img> missing caption alt text |
+| Low | G | chap_52.xhtml: <img> missing caption alt text |
+| Low | G | chap_54.xhtml: <img> missing caption alt text |
+| Low | G | chap_55.xhtml: <img> missing caption alt text |
+| Low | G | chap_55.xhtml: <img> missing caption alt text |
+| Low | G | chap_55.xhtml: <img> missing caption alt text |
+| Low | G | chap_56.xhtml: <img> missing caption alt text |
+| Low | G | chap_56.xhtml: <img> missing caption alt text |
+| Low | G | chap_58.xhtml: <img> missing caption alt text |
+| Low | G | chap_58.xhtml: <img> missing caption alt text |
+| Low | G | chap_59.xhtml: <img> missing caption alt text |
+| Low | G | chap_60.xhtml: <img> missing caption alt text |
+| Low | G | chap_60.xhtml: <img> missing caption alt text |
+| Low | G | chap_62.xhtml: <img> missing caption alt text |
+| Low | G | chap_63.xhtml: <img> missing caption alt text |
+| Low | G | chap_63.xhtml: <img> missing caption alt text |
+| Low | G | chap_64.xhtml: <img> missing caption alt text |
+| Low | G | chap_64.xhtml: <img> missing caption alt text |
+| Low | G | chap_66.xhtml: <img> missing caption alt text |
+| Low | G | chap_66.xhtml: <img> missing caption alt text |
+| Low | G | chap_67.xhtml: <img> missing caption alt text |
+| Low | G | chap_67.xhtml: <img> missing caption alt text |
+| Low | G | chap_69.xhtml: <img> missing caption alt text |
+| Low | G | chap_70.xhtml: <img> missing caption alt text |
+| Low | G | chap_71.xhtml: <img> missing caption alt text |
+| Low | G | chap_73.xhtml: <img> missing caption alt text |
+| Low | G | chap_74.xhtml: <img> missing caption alt text |
+| Low | G | chap_75.xhtml: <img> missing caption alt text |
+| Low | G | chap_77.xhtml: <img> missing caption alt text |
+| Low | G | chap_78.xhtml: <img> missing caption alt text |
+| Low | G | chap_78.xhtml: <img> missing caption alt text |
+| Low | G | chap_79.xhtml: <img> missing caption alt text |
+| Low | G | chap_79.xhtml: <img> missing caption alt text |
+| Low | G | chap_83.xhtml: <img> missing caption alt text |
+| Low | G | chap_85.xhtml: <img> missing caption alt text |
+| Low | G | chap_85.xhtml: <img> missing caption alt text |
+| Low | G | chap_93.xhtml: <img> missing caption alt text |
+| Low | G | chap_93.xhtml: <img> missing caption alt text |
+| Low | G | chap_95.xhtml: <img> missing caption alt text |
+| Low | G | chap_96.xhtml: <img> missing caption alt text |
+| Low | G | chap_97.xhtml: <img> missing caption alt text |
+| Low | G | chap_103.xhtml: <img> missing caption alt text |
+| Low | G | chap_103.xhtml: <img> missing caption alt text |
+| Low | G | chap_103.xhtml: <img> missing caption alt text |
+| Low | G | chap_103.xhtml: <img> missing caption alt text |
+| Low | G | chap_112.xhtml: <img> missing caption alt text |
+| Low | G | chap_112.xhtml: <img> missing caption alt text |
+| Low | G | chap_112.xhtml: <img> missing caption alt text |
+| Low | G | chap_114.xhtml: <img> missing caption alt text |
+| Low | G | chap_115.xhtml: <img> missing caption alt text |
+| Low | G | chap_115.xhtml: <img> missing caption alt text |
+| Low | G | chap_115.xhtml: <img> missing caption alt text |
+| Low | G | chap_115.xhtml: <img> missing caption alt text |
+| Low | G | chap_115.xhtml: <img> missing caption alt text |
+| Low | G | chap_115.xhtml: <img> missing caption alt text |
+| Low | G | chap_119.xhtml: <img> missing caption alt text |
+| Low | G | chap_121.xhtml: <img> missing caption alt text |
+| Low | G | chap_125.xhtml: <img> missing caption alt text |
+| Low | G | chap_130.xhtml: <img> missing caption alt text |
+| Low | G | chap_133.xhtml: <img> missing caption alt text |
+| Low | G | chap_135.xhtml: <img> missing caption alt text |
+| Low | G | chap_135.xhtml: <img> missing caption alt text |
+| Low | G | chap_135.xhtml: <img> missing caption alt text |
+| Low | G | chap_136.xhtml: <img> missing caption alt text |
+| Low | G | chap_137.xhtml: <img> missing caption alt text |
+| Low | G | chap_144.xhtml: <img> missing caption alt text |
+| Low | G | chap_146.xhtml: <img> missing caption alt text |
+| Low | G | chap_156.xhtml: <img> missing caption alt text |
+| Low | G | chap_159.xhtml: <img> missing caption alt text |
+| Low | G | chap_162.xhtml: <img> missing caption alt text |
+| Low | G | chap_163.xhtml: <img> missing caption alt text |
+| Low | G | chap_163.xhtml: <img> missing caption alt text |
+| Low | G | chap_165.xhtml: <img> missing caption alt text |
+| Low | G | chap_166.xhtml: <img> missing caption alt text |
+| Low | G | chap_168.xhtml: <img> missing caption alt text |
+| Low | G | chap_173.xhtml: <img> missing caption alt text |
+| Low | G | chap_174.xhtml: <img> missing caption alt text |
+| Low | G | chap_174.xhtml: <img> missing caption alt text |
+| Low | G | chap_177.xhtml: <img> missing caption alt text |
+| Low | G | chap_177.xhtml: <img> missing caption alt text |
+| Low | G | chap_178.xhtml: <img> missing caption alt text |
+| Low | G | chap_182.xhtml: <img> missing caption alt text |
+| Low | G | chap_182.xhtml: <img> missing caption alt text |
+| Low | G | chap_182.xhtml: <img> missing caption alt text |
+| Low | G | chap_190.xhtml: <img> missing caption alt text |
+| Low | G | chap_192.xhtml: <img> missing caption alt text |
+| Low | G | chap_192.xhtml: <img> missing caption alt text |
+| Low | G | chap_193.xhtml: <img> missing caption alt text |
+| Low | G | chap_194.xhtml: <img> missing caption alt text |
+| Low | G | chap_197.xhtml: <img> missing caption alt text |
+| Low | G | chap_198.xhtml: <img> missing caption alt text |
+| Low | G | chap_198.xhtml: <img> missing caption alt text |
+| Low | G | chap_205.xhtml: <img> missing caption alt text |
+| Low | G | chap_207.xhtml: <img> missing caption alt text |
+| Low | G | chap_207.xhtml: <img> missing caption alt text |
+| Low | G | chap_207.xhtml: <img> missing caption alt text |
+| Low | G | chap_207.xhtml: <img> missing caption alt text |
+| Low | G | chap_207.xhtml: <img> missing caption alt text |
+| Low | G | chap_207.xhtml: <img> missing caption alt text |
+| Low | G | chap_208.xhtml: <img> missing caption alt text |
+| Low | G | chap_209.xhtml: <img> missing caption alt text |
+| Low | G | chap_211.xhtml: <img> missing caption alt text |
+| Low | G | chap_214.xhtml: <img> missing caption alt text |
+| Low | G | chap_220.xhtml: <img> missing caption alt text |
+| Low | G | chap_222.xhtml: <img> missing caption alt text |
+| Low | G | chap_223.xhtml: <img> missing caption alt text |
+| Low | G | chap_225.xhtml: <img> missing caption alt text |
+| Low | G | chap_227.xhtml: <img> missing caption alt text |
+| Low | G | chap_234.xhtml: <img> missing caption alt text |
+| Low | G | chap_237.xhtml: <img> missing caption alt text |
+| Low | G | chap_237.xhtml: <img> missing caption alt text |
+| Low | G | chap_239.xhtml: <img> missing caption alt text |
+| Low | G | chap_242.xhtml: <img> missing caption alt text |
+| Low | G | chap_245.xhtml: <img> missing caption alt text |
+| Low | G | chap_250.xhtml: <img> missing caption alt text |
+| Low | G | chap_250.xhtml: <img> missing caption alt text |
+| Low | G | chap_252.xhtml: <img> missing caption alt text |
+| Low | G | chap_253.xhtml: <img> missing caption alt text |
+| Low | G | chap_260.xhtml: <img> missing caption alt text |
+| Low | G | chap_262.xhtml: <img> missing caption alt text |
+| Low | G | chap_263.xhtml: <img> missing caption alt text |
+| Low | G | chap_265.xhtml: <img> missing caption alt text |
+| Low | G | chap_266.xhtml: <img> missing caption alt text |
+| Low | G | chap_272.xhtml: <img> missing caption alt text |
+| Low | G | chap_284.xhtml: <img> missing caption alt text |
+
+## Classified word loss
+| class | words | top examples |
+|-------|-------|--------------|
+| rejoined hyphenation | 66 | based, to, large, high, california, self, time, powered |
+| stripped furniture | 384 | spinoff, 2025, nasa, kennedy, 3, 27, 32, 34 |
+| rasterized table cells | 0 |  |
+| superscript splits | 0 |  |
+| genuine loss | 6 | and, a, 89, 93, 88, 92 |

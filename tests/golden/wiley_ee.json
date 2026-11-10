@@ -1,0 +1,885 @@
+{
+  "spine": [
+    {
+      "file": "chap_1.xhtml",
+      "frags": [
+        [
+          "p",
+          "Received: 8 November 2023 | Accepted: 4 December 2023",
+          53
+        ],
+        [
+          "p",
+          "R E S E A R C H A R T I C L E",
+          29
+        ],
+        [
+          "h1",
+          "TreeViewer: Flexible, modular software to visualise and mani",
+          85
+        ],
+        [
+          "p",
+          "Giorgio Bianchini | Patricia S\u00e1nchez-\u00adBaracaldo School of Ge",
+          707
+        ],
+        [
+          "p",
+          "Funding information University of Bristol; Royal Society",
+          56
+        ],
+        [
+          "p",
+          "We present TreeViewer, a new software to draw phylogenetic t",
+          1654
+        ],
+        [
+          "p",
+          "K E Y W O R D S figures, graphical interface, Newick, NEXUS,",
+          152
+        ]
+      ]
+    },
+    {
+      "file": "chap_2.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Abstract",
+          8
+        ],
+        [
+          "p",
+          "1 | BACKGROUND",
+          14
+        ],
+        [
+          "p",
+          "TreeViewer is a flexible and user-\u00adfriendly multiplatform so",
+          764
+        ],
+        [
+          "p",
+          "Tree plots produced by the program are the result of the con",
+          379
+        ],
+        [
+          "p",
+          "Furthermore, this modular design means that changes to the s",
+          253
+        ],
+        [
+          "p",
+          "Plots created with TreeViewer are intrinsically reproducible",
+          567
+        ]
+      ]
+    },
+    {
+      "file": "chap_3.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Module type Task Example",
+          24
+        ],
+        [
+          "p",
+          "File type Opens and interprets the contents of a tree file i",
+          1856
+        ],
+        [
+          "p",
+          "Users can also create new modules in TreeViewer. A curated o",
+          443
+        ],
+        [
+          "p",
+          "TreeViewer is mainly a graphical program, in which users can",
+          797
+        ],
+        [
+          "p",
+          "A number of examples and tutorials make it possible for user",
+          190
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "(Bianchini, 2021b) and describe a large variety of different",
+          464
+        ]
+      ]
+    },
+    {
+      "file": "chap_4.xhtml",
+      "frags": [
+        [
+          "h2",
+          "2 | IMPLEMENTATION",
+          18
+        ],
+        [
+          "p",
+          "TreeViewer is written using the C# programming language, run",
+          436
+        ],
+        [
+          "p",
+          "TreeViewer is an open-\u00adsource software, released under the G",
+          525
+        ],
+        [
+          "p",
+          "2.1 | User interface TreeViewer provides a user-\u00adfriendly gr",
+          219
+        ],
+        [
+          "p",
+          "FI G U R E 1 Examples of trees created using TreeViewer. (a)",
+          1103
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "FI G U R E 2 Main user interface of TreeViewer. (a) The tree",
+          559
+        ],
+        [
+          "p",
+          "Rambaut, 2018) and from commonly used office suite software ",
+          381
+        ],
+        [
+          "p",
+          "The interface of TreeViewer is used to explicitly describe t",
+          959
+        ],
+        [
+          "p",
+          "This action is performed by a Load file module (Table 1), wh",
+          278
+        ],
+        [
+          "p",
+          "Once a tree file has been read, TreeViewer has access to a l",
+          899
+        ],
+        [
+          "p",
+          "In order to plot a tree, the next step is determining the co",
+          577
+        ],
+        [
+          "p",
+          "The final tree plot is the result of the action of all these",
+          200
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "FI G U R E 3 TreeViewer workflow to create tree plots. First",
+          399
+        ],
+        [
+          "p",
+          "display their attributes, and perform actions on them; plots",
+          133
+        ],
+        [
+          "p",
+          "2.2 | Command-\u00adline interface In addition to the GUI, TreeVi",
+          1771
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "FI G U R E 4 TreeViewer command-\u00adline interface. (a) List of",
+          422
+        ],
+        [
+          "p",
+          "2.3 | Modular structure The modular structure of the softwar",
+          3357
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "FI G U R E 5 Attribute formatter window. Attribute formatter",
+          447
+        ],
+        [
+          "p",
+          "many features that make writing source code as user-\u00adfriendl",
+          524
+        ],
+        [
+          "p",
+          "This approach of including UI controls that automatically ge",
+          191
+        ],
+        [
+          "p",
+          "Many modules use attribute formatters to convert between att",
+          608
+        ],
+        [
+          "p",
+          "2.4 | Module development New modules can be developed to ext",
+          1145
+        ],
+        [
+          "p",
+          "TA B LE 2 Attribute formatters. Attribute formatters are dis",
+          221
+        ],
+        [
+          "p",
+          "Attribute formatter type Output type Input attribute type De",
+          1745
+        ],
+        [
+          "p",
+          "2.5 | Digital signatures The digital signature for a TreeVie",
+          3927
+        ],
+        [
+          "p",
+          "3 | RESULTS",
+          11
+        ],
+        [
+          "p",
+          "Here, we present an example using TreeViewer to display age ",
+          686
+        ],
+        [
+          "p",
+          "3.1 | Consensus tree The tree file at https://\u200btreev\u200biewer.\u200b",
+          4769
+        ],
+        [
+          "p",
+          "(a)",
+          3
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "(b)",
+          3
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "FI G U R E 6 Steps performed in this example. (a) The file c",
+          402
+        ],
+        [
+          "p",
+          "A more detailed version of this example, showing some additi",
+          475
+        ],
+        [
+          "p",
+          "Many more examples and tutorials showcasing the capabilities",
+          129
+        ]
+      ]
+    },
+    {
+      "file": "chap_5.xhtml",
+      "frags": [
+        [
+          "h2",
+          "4 | DISCUSSION",
+          14
+        ],
+        [
+          "p",
+          "Many software tools exist to plot and visualise phylogenetic",
+          470
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "(c)",
+          3
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "(d) FI G U R E 6 (Continued)",
+          28
+        ],
+        [
+          "p",
+          "0 300 600 900 1200 1500 1800 2100 2400 2700 3000 Mya Mya Glo",
+          1576
+        ],
+        [
+          "p",
+          "FigTree (Rambaut, 2018) is a Java-\u00adbased program that was or",
+          585
+        ],
+        [
+          "p",
+          "Software Free and open source Licence OS compatibility Inter",
+          430
+        ],
+        [
+          "p",
+          "bThe latest versions of the client-\u00adside visualisation engin",
+          256
+        ],
+        [
+          "p",
+          "cIn addition to the main Python command-\u00adline interface, ETE",
+          96
+        ],
+        [
+          "p",
+          "to perform basic annotations on the trees (e.g., adding symb",
+          537
+        ],
+        [
+          "p",
+          "The ggtree R package (Yu et al., 2017) allows users to plot ",
+          617
+        ],
+        [
+          "p",
+          "The ETE Python package (Huerta-\u00adCepas et al., 2016) provides",
+          638
+        ],
+        [
+          "p",
+          "Code that uses software libraries such as ggtree and ETE can",
+          1017
+        ],
+        [
+          "p",
+          "TreeViewer has a GUI interface that can be used to produce s",
+          914
+        ]
+      ]
+    },
+    {
+      "file": "chap_6.xhtml",
+      "frags": [
+        [
+          "h2",
+          "5 | CONCLUSION",
+          14
+        ],
+        [
+          "p",
+          "TreeViewer provides new and versatile capabilities for drawi",
+          469
+        ],
+        [
+          "p",
+          "The user-\u00adfriendly interface and intuitive zoom-\u00adand-\u00addrag f",
+          195
+        ],
+        [
+          "p",
+          "Detailed documentation and tutorials are available for users",
+          505
+        ],
+        [
+          "p",
+          "TreeViewer is freely available for Windows, Linux, and macOS",
+          436
+        ]
+      ]
+    },
+    {
+      "file": "chap_7.xhtml",
+      "frags": [
+        [
+          "h2",
+          "AUTHOR CONTRIBUTIONS",
+          20
+        ],
+        [
+          "p",
+          "Giorgio Bianchini: Conceptualization (lead); methodology (le",
+          348
+        ]
+      ]
+    },
+    {
+      "file": "chap_8.xhtml",
+      "frags": [
+        [
+          "h2",
+          "ACKNO\u200bWLE\u200bDGE\u200bMENTS",
+          19
+        ],
+        [
+          "p",
+          "We would like to acknowledge all the users who have tried th",
+          187
+        ]
+      ]
+    },
+    {
+      "file": "chap_9.xhtml",
+      "frags": [
+        [
+          "h2",
+          "FUNDING INFORMATION",
+          19
+        ],
+        [
+          "p",
+          "Funding support for this work came from a University of Bris",
+          319
+        ]
+      ]
+    },
+    {
+      "file": "chap_10.xhtml",
+      "frags": [
+        [
+          "h2",
+          "CONFLICT OF INTEREST STATEMENT",
+          30
+        ],
+        [
+          "p",
+          "The authors declare that they have no competing interests.",
+          58
+        ]
+      ]
+    },
+    {
+      "file": "chap_11.xhtml",
+      "frags": [
+        [
+          "h2",
+          "DATA AVAILABILITY STATEMENT",
+          27
+        ],
+        [
+          "p",
+          "The source code for TreeViewer and all associated example fi",
+          259
+        ]
+      ]
+    },
+    {
+      "file": "chap_12.xhtml",
+      "frags": [
+        [
+          "h2",
+          "ORCID",
+          5
+        ],
+        [
+          "p",
+          "Giorgio Bianchini https://orcid.org/0000-0003-0223-0339",
+          55
+        ]
+      ]
+    },
+    {
+      "file": "chap_13.xhtml",
+      "frags": [
+        [
+          "h2",
+          "REFERENCES",
+          10
+        ],
+        [
+          "p",
+          "Anderegg, M. A., Gyimesi, G., Ho, T. M., Hediger, M. A., & F",
+          72
+        ],
+        [
+          "p",
+          "(2022). The less well-\u00adknown little brothers: The SLC9B/NHA ",
+          393
+        ],
+        [
+          "p",
+          "Metagenomes from 25 low-\u00adabundance microbes in a partial Nit",
+          263
+        ],
+        [
+          "p",
+          "org/\u200bmodules Bianchini, G. (2021b). TreeViewer manual. https",
+          164
+        ],
+        [
+          "p",
+          "arklu\u200bmpus/\u200bTreeV\u200biewer/\u200bwiki/\u200bDevel\u200boper's-\u00ad\u200bguide\u200b Bianchi",
+          126
+        ],
+        [
+          "p",
+          "in a time-\u00adcalibrated tree. https://\u200btreev\u200biewer.\u200borg/\u200bmanua",
+          141
+        ],
+        [
+          "p",
+          "manual/\u200bexamples Bianchini, G. (2023a). TreeNode: Version 1.",
+          94
+        ],
+        [
+          "p",
+          "ZENODO.\u200b8387417 Bianchini, G. (2023b). CSharpEditor: Version",
+          91
+        ],
+        [
+          "p",
+          "5281/\u200bZENODO.\u200b8387453 Bianchini, G. (2023c). TreeViewer exam",
+          406
+        ],
+        [
+          "p",
+          "Bealer, K., & Madden, T. L. (2009). BLAST+: Architecture and",
+          229
+        ],
+        [
+          "p",
+          "FIPS) https://\u200bdoi.\u200borg/\u200b10.\u200b6028/\u200bNIST.\u200bFIPS.\u200b180-\u00ad\u200b4 Eisfe",
+          296
+        ],
+        [
+          "p",
+          "washi\u200bngton.\u200bedu/\u200bphylip/\u200bnewic\u200bktree.\u200bhtml Floating-\u00adPoint ",
+          116
+        ],
+        [
+          "p",
+          "Arithmetic. IEEE Std 754\u20132019 (Revision of IEEE 754\u20132008), 1",
+          185
+        ],
+        [
+          "p",
+          "https://\u200bwww.\u200bgnu.\u200borg/\u200blicen\u200bses/\u200bagpl-\u00ad\u200b3.0.\u200ben.\u200bhtml Gyim",
+          127
+        ],
+        [
+          "p",
+          "novel solute carrier-\u00adlike proteins from proteomes. PLoS One",
+          203
+        ],
+        [
+          "p",
+          "B. R., Huelsenbeck, J. P., & Ronquist, F. (2016). RevBayes: ",
+          308
+        ],
+        [
+          "p",
+          "Network. https://\u200bcran.\u200br-\u00ad\u200bproje\u200bct.\u200borg/\u200b Huerta-\u00adCepas, J",
+          297
+        ],
+        [
+          "p",
+          "analysis, and visualization of Phylogenomic data. Molecular ",
+          215
+        ],
+        [
+          "p",
+          "Castelle, C. J., Butterfield, C. N., Hernsdorf, A. W., Amano",
+          373
+        ],
+        [
+          "p",
+          "Proton gradient mediates hemolymph trehalose influx into aph",
+          421
+        ],
+        [
+          "p",
+          "E. E., Moore, B. S., Ziemert, N., Letzel, A. C., & Jensen, P",
+          370
+        ],
+        [
+          "p",
+          "software package for phylogenetic reconstruction and molecul",
+          231
+        ],
+        [
+          "p",
+          "tool for phylogenetic tree display and annotation. Bioinform",
+          213
+        ],
+        [
+          "p",
+          "and display of phylogenetic trees made easy. Nucleic Acids R",
+          202
+        ],
+        [
+          "p",
+          "tool for the display and annotation of phylogenetic and othe",
+          224
+        ],
+        [
+          "p",
+          "updates and new developments. Nucleic Acids Research, 47, W2",
+          591
+        ],
+        [
+          "p",
+          "www.\u200bmesqu\u200bitepr\u200boject.\u200borg/\u200b Marx, V. (2013). The big chall",
+          100
+        ],
+        [
+          "p",
+          "https://\u200bdoi.\u200borg/\u200b10.\u200b1038/\u200b498255a McElreath, R. (2020). S",
+          282
+        ],
+        [
+          "p",
+          "provides C# and Visual Basic languages with rich code analys",
+          178
+        ],
+        [
+          "p",
+          "history of TOPIIA topoisomerases in animals. Journal of Mole",
+          231
+        ],
+        [
+          "p",
+          "(2021). The occurrence of 2-\u00admethylhopanoids in modern bacte",
+          228
+        ],
+        [
+          "p",
+          "IEEE Engineering in Medicine and Biology Magazine, 14, 730\u20137",
+          168
+        ],
+        [
+          "p",
+          "Phylogenetics and evolution in R language. Bioinformatics, 2",
+          199
+        ],
+        [
+          "p",
+          "& Hugenholtz, P. (2022). GTDB: An ongoing census of bacteria",
+          399
+        ],
+        [
+          "p",
+          "https://\u200bpypi.\u200borg/\u200b Rabosky, D. L., Chang, J., Title, P. O.",
+          102
+        ],
+        [
+          "p",
+          "Kaschner, K., Garilao, C., Near, T. J., Coll, M., & Alfaro, ",
+          574
+        ],
+        [
+          "p",
+          "digital signatures and public-\u00adkey cryptosystems. Communicat",
+          401
+        ],
+        [
+          "p",
+          "Cyanobacteria and biogeochemical cycles through earth histor",
+          228
+        ],
+        [
+          "p",
+          "A., & Arias, D. G. (2022). Functional characterization of mo",
+          268
+        ],
+        [
+          "p",
+          "Khovanskaya, R., Leipe, D., Mcveigh, R., O'Neill, K., Robber",
+          384
+        ],
+        [
+          "p",
+          "plant phylogeny. American Journal of Botany, 105, 302\u2013314. h",
+          457
+        ],
+        [
+          "p",
+          "https://\u200bno-\u00ad\u200bcolor.\u200borg/\u200b Suchard, M. A., Lemey, P., Baele,",
+          97
+        ],
+        [
+          "p",
+          "Rambaut, A. (2018). Bayesian phylogenetic and phylodynamic d",
+          227
+        ],
+        [
+          "p",
+          "https://\u200bcommo\u200bns.\u200bwikim\u200bedia.\u200borg/\u200bwiki/\u200bFile:\u200bPoeci\u200blia_\u200bs",
+          145
+        ],
+        [
+          "p",
+          "tree: Species-\u00adlevel sets of phylogenies for questions in ec",
+          252
+        ],
+        [
+          "p",
+          "Seifert, K. A. (2023). Da Vinci's yeast: Blastobotrys davinc",
+          427
+        ],
+        [
+          "p",
+          "Verlag. https://\u200bdoi.\u200borg/\u200b10.\u200b1007/\u200b978-\u00ad\u200b3-\u00ad\u200b319-\u00ad\u200b24277\u200b-",
+          136
+        ],
+        [
+          "p",
+          "C4 carbon delivery enzymes in diverse plants. International ",
+          475
+        ],
+        [
+          "p",
+          "Current Protocols in Bioinformatics, 69, e96. https://\u200bdoi.\u200b",
+          772
+        ],
+        [
+          "p",
+          "SUPPORTING INFORMATION",
+          22
+        ],
+        [
+          "p",
+          "Additional supporting information can be found online in the",
+          119
+        ],
+        [
+          "p",
+          "How to cite this article: Bianchini, G., & S\u00e1nchez-\u00adBaracald",
+          65
+        ],
+        [
+          "p",
+          "(2024). TreeViewer: Flexible, modular software to visualise ",
+          164
+        ]
+      ]
+    },
+    {
+      "file": "notes.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Notes",
+          5
+        ],
+        [
+          "p",
+          "This is an open access article under the terms of the Creati",
+          1418
+        ]
+      ]
+    }
+  ],
+  "stats": {
+    "asides": 0,
+    "chapters": 14,
+    "columns": 2,
+    "footnotes": 16,
+    "grid_tables": 0,
+    "headings": 13,
+    "images": 9,
+    "pages": 16,
+    "raster_figures": 0,
+    "raster_tables": 0,
+    "title": "TreeViewer: Flexible, modular software to visualise and manipulate phylogenetic trees"
+  },
+  "toc": [
+    [
+      1,
+      "TreeViewer: Flexible, modular software to visualise and manipulate phylogenetic trees"
+    ],
+    [
+      2,
+      "Abstract"
+    ],
+    [
+      2,
+      "Module type Task Example"
+    ],
+    [
+      2,
+      "2 | IMPLEMENTATION"
+    ],
+    [
+      2,
+      "4 | DISCUSSION"
+    ],
+    [
+      2,
+      "5 | CONCLUSION"
+    ],
+    [
+      2,
+      "AUTHOR CONTRIBUTIONS"
+    ],
+    [
+      2,
+      "ACKNO\u200bWLE\u200bDGE\u200bMENTS"
+    ],
+    [
+      2,
+      "FUNDING INFORMATION"
+    ],
+    [
+      2,
+      "CONFLICT OF INTEREST STATEMENT"
+    ],
+    [
+      2,
+      "DATA AVAILABILITY STATEMENT"
+    ],
+    [
+      2,
+      "ORCID"
+    ],
+    [
+      2,
+      "REFERENCES"
+    ],
+    [
+      1,
+      "Notes"
+    ]
+  ]
+}

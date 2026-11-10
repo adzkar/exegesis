@@ -1,0 +1,160 @@
+{
+  "spine": [
+    {
+      "file": "chap_1.xhtml",
+      "frags": [
+        [
+          "p",
+          "Bundesgesundheitsbl 2026 \u00b7 69:1257\u20131259 https://doi.org/10.1",
+          215
+        ],
+        [
+          "h2",
+          "Abstract",
+          8
+        ],
+        [
+          "p",
+          "Abteilung f\u00fcr Epidemiologie und Gesundheitsmonitoring, Rober",
+          96
+        ]
+      ]
+    },
+    {
+      "file": "chap_2.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Bewegung f\u00f6rdern, Gesundheit st\u00e4rken",
+          36
+        ],
+        [
+          "p",
+          "Das Bewegungsverhalten hat sich in den vergangenen Jahrzehnt",
+          6801
+        ],
+        [
+          "p",
+          "zu k\u00f6rperlicher Aktivit\u00e4t einordnet und methodische Fallstri",
+          310
+        ],
+        [
+          "p",
+          "Das Heft wird durch 2 \u00dcbersichtsartikel mit hoher Public-Hea",
+          2080
+        ]
+      ]
+    },
+    {
+      "file": "chap_3.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Korrespondenzadresse",
+          20
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Autorenrollen. Alle Autorinnen und Autoren waren gleicherma\u00df",
+          107
+        ],
+        [
+          "p",
+          "Funding. Open Access funding enabled and organized by Projek",
+          67
+        ],
+        [
+          "p",
+          "Datenverf\u00fcgbarkeit. F\u00fcr diesen Artikel wurden keine Datens\u00e4t",
+          88
+        ],
+        [
+          "p",
+          "Interessenkon\ufb02ikt. S.Krug,K.ManzundA.-C.Sass gebenan,dasskei",
+          86
+        ],
+        [
+          "p",
+          "Open Access.DieserArtikelwirdunterderCreative CommonsNamensn",
+          1363
+        ]
+      ]
+    },
+    {
+      "file": "chap_4.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Literatur",
+          9
+        ],
+        [
+          "p",
+          "1. Lee IM, Shiroma EJ, Lobelo F et al (2012) Impact of Physi",
+          187
+        ],
+        [
+          "p",
+          "2. DallmeyerS,WickerP,BreuerC(2017)Howanaging society a\ufb00ects",
+          204
+        ],
+        [
+          "p",
+          "3. Springer Nature (2012) Bundesgesundheitsblatt \u2013 Gesundhei",
+          180
+        ],
+        [
+          "p",
+          "Hinweis des Verlags. Der Verlag bleibt in Hinblick auf geogr",
+          160
+        ]
+      ]
+    }
+  ],
+  "stats": {
+    "asides": 0,
+    "chapters": 4,
+    "columns": 4,
+    "footnotes": 0,
+    "grid_tables": 0,
+    "headings": 4,
+    "images": 3,
+    "pages": 3,
+    "raster_figures": 0,
+    "raster_tables": 0,
+    "title": "Bewegung f\u00f6rdern, Gesundheit st\u00e4rken"
+  },
+  "toc": [
+    [
+      1,
+      "Abstract"
+    ],
+    [
+      1,
+      "Bewegung f\u00f6rdern, Gesundheit st\u00e4rken"
+    ],
+    [
+      2,
+      "Korrespondenzadresse"
+    ],
+    [
+      2,
+      "Literatur"
+    ]
+  ]
+}

@@ -1,0 +1,327 @@
+{
+  "spine": [
+    {
+      "file": "chap_1.xhtml",
+      "frags": [
+        [
+          "p",
+          "M. Kosuda1, M. Oura2, Sarbaini3 Abstract. There are two perm",
+          107
+        ],
+        [
+          "h2",
+          "Abstract",
+          8
+        ],
+        [
+          "p",
+          "ter table of order 1344. We take up natural representations ",
+          214
+        ],
+        [
+          "p",
+          "1. INTRODUCTION",
+          15
+        ],
+        [
+          "p",
+          "Let H1 be a complex re\ufb02ection group of order 96, which is No",
+          1090
+        ],
+        [
+          "p",
+          "} n .",
+          5
+        ],
+        [
+          "p",
+          "{z",
+          2
+        ],
+        [
+          "p",
+          "2. PRELIMINARIES",
+          16
+        ],
+        [
+          "p",
+          "Schur-Weyl\u2019s reciprocity is one the e\ufb00ective methods to \ufb01nd ",
+          706
+        ],
+        [
+          "p",
+          "s M",
+          3
+        ],
+        [
+          "p",
+          "s M i EndC(Cmi) \u223c= EndA(V ) \u223c= i Matmi(C) Thus to \ufb01nd the st",
+          144
+        ],
+        [
+          "blockquote",
+          "(5, 7)(6, 8), (2, 3, 5)(4, 7, 6), (1, 2)(3, 4)(5, 6)(7, 8))(",
+          83
+        ],
+        [
+          "p",
+          "On the other hand H be a subgroup of symmetric 14, generated",
+          63
+        ],
+        [
+          "blockquote",
+          "(1, 2, 3, 4, 5, 6)(14, 13, 12, 11, 10, 9, 8), (1, 4, 7, 9, 1",
+          86
+        ],
+        [
+          "p",
+          "Both G and H are of order 1344. Let X be the character table",
+          222
+        ],
+        [
+          "p",
+          "Class Size Representative C1 1 1 C2 7 (1, 2)(3, 4)(5, 6)(7, ",
+          376
+        ],
+        [
+          "p",
+          "Class Size Representative C\u2032 1 1 1 C\u2032 2 7 (1, 14)(4, 11)(6, ",
+          716
+        ],
+        [
+          "p",
+          "We would like to \ufb01nd d(k) G and d(k) H .",
+          40
+        ],
+        [
+          "p",
+          "3. RESULTS",
+          10
+        ],
+        [
+          "p",
+          "We follow the argument presented in the paper [8]. It is kno",
+          150
+        ],
+        [
+          "p",
+          "Proposition 3.1. We have \u03c7G = \u03c71 + \u03c78, \u03c7H = \u03c71 + \u03c74 + \u03c77.",
+          57
+        ],
+        [
+          "p",
+          "Proof. First we know the following.",
+          35
+        ],
+        [
+          "p",
+          "C1 C2 C6 C4 C3 C5 C9 C7 C8 C10 C11 \u03c7G 8 0 0 0 4 2 0 2 0 1 1 ",
+          379
+        ],
+        [
+          "p",
+          "Then we get d(1) G = (8, 0, 0, 0, 4, 2, 0, 2, 0, 1, 1)X\u22121 = ",
+          181
+        ],
+        [
+          "p",
+          "This completes the proof. \u25a1",
+          27
+        ],
+        [
+          "p",
+          "Since \u03c7G is decomposed into the trivial character and one ir",
+          306
+        ],
+        [
+          "p",
+          "C1 C2 C6 C4 C3 C5 C9 C7 C8 C10 C11 H G C\u2032 1 C\u2032 2 C\u2032 6 C\u2032 3 C",
+          248
+        ],
+        [
+          "p",
+          "2 \u03c74",
+          4
+        ],
+        [
+          "p",
+          "6 6 2 2 2 0 0 0 0 \u22121 \u22121 \u03c75",
+          26
+        ],
+        [
+          "p",
+          "7 7 \u22121 \u22121 \u22121 1 1 \u22121 \u22121 0 0 \u03c76",
+          29
+        ],
+        [
+          "p",
+          "8 8 0 0 0 \u22121 \u22121 0 0 1 1 \u03c77",
+          26
+        ],
+        [
+          "p",
+          "7 \u22121 \u22121 3 \u22121 1 \u22121 \u22121 1 0 0 \u03c78",
+          29
+        ],
+        [
+          "p",
+          "7 \u22121 \u22121 \u22121 3 1 \u22121 1 \u22121 0 0 \u03c79",
+          29
+        ],
+        [
+          "p",
+          "14 \u22122 \u22122 2 2 \u22121 1 0 0 0 0 \u03c710",
+          29
+        ],
+        [
+          "p",
+          "21 \u22123 1 1 \u22123 0 0 1 \u22121 0 0 \u03c711 21 \u22123 1 \u22123 1 0 0 \u22121 1 0 0 Cons",
+          146
+        ],
+        [
+          "p",
+          "\uf8ec \uf8ec \uf8ec \uf8ed \uf8f7 \uf8f7 \uf8f7 \uf8f8= AG \uf8ec \uf8ec \uf8ec \uf8ed Then we have \uf8eb \uf8eb \uf8f6 \uf8f6 \u03c71(Ci)\u03c7(Ci)",
+          476
+        ],
+        [
+          "p",
+          "= AG And for AH we get \uf8f6 \uf8eb \uf8eb \uf8f6 \u03c7(C\u2032 1) \u03c7(C\u2032 2) \u03c7(C\u2032 6) \u03c7(C\u2032 ",
+          336
+        ],
+        [
+          "p",
+          "1) . . . \u03c71(C\u2032 11) ... \u03c711(C\u2032",
+          29
+        ],
+        [
+          "p",
+          "1) . . . \u03c711(C\u2032 11)",
+          19
+        ],
+        [
+          "p",
+          "\uf8ec \uf8ed \uf8f7 \uf8f8.",
+          8
+        ],
+        [
+          "p",
+          "= AH Thus we have Xdiag(8, 0, 0, 0, 4, 2, 0, 2, 0, 1, 1) = A",
+          209
+        ],
+        [
+          "p",
+          "Therefore we have Subsequently, we possess 1344 + 22k aG,k =",
+          406
+        ],
+        [
+          "p",
+          "and for \u03c7H d(k) H = dk\u22121 H AH = d(1) H Ak\u22121 H = d(1) H X (di",
+          549
+        ],
+        [
+          "p",
+          "64 \u00b7 7k \u22127 64 \u00b7 3k + 7 32 Theorem 3.2. We have ( 2M1 MaG,k \u2295",
+          126
+        ],
+        [
+          "p",
+          "( 3M1 MaH,k \u22952MbH,k \u2295MdH,k \u2295MeH,k \u2295MfH,k \u2295MgH,k \u2295MhH,k \u2295MiH,",
+          181
+        ],
+        [
+          "p",
+          "Corollary 3.3. We have 1344 \u00b7 26k + 1 32 \u00b7 24k + 7 24 \u00b7 22k ",
+          71
+        ],
+        [
+          "p",
+          "dim A(k) H = 22k 1 1344 \u00b7 72k + 7 192 \u00b7 32k + 37 96",
+          51
+        ],
+        [
+          "p",
+          "The second assertion of Corollary 3.3 is obtained by taking ",
+          170
+        ],
+        [
+          "p",
+          "1 2 3 4 5 6 dim A(k) G",
+          22
+        ],
+        [
+          "p",
+          "2 16 342 14606 831982 51656046 dim A(k) H 3 82 7328 1159392 ",
+          381
+        ],
+        [
+          "p",
+          "REFERENCES [1] Bannai, E., Ito, T., Algebraic Combinatorics ",
+          1096
+        ],
+        [
+          "p",
+          "Faculty of Engineering, University of Yamanashi, 400-8511, J",
+          103
+        ],
+        [
+          "p",
+          "Institute of Science and Engineering, Kanazawa University, I",
+          125
+        ],
+        [
+          "p",
+          "Department of Mathematics, Universitas Islam Negeri Sultan S",
+          91
+        ],
+        [
+          "p",
+          "Graduate School of Natural Science and Technology, Kanazawa ",
+          142
+        ]
+      ]
+    },
+    {
+      "file": "notes.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Notes",
+          5
+        ],
+        [
+          "p",
+          "s M V \u223c= i miVi",
+          15
+        ],
+        [
+          "p",
+          "1 d(k) G = dk\u22121 G AG = d(1) G Ak\u22121 G = d(1) G X (diag(8, 0, ",
+          174
+        ]
+      ]
+    }
+  ],
+  "stats": {
+    "asides": 0,
+    "chapters": 2,
+    "columns": 1,
+    "footnotes": 9,
+    "grid_tables": 0,
+    "headings": 1,
+    "images": 0,
+    "pages": 9,
+    "raster_figures": 0,
+    "raster_tables": 0,
+    "title": "arxiv_revtex"
+  },
+  "toc": [
+    [
+      1,
+      "Abstract"
+    ],
+    [
+      1,
+      "Notes"
+    ]
+  ]
+}

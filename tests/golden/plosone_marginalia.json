@@ -1,0 +1,693 @@
+{
+  "spine": [
+    {
+      "file": "chap_1.xhtml",
+      "frags": [
+        [
+          "p",
+          "PLOS ONE",
+          8
+        ],
+        [
+          "p",
+          "RESEARCH ARTICLE",
+          16
+        ],
+        [
+          "h1",
+          "An analysis of the effects of sharing research data, code, a",
+          85
+        ],
+        [
+          "p",
+          "Giovanni Colavizza1,2*, Lauren Cadwallader3, Marcel LaFlamme",
+          369
+        ]
+      ]
+    },
+    {
+      "file": "chap_2.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Abstract",
+          8
+        ],
+        [
+          "p",
+          "Calls to make scientific research more open have gained trac",
+          1703
+        ]
+      ]
+    },
+    {
+      "file": "chap_3.xhtml",
+      "frags": [
+        [
+          "h2",
+          "1 Introduction",
+          14
+        ],
+        [
+          "p",
+          "Arising from a diverse set of cultural and technological pro",
+          4265
+        ],
+        [
+          "aside",
+          "OPEN ACCESSCitation: Colavizza G, Cadwallader L, LaFlamme M,",
+          1153
+        ]
+      ]
+    },
+    {
+      "file": "chap_4.xhtml",
+      "frags": [
+        [
+          "h2",
+          "2 State of the art",
+          18
+        ],
+        [
+          "p",
+          "There is evidence that adopting Open Science practices has e",
+          1369
+        ],
+        [
+          "aside",
+          "Competing interests: Three of the authors (LC, ML, and IH) w",
+          221
+        ],
+        [
+          "p",
+          "2.1 Data and code sharing",
+          25
+        ],
+        [
+          "p",
+          "Researchers who adopt Open Science practices may see increas",
+          1871
+        ],
+        [
+          "p",
+          "2.2 Preprints",
+          13
+        ],
+        [
+          "p",
+          "There is evidence for advantages in terms of visibility for ",
+          923
+        ]
+      ]
+    },
+    {
+      "file": "chap_5.xhtml",
+      "frags": [
+        [
+          "h2",
+          "3 Methods and data",
+          18
+        ],
+        [
+          "p",
+          "To make this study entirely reproducible, we focus only on O",
+          1682
+        ]
+      ]
+    },
+    {
+      "file": "chap_6.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Dependent variable",
+          18
+        ],
+        [
+          "p",
+          "Citation counts for each publication are calculated using th",
+          969
+        ]
+      ]
+    },
+    {
+      "file": "chap_7.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Independent variables",
+          21
+        ],
+        [
+          "p",
+          "We use a set of control variables for modeling. Firstly, pub",
+          1301
+        ],
+        [
+          "table",
+          "Table 1. ANZSRC fields of research divisions to model catego",
+          1192
+        ],
+        [
+          "p",
+          "https://doi.org/10.1371/journal.pone.0311493.t001",
+          49
+        ],
+        [
+          "p",
+          "The reputation of authors before publication has also been l",
+          2200
+        ],
+        [
+          "p",
+          "n_cit_tot n_cit_2 n_authors n_references_tot p_year p_month ",
+          356
+        ]
+      ]
+    },
+    {
+      "file": "chap_8.xhtml",
+      "frags": [
+        [
+          "h2",
+          "D_Shared D_Location Repo_Data C_Generated C_Shared C_Locatio",
+          69
+        ],
+        [
+          "p",
+          "N: 39\u2019124 N/A: 39\u2019657 F: 94\u2019715 N: 76\u2019452 N: 107\u2019390 N/A: 10",
+          194
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "aside",
+          "https://doi.org/10.1371/journal.pone.0311493.t002https://doi",
+          98
+        ],
+        [
+          "p",
+          "zero-inflated negative binomial, lognormal, and Pareto 2 fam",
+          523
+        ]
+      ]
+    },
+    {
+      "file": "chap_9.xhtml",
+      "frags": [
+        [
+          "h2",
+          "4 Results",
+          9
+        ],
+        [
+          "p",
+          "We start by providing a brief descriptive overview of the Op",
+          144
+        ],
+        [
+          "p",
+          "4.1 Overview of the Open Science Indicators dataset",
+          51
+        ],
+        [
+          "p",
+          "As mentioned previously, the OSI dataset we use for analysis",
+          2271
+        ],
+        [
+          "table",
+          "Table 4. Descriptive statistics for the Open Science practic",
+          285
+        ],
+        [
+          "p",
+          "https://doi.org/10.1371/journal.pone.0311493.t004",
+          49
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Fig 2. Adoption of OSI over time. Each OSI remains adopted b",
+          119
+        ],
+        [
+          "p",
+          "https://doi.org/10.1371/journal.pone.0311493.g002 Open Scien",
+          339
+        ],
+        [
+          "p",
+          "4.2 Modeling",
+          12
+        ],
+        [
+          "p",
+          "The base model results we discuss are provided in Table 5. I",
+          1018
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Fig 3. Adoption of OSI by division, as described in Table 1.",
+          164
+        ],
+        [
+          "p",
+          "https://doi.org/10.1371/journal.pone.0311493.g003 dependent ",
+          118
+        ],
+        [
+          "p",
+          "log\u00f0n cit tot \u00fe 1\u00de \u00bc log\u00f0n authors \u00fe 1\u00de \u00fe log\u00f0n references \u00fe",
+          513
+        ],
+        [
+          "table",
+          "Table 5. Results for the base model.OLSrobust linear(1)(2)(0",
+          282
+        ],
+        [
+          "aside",
+          "Note: *p<0.1;**p<0.05;***p<0.01https://doi.org/10.1371/journ",
+          80
+        ],
+        [
+          "p",
+          "n_authors_log 0.265 *** 0.254 *** n_references_tot_log 0.192",
+          799
+        ],
+        [
+          "table",
+          "Table 6. Results for the full model.OLSrobust linear(1)(2)(0",
+          366
+        ],
+        [
+          "p",
+          "n_authors_log 0.207 *** 0.194 *** n_references_tot_log 0.246",
+          895
+        ],
+        [
+          "table",
+          "Table 6. (Continued)OLSrobust linear(1)(2)(0.011)(0.011)(0.0",
+          210
+        ],
+        [
+          "aside",
+          "Note: *p<0.1;**p<0.05;***p<0.01https://doi.org/10.1371/journ",
+          80
+        ],
+        [
+          "p",
+          "C(division_8)True -0.186 *** -0.172 *** C(division_9)True -0",
+          614
+        ],
+        [
+          "p",
+          "Starting with the base model in Table 5, we provide results ",
+          943
+        ],
+        [
+          "p",
+          "",
+          0
+        ],
+        [
+          "p",
+          "Fig 4. An illustration of the assumed causal dependency grap",
+          471
+        ],
+        [
+          "p",
+          "https://doi.org/10.1371/journal.pone.0311493.g004 These effe",
+          1927
+        ]
+      ]
+    },
+    {
+      "file": "chap_10.xhtml",
+      "frags": [
+        [
+          "h2",
+          "5 Discussion",
+          12
+        ],
+        [
+          "p",
+          "This study offers a comprehensive analysis of the citation i",
+          628
+        ],
+        [
+          "p",
+          "5.1 Limitations",
+          15
+        ],
+        [
+          "p",
+          "Several limitations of our study should be acknowledged. Fir",
+          1620
+        ],
+        [
+          "p",
+          "5.2 Extension of previous research",
+          34
+        ],
+        [
+          "p",
+          "The model-explained variance in our results is globally high",
+          2081
+        ],
+        [
+          "p",
+          "5.3 Implications for future research",
+          36
+        ],
+        [
+          "p",
+          "Our data and code are shared openly to enable independent re",
+          1507
+        ]
+      ]
+    },
+    {
+      "file": "chap_11.xhtml",
+      "frags": [
+        [
+          "h2",
+          "6 Conclusion",
+          12
+        ],
+        [
+          "p",
+          "In summary, our study contributes to the growing body of lit",
+          546
+        ]
+      ]
+    },
+    {
+      "file": "chap_12.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Supporting information",
+          22
+        ],
+        [
+          "p",
+          "S1 Appendix. Results for more models in the appendix. (PDF)",
+          59
+        ]
+      ]
+    },
+    {
+      "file": "chap_13.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Acknowledgments",
+          15
+        ],
+        [
+          "p",
+          "We thank Tim Vines, Scott Kerr, Souad McIntosh, and the team",
+          234
+        ]
+      ]
+    },
+    {
+      "file": "chap_14.xhtml",
+      "frags": [
+        [
+          "h2",
+          "Author Contributions",
+          20
+        ],
+        [
+          "p",
+          "Conceptualization: Giovanni Colavizza, Iain Hrynaszkiewicz.",
+          59
+        ],
+        [
+          "p",
+          "Data curation: Giovanni Colavizza, Gre\u00b4gory Dozot.",
+          50
+        ],
+        [
+          "p",
+          "Formal analysis: Giovanni Colavizza, Lauren Cadwallader.",
+          56
+        ],
+        [
+          "p",
+          "Funding acquisition: Iain Hrynaszkiewicz.",
+          41
+        ],
+        [
+          "p",
+          "Investigation: Giovanni Colavizza.",
+          34
+        ],
+        [
+          "p",
+          "Methodology: Giovanni Colavizza, Iain Hrynaszkiewicz.",
+          53
+        ],
+        [
+          "p",
+          "Project administration: Iain Hrynaszkiewicz.",
+          44
+        ],
+        [
+          "p",
+          "Resources: Iain Hrynaszkiewicz.",
+          31
+        ],
+        [
+          "p",
+          "Software: Giovanni Colavizza, Gre\u00b4gory Dozot.",
+          45
+        ],
+        [
+          "p",
+          "Supervision: Giovanni Colavizza, Ste\u00b4phane Lecorney, Daniel ",
+          87
+        ],
+        [
+          "p",
+          "Visualization: Lauren Cadwallader.",
+          34
+        ],
+        [
+          "p",
+          "Writing \u2013 original draft: Giovanni Colavizza, Lauren Cadwall",
+          103
+        ],
+        [
+          "p",
+          "Writing \u2013 review & editing: Giovanni Colavizza, Marcel LaFla",
+          135
+        ]
+      ]
+    },
+    {
+      "file": "chap_15.xhtml",
+      "frags": [
+        [
+          "h2",
+          "References",
+          10
+        ],
+        [
+          "p",
+          "1. Willinsky J. The Unacknowledged Convergence of Open Sourc",
+          247
+        ],
+        [
+          "p",
+          "3. Moore SA. A Genealogy of Open Access: Negotiations betwee",
+          502
+        ],
+        [
+          "p",
+          "6. UNESCO. UNESCO Recommendation on Open Science. Paris: UNE",
+          70
+        ],
+        [
+          "p",
+          "7. Serghiou S, Contopoulos-Ioannidis DG, Boyack KW, Riedel N",
+          1234
+        ],
+        [
+          "p",
+          "12. Dougherty MR, Horne Z. Citation Counts and Journal Impac",
+          1057
+        ],
+        [
+          "p",
+          "17. Colavizza G, Hrynaszkiewicz I, Staden I, Whitaker K, McG",
+          379
+        ],
+        [
+          "p",
+          "19. Huang CK, Neylon C, Montgomery L, Hosking R, Diprose JP,",
+          1533
+        ],
+        [
+          "p",
+          "27. Hostler TJ. The Invisible Workload of Open Research. Jou",
+          653
+        ],
+        [
+          "p",
+          "31. Piwowar HA, Day RS, Fridsma DB. Sharing Detailed Researc",
+          435
+        ],
+        [
+          "p",
+          "34. Christensen G, Dafoe A, Miguel E, Moore DA, Rose AK. A S",
+          855
+        ],
+        [
+          "p",
+          "38. Vandewalle P. Code Sharing Is Associated with Research I",
+          362
+        ],
+        [
+          "p",
+          "40. Cao H, Dodge J, Lo K, McFarland DA, Wang LL. The Rise of",
+          167
+        ],
+        [
+          "p",
+          "41. Kang D, Kang T, Jang J. Papers with Code or without Code",
+          942
+        ],
+        [
+          "p",
+          "46. Fraser N, Brierley L, Dey G, Polka JK, Pa\u00b4lfy M, Nanni F",
+          2432
+        ],
+        [
+          "p",
+          "56. National Library of Medicine BM. PMC Open Access Subset;",
+          66
+        ],
+        [
+          "p",
+          "57. Gargouri Y, Hajjem C, Larivi\u00e8re V, Gingras Y, Carr L, Br",
+          3054
+        ],
+        [
+          "p",
+          "71. Janssen MA, Pritchard C, Lee A. On Code Sharing and Mode",
+          239
+        ]
+      ]
+    },
+    {
+      "file": "notes.xhtml",
+      "frags": [
+        [
+          "h1",
+          "Notes",
+          5
+        ],
+        [
+          "p",
+          "Fig 1. Correlation plot among most variables. We see that no",
+          240
+        ]
+      ]
+    }
+  ],
+  "stats": {
+    "asides": 5,
+    "chapters": 16,
+    "columns": 1,
+    "footnotes": 2,
+    "grid_tables": 5,
+    "headings": 15,
+    "images": 4,
+    "pages": 19,
+    "raster_figures": 0,
+    "raster_tables": 0,
+    "title": "An analysis of the effects of sharing research data, code, and preprints on citations"
+  },
+  "toc": [
+    [
+      1,
+      "An analysis of the effects of sharing research data, code, and preprints on citations"
+    ],
+    [
+      2,
+      "Abstract"
+    ],
+    [
+      2,
+      "1 Introduction"
+    ],
+    [
+      2,
+      "2 State of the art"
+    ],
+    [
+      2,
+      "3 Methods and data"
+    ],
+    [
+      2,
+      "Dependent variable"
+    ],
+    [
+      2,
+      "Independent variables"
+    ],
+    [
+      2,
+      "D_Shared D_Location Repo_Data C_Generated C_Shared C_Location P_Match"
+    ],
+    [
+      2,
+      "4 Results"
+    ],
+    [
+      2,
+      "5 Discussion"
+    ],
+    [
+      2,
+      "6 Conclusion"
+    ],
+    [
+      2,
+      "Supporting information"
+    ],
+    [
+      2,
+      "Acknowledgments"
+    ],
+    [
+      2,
+      "Author Contributions"
+    ],
+    [
+      2,
+      "References"
+    ],
+    [
+      1,
+      "Notes"
+    ]
+  ]
+}

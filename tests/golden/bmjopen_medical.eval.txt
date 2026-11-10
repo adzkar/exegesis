@@ -1,0 +1,28 @@
+# epub-eval: bmjopen_medical.pdf
+
+**Verdict:** 0 high-severity findings — clean; verbatim word coverage 97.7% (7080/7248, epub emitted 7204 words after rejoins)
+
+## Checks
+- A container: PASS — 15 members, 6 chapters, 1 images
+- B metadata: title='Use of GLP1 receptor agonists in early pregnancy and reprodu'
+- C coverage: rejoined 142, furniture 168, rasterized table cells 258, superscript splits 23, genuine loss 3
+- D toc: 7 entries, h1=1 h2=5, dupes=none
+- G figures: pdf rasters=1, embedded=1, vector pages=[1, 5, 6, 8]
+
+## Findings (severity-ranked)
+| Sev | Check | Finding |
+|-----|-------|---------|
+| Low | C | genuine word loss 3: [('hradj', 3)] |
+| Low | F | Table 2: rasterized to image (cells not text-checkable) |
+| Low | G | vector-ruled table grids on pages [5, 6, 8] — cells emit as flat text, structure lost |
+| Low | G | vector graphics on pages [1] not capturable — verify content survived as text |
+| Low | G | chap_3.xhtml: <img> missing caption alt text |
+
+## Classified word loss
+| class | words | top examples |
+|-------|-------|--------------|
+| rejoined hyphenation | 142 | tion, refer, ence, in, weight, over, ment, preg |
+| stripped furniture | 168 | open, dao, k, et, al, bmj, 2024, e083550 |
+| rasterized table cells | 258 | 1, of, to, n, 0, 2, pregnancies, group |
+| superscript splits | 23 | m2, unplanned5, 10th, diabetes25, 1swiss, 2the, 3charit, 4the |
+| genuine loss | 3 | hradj |

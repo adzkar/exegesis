@@ -1,0 +1,35 @@
+# epub-eval: mdpi_2col.pdf
+
+**Verdict:** 1 high-severity findings — needs attention; verbatim word coverage 99.6% (7925/7960, epub emitted 7943 words after rejoins)
+
+## Checks
+- A container: PASS — 23 members, 10 chapters, 6 images
+- B metadata: title='Evaluation of a Modified Mindfulness-Based Stress Reduction '
+- C coverage: rejoined 34, furniture 144, rasterized table cells 0, superscript splits 0, genuine loss 1
+- D toc: 11 entries, h1=1 h2=9, dupes=['Total n = 31 Intervention n = 16 Control n = 15 p-Value']
+- G figures: pdf rasters=6, embedded=6, vector pages=[]
+
+## Findings (severity-ranked)
+| Sev | Check | Finding |
+|-----|-------|---------|
+| High | D | numbered section headings missing from TOC (13): ['1. Introduction', '2. Materials and Methods', '2.1. Study Design and Participants', '2.2. Randomisation and Blinding', '2.3. Intervention']… |
+| Med | E | chap_5.xhtml: legend spliced mid-sentence: …e house/supported accommodation 4 (12.9%) 1 (6.2%) 3 (20.0%)  Table 3. |
+| Med | E | chap_6.xhtml: legend spliced mid-sentence: …d emotional connection 17.5 (5.4) 17.6 (5.0) 17.4 (5.9) 0.91  Table 4. |
+| Med | E | chap_7.xhtml: legend spliced mid-sentence: …27.9 (6.3) 26.7 (6.2) 29.3 (6.3) 0.30  Table 4. |
+| Med | F | Table 3: flattened to prose, no grid markup |
+| Med | F | Table 4: legend absent; grid data survives (100% coverage) |
+| Med | G | Fig. 3: legend absent from EPUB |
+| Low | C | genuine word loss 1: [('based', 1)] |
+| Low | D | duplicate TOC titles: ['Total n = 31 Intervention n = 16 Control n = 15 p-Value'] |
+| Low | G | chap_2.xhtml: <img> missing caption alt text |
+| Low | G | chap_8.xhtml: <img> missing caption alt text |
+| Low | G | chap_8.xhtml: <img> missing caption alt text |
+
+## Classified word loss
+| class | words | top examples |
+|-------|-------|--------------|
+| rejoined hyphenation | 34 | value, carried, mindful, ness, intervention, post, mind, non |
+| stripped furniture | 144 | 13, j, clin, med, 2024, 1, 15, of |
+| rasterized table cells | 0 |  |
+| superscript splits | 0 |  |
+| genuine loss | 1 | based |

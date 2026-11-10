@@ -1,0 +1,37 @@
+# epub-eval: jbigdata_springer.pdf
+
+**Verdict:** 0 high-severity findings — clean; verbatim word coverage 99.6% (11981/12028, epub emitted 12063 words after rejoins)
+
+## Checks
+- A container: PASS — 32 members, 12 chapters, 13 images
+- B metadata: title='CardiaTics: An explainable AI integrated heart disease diagn'
+- C coverage: rejoined 10, furniture 363, rasterized table cells 0, superscript splits 6, genuine loss 31
+- D toc: 13 entries, h1=1 h2=11, dupes=none
+- G figures: pdf rasters=13, embedded=13, vector pages=[14, 16, 18]
+
+## Findings (severity-ranked)
+| Sev | Check | Finding |
+|-----|-------|---------|
+| Med | C | genuine word loss 31: [('yi', 5), ('xi', 3), ('ei', 3), ('ai', 2), ('oi', 2), ('cvak', 2), ('modelx', 2), ('omax', 2), ('fcardiat', 2), ('pi', 2)] |
+| Med | F | Table 2: legend absent; grid data survives (100% coverage) |
+| Med | G | Fig. 3: legend absent from EPUB |
+| Med | G | Fig. 4: legend absent from EPUB |
+| Med | G | Fig. 5: legend absent from EPUB |
+| Med | G | Fig. 7: legend absent from EPUB |
+| Med | G | Fig. 12: legend absent from EPUB |
+| Low | G | vector-ruled table grids on pages [14, 16, 18] — cells emit as flat text, structure lost |
+| Low | G | chap_4.xhtml: <img> missing caption alt text |
+| Low | G | chap_5.xhtml: <img> missing caption alt text |
+| Low | G | chap_5.xhtml: <img> missing caption alt text |
+| Low | G | chap_5.xhtml: <img> missing caption alt text |
+| Low | G | chap_5.xhtml: <img> missing caption alt text |
+| Low | G | chap_11.xhtml: <img> missing caption alt text |
+
+## Classified word loss
+| class | words | top examples |
+|-------|-------|--------------|
+| rejoined hyphenation | 10 | slope, n2genetic, nusvm, validation, per, instance, cross, grad |
+| stripped furniture | 363 | of, 13, 27, 2026, and, ghose, jamil, journal |
+| rasterized table cells | 0 |  |
+| superscript splits | 6 | f1, 1department, 2department, cva1, cva2 |
+| genuine loss | 31 | yi, xi, ei, ai, oi, cvak, modelx, omax |
