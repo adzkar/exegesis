@@ -77,7 +77,6 @@ from furniture_fixtures import (
 )
 from helpers import chapter_body_text, doc_html, lint_epub
 from layout_assertions import (
-    SemanticMismatch,
     assert_retained_once,
     require,
     require_absent,
@@ -88,6 +87,7 @@ from exegesis.analyze import (
     _body_font_size,
     _boilerplate_signatures,
     _doc_column_edges,
+    _folio_head_rows,
     _is_furniture,
     _is_margin_strip,
     _is_signature_furniture,
@@ -1423,14 +1423,22 @@ def test_single_block_book_heads_conversion_and_lint(sbp_case):
         assert line.strip() in case.text  # the p6 note region stays body text
 
 
-@pytest.mark.xfail(
-    strict=True, raises=SemanticMismatch,
-    reason="#72: leading running heads fused into single-block pages "
-           "still splice into body flow",
-)
+def test_issue72_folio_head_rows_detection(sbp_pdf):
+    """The doc-wide cluster flags exactly the committed leading rows:
+    p1-4's folio'd heads, the p7 same-y pair — folio line and its head
+    sibling at one y — and nothing else. The p0 opener's bare '7', the
+    p6 suffix head, the p8 folio-less head, and the p9 internal head
+    all stay out (#72)."""
+    with fitz.open(sbp_pdf) as doc:
+        pages = [(page, page.get_text("dict")) for page in doc]
+        assert _folio_head_rows(pages) == {
+            1: [0], 2: [0], 3: [0], 4: [0], 7: [0, 1]
+        }
+
+
 def test_issue72_single_block_leading_heads_absent(sbp_case):
     """The folio'd leading heads must not emit inside body flow — the
-    semantic baseline that fails today and #72 flips."""
+    folio-anchored cluster split keeps them out of the paragraphs."""
     require_absent(
         sbp_case.text,
         f"{SBP_TITLE_HEAD} 138",

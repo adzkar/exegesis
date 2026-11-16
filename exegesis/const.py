@@ -16,6 +16,13 @@ BOILERPLATE_MAX_CHARS = 300
 # that merely resembles the head, and real running heads reach 4-6
 # lines (the medRxiv license head above).
 SIGNATURE_PREFIX_MAX_LINES = BOILERPLATE_MAX_LINES
+# folio-anchored running heads (#72): a page's first block can fuse a
+# running head to its leading rows where no standalone block ever emits
+# the head's signature. Only the leading rows inside the top edge zone
+# are candidates, and rows commit only when folio − page_index clusters
+# — a genuine folio tracks the page index, a body number doesn't.
+FOLIO_HEAD_LEAD_LINES = 4
+FOLIO_HEAD_MIN_PAGES = 3
 MIN_IMAGE_BYTES = 2048
 MIN_HEADING_CHARS = 4
 MAX_HEADING_CHARS = 120

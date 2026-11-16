@@ -282,6 +282,27 @@ but contributes nothing there).
   the same failure the split fixes. Column-edge voting, the strip clip,
   and render all see the post-split blocks, so a recurring fused head
   can't vote a phantom column edge either.
+  A second pre-pass covers the heads no signature can ever see: on a
+  single-block-page book scan the whole page extracts as one block, so
+  the running head is a *line* inside it and no standalone block ever
+  emits the head's signature. `_folio_head_rows` (doc-wide, before the
+  signature split) scans the in-zone leading lines of each page's
+  top-most text block for an edge folio — a standalone integer at
+  either end, bare folios included — with a head-shaped remainder (no
+  terminal punctuation, ≤10 words, no lowercase continuation after a
+  leading folio). Rows commit only when `folio − page_index` clusters
+  (mode ±1, ≥3 pages): a genuine folio tracks the page index while a
+  body number, year, or chapter counter does not — the cluster is the
+  whole evidence, so a page whose leading row merely looks like a head
+  never qualifies on its own, and a recurring first line that is real
+  content (`recurring_page_opener`) carries no clustered folio at all.
+  Committed rows also flag their same-row siblings — a folio and its
+  head text can extract as separate line objects on one printed row —
+  and `_split_folio_heads` lifts the flagged lines into their own
+  `folio_head`-marked blocks, furniture downstream like any other
+  head (dropped by default, kept verbatim at the page edge under
+  `--keep-headers`); the remainder keeps the ordinary block with a
+  recomputed bbox.
   Rotated margin strips (tall+narrow blocks in the outer 10% margins,
   measured in `page.mediabox` space so /Rotate pages compare correctly)
   qualify by *line direction*, not width: every line with reliable
