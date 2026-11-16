@@ -513,11 +513,15 @@ def single_block_book_heads(path):
 def single_block_section_heads(path):
     """Body-size section heads fused inside page-long blocks (#74):
     an isolated Title-Case head, an all-caps head, a wrapped caps
-    pair, and a vocabulary `Summary` — each separated by blank lines
-    from its body — promote to h2, while the traps stay prose: the
-    opener's isolated byline names (pages 0–1 admit vocabulary hits
-    only), a folio-less residual carrying a committed needle, a
-    period-ending isolated line, and a paragraph-final short line."""
+    pair, a vocabulary `Summary`, a roman-numeral `IV`, the next
+    chapter's `CHAPTER FIVE` (its `chapter` needle is an exact match
+    only), and a head behind a marker-opening page — each separated
+    by blank lines from its body — promote to h2, while the traps
+    stay prose: the opener's isolated byline names (pages 0–1 admit
+    vocabulary hits only), a folio-less residual repeating the
+    committed `CHAPTER 4` head, a period-ending isolated line, a
+    paragraph-final short line, an under-floor caps token `ON`, and
+    the caption-shaped `PLATE IV`."""
     doc = fitz.open()
     folio_of = {1: 138, 2: 139, 3: 140}
     for pi in range(6):
@@ -533,7 +537,7 @@ def single_block_section_heads(path):
             continue
         body = _sbp_body(pi)
         head = (
-            [f"{folio_of[pi]}  JANE Q. TESTER", SBP_HEAD_BLANK]
+            [f"{folio_of[pi]}  CHAPTER 4", SBP_HEAD_BLANK]
             if pi in folio_of else []
         )
         if pi == 2:
@@ -550,16 +554,39 @@ def single_block_section_heads(path):
                 SBP_HEAD_BLANK, "Summary", SBP_HEAD_BLANK,
             ] + body[10:18] + [
                 # a folio-less residual repeating the committed head —
-                # the needle veto keeps it prose
-                SBP_HEAD_BLANK, "JANE Q. TESTER", SBP_HEAD_BLANK,
-            ] + body[18:26]
+                # the exact needle match keeps it prose
+                SBP_HEAD_BLANK, "CHAPTER 4", SBP_HEAD_BLANK,
+            ] + body[18:26] + [
+                # containment once vetoed this too — exact-match
+                # needles leave the next chapter's head promotable
+                SBP_HEAD_BLANK, "CHAPTER FIVE", SBP_HEAD_BLANK,
+            ] + body[26:34]
         elif pi == 4:
             lines = body[:6] + [
                 SBP_HEAD_BLANK, "University Press.", SBP_HEAD_BLANK,
             ] + body[6:14] + [
                 # paragraph-final short line — no isolation, no head
                 "Short tail",
-            ] + body[14:24]
+            ] + body[14:24] + [
+                # a bare two-letter caps token is under the floor…
+                SBP_HEAD_BLANK, "ON", SBP_HEAD_BLANK,
+            ] + body[24:30] + [
+                # …but a roman numeral is a real head in this domain
+                SBP_HEAD_BLANK, "IV", SBP_HEAD_BLANK,
+            ] + body[30:36] + [
+                # caption-shaped, not a section head
+                SBP_HEAD_BLANK, "PLATE IV", SBP_HEAD_BLANK,
+            ] + body[36:42]
+        elif pi == 5:
+            # a marker-opening block (a carried-over footnote) can't
+            # veto the page's heads — only its own marker lines
+            lines = [
+                "* A carried-over footnote opens this page's block,",
+                "its marker line alone can never be a head.",
+                SBP_HEAD_BLANK,
+            ] + body[:10] + [
+                SBP_HEAD_BLANK, "Marker Page Head", SBP_HEAD_BLANK,
+            ] + body[10:30]
         else:
             lines = head + body
         _sbp_insert(page, 54, 48, lines)

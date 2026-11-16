@@ -202,12 +202,21 @@ def _heading_run_end(lines, start, levels, line_h):
     return end
 
 
+_ROMAN_HEAD = re.compile(r"^[IVXLCDM]+$")
+
+
 def _head_shape(text):
-    """True when a line reads like a section head: ≤8 words, no
-    terminal punctuation, no footnote marker, opens on an uppercase
-    letter or digit — a mid-sentence fragment fails each of these."""
+    """True when a line reads like a section head: ≤8 words, inside the
+    shared heading char bounds — a lone roman numeral (`IV`) ducks the
+    floor since numbered heads are real in this domain — no terminal
+    punctuation, no footnote marker, opens on an uppercase letter or
+    digit. A mid-sentence fragment fails each of these."""
     words = text.split()
     if not (1 <= len(words) <= 8) or not re.search(r"[A-Za-z]", text):
+        return False
+    if len(text) > MAX_HEADING_CHARS:
+        return False
+    if len(text) < MIN_HEADING_CHARS and not _ROMAN_HEAD.fullmatch(text):
         return False
     if re.search(r"[.!?…;:,][\"”’)\]]*$", text):
         return False
@@ -215,12 +224,6 @@ def _head_shape(text):
         return False
     first = next((c for c in text if c.isalpha()), "")
     return not first.islower()
-
-
-_CONNECTORS = {
-    "a", "an", "the", "of", "in", "on", "at", "to", "for", "and",
-    "or", "nor", "but", "by", "vs", "with", "from", "de", "la", "des",
-}
 
 
 def _head_needle(text):
@@ -232,8 +235,7 @@ def _head_needle(text):
                   re.sub(r"[^a-z0-9]+", "", t.lower()))
 
 
-def _isolated_head_lines(lines, line_h, lang, page_index, marker_block,
-                         needles):
+def _isolated_head_lines(lines, line_h, lang, page_index, needles):
     """Body-size section heads fused inside a page-dominant block (#74).
 
     On a single-block book page a section head is just another
@@ -242,21 +244,29 @@ def _isolated_head_lines(lines, line_h, lang, page_index, marker_block,
     nonempty neighbors ~2 pitches away. A head unit is the maximal
     chain of consecutive nonempty head-shaped lines starting at an
     isolated-above line (wrapped caps heads like `…PARENTAL INVESTME`
-    + `ATTRIBUTES` ride at normal pitch inside one unit). The unit
-    promotes to h2 when one of:
+    + `ATTRIBUTES` ride at normal pitch inside one unit); member
+    lines keep the shared heading bounds (`IV`-style roman numerals
+    duck the floor) and a `*†‡§` opener fails each member
+    individually, so a footnote continuation at the block's head
+    can't veto the whole page. The unit promotes to h2 when one of:
       - it is bounded below the same way — the fully isolated case
-        covering mixed-case heads like `Desertion and Cuckoldry`, or
+        covering mixed-case heads like `Desertion and Cuckoldry`
+        (small joiner words ride ``lang.connectors`` — German `und`,
+        French elided `l`, Spanish `y` — so non-English Title-Case
+        heads can fire this arm too), or
       - every member is all-caps — `INITIAL PARENTAL INVESTMENT` and
         caps wraps abut their body directly, or
       - it is a single line that is itself a section label —
         `REFERENCES` loses its gap below to the first entry.
     Pages 0–1 admit vocabulary hits only — an opener's byline names
-    are isolated all-caps lines too — and any unit whose collapsed
-    text reuses a committed ``folio_head`` needle is vetoed: a
+    are isolated all-caps lines too — a caption-shaped unit (`PLATE
+    IV`, `TABLE 3` — a label plus numeral material only) is figure
+    furniture regardless of arm, and any unit whose collapsed text
+    exactly reuses a committed ``folio_head`` needle is vetoed: a
     folio-less running head is the same shape standing anywhere on
-    the page. Footnote-marker blocks demote every line outright."""
-    if marker_block:
-        return set()
+    the page. The needle match is exact — containment let `CHAPTER 4`
+    suppress `CHAPTER FIVE`, and needles under the heading floor
+    are never harvested."""
     ne = [(i, l) for i, l in enumerate(lines) if _line_text(l).strip()]
     if len(ne) < 3:
         return set()
@@ -284,11 +294,11 @@ def _isolated_head_lines(lines, line_h, lang, page_index, marker_block,
             k += 1
             members.append(ne[k])
         texts = [_line_text(l).strip() for _i, l in members]
-        cols = {_head_needle(t) for t in texts}
-        if any(
-            len(c) >= 4 and any(c in n or n in c for n in needles)
-            for c in cols
-        ):
+        # exact collapsed match only: containment let a `CHAPTER 4`
+        # needle suppress `CHAPTER FIVE` — over-matching costs the
+        # genuine heads this pass exists to recover, and a chapter
+        # title repeating its own running head is the accepted miss
+        if {_head_needle(t) for t in texts} & needles:
             j = k + 1
             continue
         vocab = (
@@ -306,6 +316,22 @@ def _isolated_head_lines(lines, line_h, lang, page_index, marker_block,
             k == len(ne) - 1
             or ne[k + 1][1]["bbox"][1] - ne[k][1]["bbox"][1] >= bound
         )
+        # a label plus numeral material only is a caption (`PLATE IV`,
+        # `TABLE 3`), never a section head — a real head like `PLATE
+        # TECTONICS` carries non-numeral text and survives
+        joined = " ".join(texts)
+        labels = "|".join(
+            p for p in (lang.figure_labels, lang.table_labels) if p
+        )
+        caption = bool(
+            labels
+            and re.fullmatch(
+                rf"(?:{labels})\s*\.?\s*[0-9ivxlcdm]+"
+                rf"(?:\s*[-–]\s*[0-9ivxlcdm]+)*[a-z]?\s*",
+                joined,
+                re.IGNORECASE,
+            )
+        )
         all_caps = all(
             all(
                 w.isupper() for w in t.split() if re.search(r"[A-Za-z]", w)
@@ -314,12 +340,15 @@ def _isolated_head_lines(lines, line_h, lang, page_index, marker_block,
         )
         title_case = all(
             all(
-                w[0].isupper() or w.split("'")[0] in _CONNECTORS
+                w[0].isupper()
+                or re.split(r"['’]", w)[0] in lang.connectors
                 for w in t.split() if w[0].isalpha()
             )
             for t in texts
         )
-        if vocab or all_caps or (below and title_case):
+        if not caption and (
+            vocab or all_caps or (below and title_case)
+        ):
             out.update(i for i, _l in members)
         j = k + 1
     return out
@@ -1419,7 +1448,7 @@ def _render_page(page, page_index: int, state: PipelineState):
         ):
             for li in _isolated_head_lines(
                 block_lines, state.line_h, state.lang, page_index,
-                marker_block, state.head_needles,
+                state.head_needles,
             ):
                 line_levels[li] = line_levels[li] or 2
         run_done = set()

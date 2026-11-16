@@ -76,6 +76,13 @@ class LangProfile:
     label alternation the aside detector anchors on; ``None`` on a
     hand-built profile means no info-box detection (the detector
     degrades rather than borrow English labels).
+    ``connectors`` is the small-word set the Title-Case arm of the
+    isolated-head pass treats as joiners — lowercase words a real
+    section head leaves uncapitalized (English `of`/`and`, German
+    `und`, French elided `l`, Spanish `y`); an empty frozenset on a
+    hand-built profile means no connector vocabulary was declared and
+    the arm demands capitals on every word rather than borrow
+    English's.
     """
 
     code: str
@@ -97,6 +104,7 @@ class LangProfile:
     figure_labels: str | None = None
     table_labels: str | None = None
     info_labels: str | None = None
+    connectors: frozenset = frozenset()
 
 
 def _profile(
@@ -117,6 +125,7 @@ def _profile(
     start_title,
     letters,
     info_labels,
+    connectors,
 ):
     """Assemble a frozen profile from per-language pattern strings.
 
@@ -145,6 +154,7 @@ def _profile(
         figure_labels=fig_labels,
         table_labels=table_label,
         info_labels=info_labels,
+        connectors=frozenset(connectors),
     )
 
 
@@ -188,6 +198,11 @@ EN = _profile(
         r"editor|correspondence|copyright|funding|data availability|"
         r"article history|open access"
     ),
+    connectors={
+        "a", "an", "the", "of", "in", "on", "at", "to", "for", "and",
+        "or", "nor", "but", "by", "vs", "with", "from", "de", "la",
+        "des",
+    },
 )
 
 DE = _profile(
@@ -231,6 +246,12 @@ DE = _profile(
         r"herausgegeben von|begutachtet von|korrespondenz|urheberrecht|"
         r"förderung|datenverfügbarkeit|open access"
     ),
+    connectors={
+        "und", "oder", "der", "die", "das", "den", "dem", "des", "ein",
+        "eine", "einen", "einem", "einer", "von", "vom", "zu", "zur",
+        "zum", "im", "am", "an", "auf", "aus", "bei", "mit", "nach",
+        "für", "über", "um", "als", "wie",
+    },
 )
 
 FR = _profile(
@@ -272,6 +293,12 @@ FR = _profile(
         r"correspondance|droits|financement|"
         r"disponibilité des données|accès libre|open access"
     ),
+    connectors={
+        "et", "ou", "le", "la", "les", "l", "d", "j", "n", "s", "t",
+        "de", "des", "du", "un", "une", "à", "au", "aux", "en",
+        "dans", "sur", "sous", "avec", "sans", "pour", "par", "vers",
+        "ni", "que",
+    },
 )
 
 ES = _profile(
@@ -311,6 +338,11 @@ ES = _profile(
         r"correspondencia|financiación|disponibilidad de datos|"
         r"acceso abierto|open access"
     ),
+    connectors={
+        "y", "e", "o", "u", "el", "la", "los", "las", "un", "una",
+        "unos", "unas", "de", "del", "en", "con", "sin", "por",
+        "para", "a", "al", "sobre", "entre", "como", "ni", "que",
+    },
 )
 
 LANGS = {p.code: p for p in (EN, DE, FR, ES)}

@@ -25,7 +25,7 @@ from .analyze import (
     _split_signature_prefixes,
     _zone_reading_maps,
 )
-from .const import PAGES_PER_FALLBACK_CHAPTER
+from .const import MIN_HEADING_CHARS, PAGES_PER_FALLBACK_CHAPTER
 from .lang import LangProfile, get_lang
 from .render import (
     _flush_paragraph,
@@ -99,8 +99,9 @@ def convert(
     # whole-block signature test — split the matched leading lines off
     # so ordering and every later consumer sees them as furniture.
     # Their collapsed head texts double as the #74 veto vocabulary:
-    # a folio-less line repeating a committed head is the same
-    # furniture, not a section head
+    # a folio-less line repeating a committed head *exactly* is the
+    # same furniture, not a section head — and a needle under the
+    # heading floor can't identify anything, so it isn't harvested
     head_needles = set()
     for pi, (page, pdict) in enumerate(pages):
         blocks = pdict["blocks"]
@@ -108,12 +109,16 @@ def convert(
             blocks = _split_folio_heads(blocks, folio_rows[pi])
         for b in blocks:
             if b.get("folio_head"):
-                t = " ".join(
+                rows = [
                     _line_text(l).strip() for l in _block_lines(b)
-                ).strip()
-                col = _head_needle(t)
-                if col:
-                    head_needles.add(col)
+                ]
+                # per-row needles cover a stacked head's single-row
+                # residual; the joined row covers one line carrying
+                # the whole fused head
+                for t in (*rows, " ".join(rows)):
+                    col = _head_needle(t)
+                    if len(col) >= MIN_HEADING_CHARS:
+                        head_needles.add(col)
         pdict["blocks"] = _split_signature_prefixes(
             blocks, page.rect.height, boilerplate, profile
         )
