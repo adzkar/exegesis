@@ -725,6 +725,16 @@ cases deselected). Converter heuristics and golden snapshots are unchanged.
   positive costs a finding, not deleted content), while the furniture
   excuse side still replays `analyze._folio_head_rows`/`_split_folio_heads`
   so dropped heads can't masquerade as genuine loss.
+  Its needle model is one needle per committed *printed* row:
+  `_row_groups` clusters a page's flat line list by y, so stacked
+  double heads or a needle-matched row beside a flagged one each
+  build their own needle — joining a page into one composite can
+  never match an emitted splice, and pooling rows also corrupts the
+  per-row confirmed/never-learned `issubset` check — and `head_leaks`
+  grades needles longest-first with each claiming its match spans,
+  so a needle nested inside a longer one (`LANGMUIR` vs
+  `LANGMUIR LETTERS`) keeps its own src rows and occurrences instead
+  of double-counting or being deduped away.
 - A repeated regex group must match its text exactly one way — no
   empty-able repeat nested inside it (`(?:<t>x</t>|[^<]*)*`,
   `(?:\.?\s*)*`) and no two alternatives that can consume the same
@@ -734,6 +744,12 @@ cases deselected). Converter heuristics and golden snapshots are unchanged.
   Make each loop step consume one unambiguous unit
   (`(?:[^<]|<(?!/sup>)[^>]*>)*`, `<(?!sup\b)[^>]+>`,
   `(?:[.\s]|</b><b>)*`).
+- Unit tests load `scripts/eval_epub.py` in-process via
+  `importlib.util.spec_from_file_location` — never `sys.path.insert`
+  + `import` + `sys.path.pop`: the module's own top-level
+  `sys.path.insert(0, <repo root>)` runs at import time and lands at
+  index 0, so `pop(0)` removes *that* entry and leaves the test's
+  `scripts/` insertion on `sys.path` for the rest of the session.
 - `dev/` survey tools take args through `argparse` and contain per-file
   failures — a hand-rolled `argv` scan lets a flag's value leak into the
   positional name filter (the documented `--journals-dir DIR` call then
