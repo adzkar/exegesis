@@ -324,6 +324,28 @@ but contributes nothing there).
   `--keep-headers`, and exempted from `_detect_asides` claims like
   signature furniture); the remainder keeps the ordinary block with a
   recomputed bbox.
+  Inside that same page-dominant shape, section heads lose their size
+  and bold signals entirely — a book scan's `Desertion and Cuckoldry`
+  is just another body-size line — so `render._isolated_head_lines`
+  recovers them on *geometry*: the scan's blank lines push a head's
+  nearest nonempty neighbors ~2 pitches away. Inside any block
+  spanning `PAGE_BLOCK_MIN_SPAN` of the page, an isolated-above line
+  opens a head unit — the maximal chain of consecutive nonempty
+  head-shaped lines (≤8 words, no terminal punctuation, uppercase
+  initial, no footnote markers, no name-list markers) riding at
+  normal pitch, so wrapped heads promote whole. The unit emits h2
+  when it is isolated below the same way (the mixed-case arm —
+  Title-Case lines where every alphabetic word capitalizes or is a
+  small connector), when every member is all-caps (heads like
+  `INITIAL PARENTAL INVESTMENT` abut their body directly), or when it
+  is a single line matching a `sections` vocabulary label exactly —
+  `REFERENCES` loses its gap below to the first entry. Pages 0–1
+  admit vocabulary hits only — an opener's byline names are isolated
+  all-caps lines too — and any unit whose collapsed text (edge folio
+  stripped) reuses a committed `folio_head` needle is vetoed: a
+  folio-less running head is the same shape standing anywhere on the
+  page, so the emit pass harvests each committed head's collapsed
+  text into `state.head_needles` for exactly this veto.
   Rotated margin strips (tall+narrow blocks in the outer 10% margins,
   measured in `page.mediabox` space so /Rotate pages compare correctly)
   qualify by *line direction*, not width: every line with reliable

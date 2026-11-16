@@ -64,3 +64,7 @@ class PipelineState:
     # drains into par_page's frags right behind the closing paragraph
     asides: int = 0
     pending_asides: list[str] = field(default_factory=list)
+    # collapsed head texts of committed folio_head rows (#74): an
+    # isolated line matching one is a folio-less running head left
+    # behind by the split, never a section head
+    head_needles: set[str] = field(default_factory=set)

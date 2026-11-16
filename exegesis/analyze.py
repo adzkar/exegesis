@@ -23,7 +23,6 @@ from .const import (
     FIGURE_LABEL_CHARS,
     FIGURE_LABEL_PAD,
     FIGURE_MIN_LABELS,
-    FOLIO_HEAD_BLOCK_SPAN,
     FOLIO_HEAD_LEAD_LINES,
     FOLIO_HEAD_MIN_PAGES,
     FRAG_PROSE_SHARE,
@@ -43,6 +42,7 @@ from .const import (
     OUTDENT_BAND_FILL,
     OUTDENT_HEADING_SHARE,
     OUTDENT_MIN_BLOCKS,
+    PAGE_BLOCK_MIN_SPAN,
     PAGE_FRAME_RATIO,
     SIGNATURE_PREFIX_MAX_LINES,
     VOTE_MIN_WORDS,
@@ -1601,7 +1601,7 @@ def _folio_head_rows(pages):
         )
         if first is None or (
             first["bbox"][3] - first["bbox"][1]
-            < height * FOLIO_HEAD_BLOCK_SPAN
+            < height * PAGE_BLOCK_MIN_SPAN
         ):
             continue
         firsts[pi] = first

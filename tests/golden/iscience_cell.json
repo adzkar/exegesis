@@ -172,9 +172,14 @@
           "p",
           "The authors declare no competing interests.",
           43
-        ],
+        ]
+      ]
+    },
+    {
+      "file": "chap_8.xhtml",
+      "frags": [
         [
-          "p",
+          "h2",
           "REFERENCES",
           10
         ],
@@ -278,11 +283,11 @@
   ],
   "stats": {
     "asides": 0,
-    "chapters": 8,
+    "chapters": 9,
     "columns": 1,
     "footnotes": 2,
     "grid_tables": 1,
-    "headings": 7,
+    "headings": 8,
     "images": 3,
     "pages": 9,
     "raster_figures": 0,
@@ -317,6 +322,10 @@
     [
       2,
       "DECLARATION OF INTERESTS"
+    ],
+    [
+      2,
+      "REFERENCES"
     ],
     [
       1,

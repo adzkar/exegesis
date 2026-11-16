@@ -161,9 +161,12 @@ EN = _profile(
         r"the author[s]? (?:thank|acknowledge|wish)|to whom correspondence)"
     ),
     sections=(
-        r"^(References and Notes|Notes and References|References|"
-        r"Bibliography|Supporting Online Material|Supplementary Materials?|"
+        r"^(References and Notes|Notes and References|"
+        r"REFERENCES AND NOTES|NOTES AND REFERENCES|References|"
+        r"REFERENCES|Bibliography|Supporting Online Material|"
+        r"Supplementary Materials?|"
         r"Acknowledg?ements|Acknowledgments|Materials and Methods|Appendix|"
+        r"Introduction|Summary|"
         r"Funding|Author Contributions|Data Availability)\b"
     ),
     fig_labels=r"fig\.?|figure|plate|scheme|chart",

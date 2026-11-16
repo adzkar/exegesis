@@ -22,7 +22,12 @@ from .analyze import (
     _sup_marker,
     _table_regions,
 )
-from .const import MAX_HEADING_CHARS, MIN_HEADING_CHARS, MIN_IMAGE_BYTES
+from .const import (
+    MAX_HEADING_CHARS,
+    MIN_HEADING_CHARS,
+    MIN_IMAGE_BYTES,
+    PAGE_BLOCK_MIN_SPAN,
+)
 from .lang import EN, LangProfile
 from .order import _ordered_blocks
 from .state import PipelineState
@@ -195,6 +200,129 @@ def _heading_run_end(lines, start, levels, line_h):
         end += 1
         prev = nxt
     return end
+
+
+def _head_shape(text):
+    """True when a line reads like a section head: ≤8 words, no
+    terminal punctuation, no footnote marker, opens on an uppercase
+    letter or digit — a mid-sentence fragment fails each of these."""
+    words = text.split()
+    if not (1 <= len(words) <= 8) or not re.search(r"[A-Za-z]", text):
+        return False
+    if re.search(r"[.!?…;:,][\"”’)\]]*$", text):
+        return False
+    if text[0] in "*†‡§":
+        return False
+    first = next((c for c in text if c.isalpha()), "")
+    return not first.islower()
+
+
+_CONNECTORS = {
+    "a", "an", "the", "of", "in", "on", "at", "to", "for", "and",
+    "or", "nor", "but", "by", "vs", "with", "from", "de", "la", "des",
+}
+
+
+def _head_needle(text):
+    """Collapsed form used to recognize residual running heads: strip
+    the edge folio, then alphanumerics only — the same normalization
+    the emit pass applies to committed ``folio_head`` blocks."""
+    t = re.sub(r"^\s*\d{1,4}\s*|\s*\d{1,4}\s*$", "", text.strip())
+    return re.sub(r"(^[^a-z]+|[^a-z]+$)", "",
+                  re.sub(r"[^a-z0-9]+", "", t.lower()))
+
+
+def _isolated_head_lines(lines, line_h, lang, page_index, marker_block,
+                         needles):
+    """Body-size section heads fused inside a page-dominant block (#74).
+
+    On a single-block book page a section head is just another
+    body-size line — the size and bold bands never reach it — but it
+    still sits *isolated*: the scan's blank lines push the nearest
+    nonempty neighbors ~2 pitches away. A head unit is the maximal
+    chain of consecutive nonempty head-shaped lines starting at an
+    isolated-above line (wrapped caps heads like `…PARENTAL INVESTME`
+    + `ATTRIBUTES` ride at normal pitch inside one unit). The unit
+    promotes to h2 when one of:
+      - it is bounded below the same way — the fully isolated case
+        covering mixed-case heads like `Desertion and Cuckoldry`, or
+      - every member is all-caps — `INITIAL PARENTAL INVESTMENT` and
+        caps wraps abut their body directly, or
+      - it is a single line that is itself a section label —
+        `REFERENCES` loses its gap below to the first entry.
+    Pages 0–1 admit vocabulary hits only — an opener's byline names
+    are isolated all-caps lines too — and any unit whose collapsed
+    text reuses a committed ``folio_head`` needle is vetoed: a
+    folio-less running head is the same shape standing anywhere on
+    the page. Footnote-marker blocks demote every line outright."""
+    if marker_block:
+        return set()
+    ne = [(i, l) for i, l in enumerate(lines) if _line_text(l).strip()]
+    if len(ne) < 3:
+        return set()
+    bound = line_h * 1.7
+    out = set()
+    j = 0
+    while j < len(ne):
+        li, line = ne[j]
+        above = (
+            j == 0
+            or line["bbox"][1] - ne[j - 1][1]["bbox"][1] >= bound
+        )
+        if not above or not _head_shape(_line_text(line).strip()):
+            j += 1
+            continue
+        # extend the unit while following lines stay head-shaped at
+        # normal pitch — wrapped heads are several lines, never one
+        members = [(li, line)]
+        k = j
+        while (
+            k + 1 < len(ne)
+            and ne[k + 1][1]["bbox"][1] - ne[k][1]["bbox"][1] < bound
+            and _head_shape(_line_text(ne[k + 1][1]).strip())
+        ):
+            k += 1
+            members.append(ne[k])
+        texts = [_line_text(l).strip() for _i, l in members]
+        cols = {_head_needle(t) for t in texts}
+        if any(
+            len(c) >= 4 and any(c in n or n in c for n in needles)
+            for c in cols
+        ):
+            j = k + 1
+            continue
+        vocab = (
+            len(members) == 1
+            and _section_label(texts[0], lang)
+            and not _section_label(texts[0], lang)[1]
+        )
+        if page_index < 2 and not vocab:
+            j = k + 1
+            continue
+        if any(_author_line(t, lang.name_joiner) for t in texts):
+            j = k + 1
+            continue
+        below = (
+            k == len(ne) - 1
+            or ne[k + 1][1]["bbox"][1] - ne[k][1]["bbox"][1] >= bound
+        )
+        all_caps = all(
+            all(
+                w.isupper() for w in t.split() if re.search(r"[A-Za-z]", w)
+            )
+            for t in texts
+        )
+        title_case = all(
+            all(
+                w[0].isupper() or w.split("'")[0] in _CONNECTORS
+                for w in t.split() if w[0].isalpha()
+            )
+            for t in texts
+        )
+        if vocab or all_caps or (below and title_case):
+            out.update(i for i, _l in members)
+        j = k + 1
+    return out
 
 
 def _standalone_heading_level(block, body_size):
@@ -1285,6 +1413,15 @@ def _render_page(page, page_index: int, state: PipelineState):
                 l, body_size, bold_h2_ok, state.lang, marker_block)
             for l in block_lines
         ]
+        if (
+            block["bbox"][3] - block["bbox"][1]
+            >= page.rect.height * PAGE_BLOCK_MIN_SPAN
+        ):
+            for li in _isolated_head_lines(
+                block_lines, state.line_h, state.lang, page_index,
+                marker_block, state.head_needles,
+            ):
+                line_levels[li] = line_levels[li] or 2
         run_done = set()
         for li, line in enumerate(block_lines):
             if li in run_done:

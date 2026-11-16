@@ -510,6 +510,62 @@ def single_block_book_heads(path):
     return _save(doc, path)
 
 
+def single_block_section_heads(path):
+    """Body-size section heads fused inside page-long blocks (#74):
+    an isolated Title-Case head, an all-caps head, a wrapped caps
+    pair, and a vocabulary `Summary` — each separated by blank lines
+    from its body — promote to h2, while the traps stay prose: the
+    opener's isolated byline names (pages 0–1 admit vocabulary hits
+    only), a folio-less residual carrying a committed needle, a
+    period-ending isolated line, and a paragraph-final short line."""
+    doc = fitz.open()
+    folio_of = {1: 138, 2: 139, 3: 140}
+    for pi in range(6):
+        page = _page(doc)
+        if pi == 0:
+            lines = [
+                "1", "___________________", SBP_HEAD_BLANK,
+                "JANE Q. TESTER", "TEST UNIVERSITY", SBP_HEAD_BLANK,
+                "Fused Evidence and Synthetic Layouts", SBP_HEAD_BLANK,
+                "Introduction", SBP_HEAD_BLANK,
+            ] + _sbp_body(pi, 35)
+            _sbp_insert(page, 54, 48, lines)
+            continue
+        body = _sbp_body(pi)
+        head = (
+            [f"{folio_of[pi]}  JANE Q. TESTER", SBP_HEAD_BLANK]
+            if pi in folio_of else []
+        )
+        if pi == 2:
+            lines = head + body[:6] + [
+                SBP_HEAD_BLANK, "Isolated Section Head", SBP_HEAD_BLANK,
+            ] + body[6:16] + [
+                SBP_HEAD_BLANK, "CAPS SECTION HEAD", SBP_HEAD_BLANK,
+            ] + body[16:22] + [
+                SBP_HEAD_BLANK, "WRAPPED CAPS", "SECTION HEAD",
+                SBP_HEAD_BLANK,
+            ] + body[22:30]
+        elif pi == 3:
+            lines = head + body[:10] + [
+                SBP_HEAD_BLANK, "Summary", SBP_HEAD_BLANK,
+            ] + body[10:18] + [
+                # a folio-less residual repeating the committed head —
+                # the needle veto keeps it prose
+                SBP_HEAD_BLANK, "JANE Q. TESTER", SBP_HEAD_BLANK,
+            ] + body[18:26]
+        elif pi == 4:
+            lines = body[:6] + [
+                SBP_HEAD_BLANK, "University Press.", SBP_HEAD_BLANK,
+            ] + body[6:14] + [
+                # paragraph-final short line — no isolation, no head
+                "Short tail",
+            ] + body[14:24]
+        else:
+            lines = head + body
+        _sbp_insert(page, 54, 48, lines)
+    return _save(doc, path)
+
+
 def stacked_digit_heads(path):
     """One page opens with three in-zone folio'd head-shaped rows whose
     offsets cluster — the quorum counts *distinct pages*, so a lone

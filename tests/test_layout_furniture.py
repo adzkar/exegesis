@@ -76,6 +76,7 @@ from furniture_fixtures import (
     rotated_table_margin_cells,
     rotated_table_staggered_cells,
     single_block_book_heads,
+    single_block_section_heads,
     stacked_digit_heads,
     stacked_fused_heads,
     tall_top_folio_tops,
@@ -1500,6 +1501,74 @@ def test_issue72_single_block_leading_heads_absent(sbp_case):
         "141 JANE Q. TESTER",
         issue="#72: leading running heads leak into single-block page flow",
     )
+
+
+@pytest.fixture(scope="module")
+def sbp_heads_pdf(tmp_path_factory):
+    """Generate the section-head recovery source before any conversion."""
+    directory = tmp_path_factory.mktemp("single_block_section_heads")
+    return single_block_section_heads(directory / "input.pdf")
+
+
+@pytest.fixture(scope="module")
+def sbp_heads_case(sbp_heads_pdf):
+    """Convert the isolated-head source once; the #74 pass owns the h2s."""
+    return _converted_case(sbp_heads_pdf)
+
+
+def _h2_texts(epub_path):
+    """Heading text of every h2 in document order."""
+    out = []
+    for t in doc_html(epub_path).values():
+        out += [
+            re.sub(r"<[^>]+>", "", m)
+            for m in re.findall(r"<h2[^>]*>.*?</h2>", t)
+        ]
+    return out
+
+
+def test_single_block_section_heads_conversion_and_lint(sbp_heads_case):
+    """Packaging stays healthy: valid EPUB, chapters split at each
+    recovered h2, every committed head row still lifts out."""
+    case = sbp_heads_case
+    assert case.epub.is_file()
+    assert lint_epub(case.epub) == []
+    assert case.stats["chapters"] >= 5
+
+
+def test_issue74_isolated_heads_promote(sbp_heads_case):
+    """Each isolation class emits an h2: Title-Case, all-caps, the
+    wrapped caps pair (merged into one heading), and the vocabulary
+    `Summary`; the opener's `Introduction` promotes on vocabulary
+    alone since page 0 admits nothing else (#74)."""
+    heads = _h2_texts(sbp_heads_case.epub)
+    for want in (
+        "Isolated Section Head",
+        "CAPS SECTION HEAD",
+        "WRAPPED CAPS SECTION HEAD",
+        "Summary",
+        "Introduction",
+    ):
+        assert want in heads, f"{want!r} missing from {heads}"
+
+
+def test_issue74_head_traps_stay_prose(sbp_heads_case):
+    """The veto battery never emits an h2: the opener's isolated
+    byline names (pages 0–1 admit vocabulary hits only), the
+    folio-less `JANE Q. TESTER` residual matching a committed needle,
+    a period-ending isolated line, and a paragraph-final tail."""
+    heads = _h2_texts(sbp_heads_case.epub)
+    for trap in (
+        "JANE Q. TESTER",
+        "TEST UNIVERSITY",
+        "Fused Evidence and Synthetic Layouts",
+        "University Press.",
+        "Short tail",
+    ):
+        assert not any(trap in h for h in heads), trap
+    text = sbp_heads_case.text
+    for trap in ("University Press.", "Short tail"):
+        assert trap in text, trap
 
 
 def test_recurring_page_opener_is_retained(recurring_case):

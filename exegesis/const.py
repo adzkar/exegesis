@@ -23,10 +23,11 @@ SIGNATURE_PREFIX_MAX_LINES = BOILERPLATE_MAX_LINES
 # heads hide in — and only the leading rows inside the top edge zone
 # are candidates; rows commit only when folio − page_index clusters on
 # ≥3 distinct pages — a genuine folio tracks the page index, a body
-# number doesn't.
+# number doesn't. The same span gate bounds #74's isolated-head pass:
+# inside a multi-block page no body-size line needs rescuing.
 FOLIO_HEAD_LEAD_LINES = 4
 FOLIO_HEAD_MIN_PAGES = 3
-FOLIO_HEAD_BLOCK_SPAN = 0.5
+PAGE_BLOCK_MIN_SPAN = 0.5
 MIN_IMAGE_BYTES = 2048
 MIN_HEADING_CHARS = 4
 MAX_HEADING_CHARS = 120
