@@ -1370,6 +1370,9 @@ def main() -> int:
         return 2
     if looks_like_junk_title(meta["title"]):
         findings.append(("High", "B", f"dc:title looks like junk: {meta['title']!r}"))
+    elif re.search(r"\.pdf\s*$", meta["title"], re.IGNORECASE):
+        findings.append(
+            ("Low", "B", f"dc:title retains .pdf extension: {meta['title']!r}"))
     creator = meta["creator"]
     # Contamination is about content, not length — a 10-author byline
     # clears 150 chars legitimately. Flag an affiliation tail

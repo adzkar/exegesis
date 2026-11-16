@@ -175,6 +175,45 @@ def test_dirty_metadata_sanitized_before_nav_seed(tmp_path):
     assert any(">A Writer<" in h for h in docs)
 
 
+def test_pdf_extension_title_normalized(tmp_path):
+    """Embedded titles often carry the source filename whole —
+    'paper.PDF' — so the derived title loses the extension wherever it
+    came from: metadata, the h1 fallback, the filename stem, or an
+    explicit --title (#71)."""
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 300),
+        "Body text fills the page with plain sentences.",
+        fontsize=BODY,
+    )
+    doc.set_metadata({"title": "Study of layout.PDF"})
+    pdf = tmp_path / "pdftitle.pdf"
+    _save(doc, pdf)
+    out = tmp_path / "pdftitle.epub"
+    stats = convert(pdf, out)
+    assert stats["title"] == "Study of layout"
+    # the OPF's dc:title carries the normalized name too
+    with zipfile.ZipFile(out) as zf:
+        opf = zf.read("EPUB/content.opf").decode("utf8")
+    assert "layout.PDF" not in opf
+    # an explicit --title ending in the extension normalizes likewise
+    stats = convert(pdf, tmp_path / "cli.epub", title="My Book.pdf")
+    assert stats["title"] == "My Book"
+    # a double-extension filename strips at the stem source as well
+    doc = fitz.open()
+    p = _page(doc)
+    p.insert_textbox(
+        fitz.Rect(72, 100, 540, 300),
+        "Body text fills the page with plain sentences.",
+        fontsize=BODY,
+    )
+    stem_pdf = tmp_path / "double.pdf.pdf"
+    _save(doc, stem_pdf)
+    stats = convert(stem_pdf, tmp_path / "stem.epub")
+    assert stats["title"] == "double"
+
+
 def test_keep_headers_preserves_furniture(tmp_path):
     doc = fitz.open()
     p = _page(doc)
