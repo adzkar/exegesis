@@ -16,7 +16,19 @@ from layout_assertions import (
     require_absent,
     require_order,
 )
-from layout_fixtures import GENERATORS
+from layout_fixtures import (
+    BOOK_BYLINE,
+    BOOK_COVER_LINES,
+    BOOK_COVER_TITLE,
+    BOOK_DRIFT_HEADS,
+    BOOK_DRIFT_LEADER,
+    BOOK_H2_RUN,
+    BOOK_SIZE_HEADS,
+    BOOK_STYLE_HEADS,
+    BOOK_TITLE,
+    BOOK_TITLE_LINES,
+    GENERATORS,
+)
 
 from exegesis import convert
 from exegesis.analyze import (
@@ -33,7 +45,7 @@ from exegesis.analyze import (
 )
 from exegesis.lang import DE, EN
 from exegesis.order import _ordered_blocks
-from exegesis.text import _block_text, _span_is_near_white
+from exegesis.text import _block_text, _line_max_size, _line_text, _span_is_near_white
 
 REQUIRED_CONTENT = {
     "mixed_1col_plus_2col": [
@@ -158,6 +170,12 @@ REQUIRED_CONTENT = {
         "Gamma upper", "Gamma lower", "Delta upper", "Delta lower",
     ],
     "invisible_text": ["Opening prose", "Trailing prose", "Banner label"],
+    "book_heading_run": [
+        "edited by", "JANE Q. EDITOR", BOOK_BYLINE, "TEST UNIVERSITY",
+        "Introduction", *BOOK_STYLE_HEADS, *BOOK_SIZE_HEADS,
+        *BOOK_DRIFT_HEADS,
+        "A plain body page closes the document",
+    ],
 }
 
 
@@ -671,6 +689,47 @@ def _contract_banded(pages):
     ]
 
 
+def _contract_book_run(pages):
+    """The fixture really fuses title lines and body into one block per
+    page — the per-line fallback's trigger — with the style/size
+    contrasts the merge contract reads."""
+    assert len(pages) == 4
+    for i in (0, 1, 3):
+        assert len(_texts(pages[i][1])) == 1
+    cover_lines = _texts(pages[0][1])[0]["lines"]
+    assert [_line_text(l).strip() for l in cover_lines[:3]] == list(
+        BOOK_COVER_LINES
+    )
+    assert all(_line_max_size(l) >= 21 for l in cover_lines[:3])
+    assert _line_text(cover_lines[3]).strip() == "edited by"
+    opener_lines = _texts(pages[1][1])[0]["lines"]
+    otexts = [_line_text(l).strip() for l in opener_lines]
+    assert otexts[0] == "7" and otexts[1] == BOOK_BYLINE
+    assert otexts[3:5] == list(BOOK_TITLE_LINES)
+    assert all(
+        _line_max_size(l) >= 20 for l in opener_lines[3:5])
+    style_lines = _texts(pages[3][1])[0]["lines"]
+    stexts = [_line_text(l).strip() for l in style_lines]
+    assert stexts[:3] == list(BOOK_STYLE_HEADS)
+    heads = style_lines[:3]
+    # same size, three different fingerprints: bold, regular, colored
+    assert max(_line_max_size(l) for l in heads) - min(
+        _line_max_size(l) for l in heads) < 0.5
+    fonts = {l["spans"][0]["font"] for l in heads}
+    colors = {l["spans"][0]["color"] for l in heads}
+    assert len(fonts) == 2 and len(colors) == 2
+    assert stexts[5:7] == list(BOOK_SIZE_HEADS)
+    assert _line_max_size(style_lines[5]) - _line_max_size(
+        style_lines[6]) > 0.3
+    assert stexts[7:10] == list(BOOK_DRIFT_HEADS)
+    drift = [_line_max_size(l) for l in style_lines[7:10]]
+    # every adjacent step fits the ±0.3pt bound while the end-to-end
+    # spread exceeds it — the shape that discriminates an anchored
+    # fingerprint from a pairwise one
+    assert all(a - b <= 0.3 for a, b in zip(drift, drift[1:]))
+    assert drift[0] - drift[-1] > 0.3
+
+
 CONTRACTS = {
     "mixed_1col_plus_2col": _contract_mixed,
     "mixed_parity_2col": _contract_parity,
@@ -696,6 +755,7 @@ CONTRACTS = {
     "mid_page_span": _contract_mid_page_span,
     "banded_sections": _contract_banded,
     "invisible_text": _contract_invisible,
+    "book_heading_run": _contract_book_run,
 }
 
 
@@ -1036,6 +1096,37 @@ def _semantic_mid_page_span(result):
                   issue="#60 sparse header zone preserved")
 
 
+def _semantic_book_run(result):
+    """#70: same-style adjacent heading lines merge into one heading;
+    a style or size shift keeps neighbors separate."""
+    chaps = "".join(
+        h for n, h in result[4].items() if n.startswith("chap_"))
+    require(chaps.count("<h1") == 2,
+            "#70 wrapped cover + chapter titles merge to one h1 each")
+    require(f">{BOOK_COVER_TITLE}</h1>" in chaps,
+            "#70 cover title lines merge into one h1")
+    require(f">{BOOK_TITLE}</h1>" in chaps,
+            "#70 chapter title lines merge into one h1")
+    require(f">{BOOK_H2_RUN}</h2>" in chaps,
+            "#70 same-style h2 run merges into one heading")
+    require(chaps.count("<h2") == 8,
+            "#70 style and size shifts keep adjacent heads separate")
+    require(f">{BOOK_DRIFT_LEADER}</h2>" in chaps,
+            "#70 drift run merges only inside the leader's ±0.3pt")
+    require(f">{BOOK_DRIFT_HEADS[2]}</h2>" in chaps,
+            "#70 the drift's tail keeps its own heading")
+    for needle in (
+        f">{BOOK_STYLE_HEADS[0]} {BOOK_STYLE_HEADS[1]}",
+        f"{BOOK_SIZE_HEADS[0]} {BOOK_SIZE_HEADS[1]}",
+        " ".join(BOOK_DRIFT_HEADS),
+    ):
+        require(needle not in chaps,
+                "#70 unlike styles never merge into one heading")
+    require_order(
+        result[3], BOOK_TITLE, "Introduction", "Opener prose 0",
+        issue="#70 merged title keeps its position over body")
+
+
 def _semantic_banded(result):
     """#61: banded sections emit band-major — the declarations band in
     both columns precedes the references band — while page 1's unmarked
@@ -1075,6 +1166,7 @@ SEMANTICS = {
     "mid_page_span": _semantic_mid_page_span,
     "banded_sections": _semantic_banded,
     "invisible_text": _semantic_invisible,
+    "book_heading_run": _semantic_book_run,
 }
 SYMPTOMS = {}
 SEMANTIC_CASES = [

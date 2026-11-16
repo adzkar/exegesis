@@ -241,7 +241,17 @@ but contributes nothing there).
   demotion — a trailing `Funding NIH grant…` is a plausible note tail,
   not a section head. All-caps short labels in the top 12% emit
   `<p class="label">` instead, and so does a single all-caps word at
-  title size anywhere on the page (scirep's `OPEN` badge). Chapters split at heading fragments; frags
+  title size anywhere on the page (scirep's `OPEN` badge). Where a block's
+  lines classify per-line — book scans fuse heading and body lines into one
+  dict block, so no block-level arm fires — adjacent heading lines merge into
+  one heading while every member holds the same gated level
+  (`_line_level_gated` applies the footnote-marker, name-list, and
+  bold-band follower gates identically to run members), an identical style
+  fingerprint — span size within ±0.3pt *anchored to the run leader* so a
+  monotone drift can't chain pairwise, plus equal span-font, bold/italic-flag,
+  and color sets — and a vertical gap under 1.6× body leading; the joined
+  text must still pass `_looks_like_heading`, else each member emits on its
+  own. Chapters split at heading fragments; frags
   before the first heading fold into chapter 1 rather than forming a
   degenerate leading chapter. The TOC nests: each h1 opens a section that
   absorbs following h2s (an h2 before the first h1 stays top-level); a
