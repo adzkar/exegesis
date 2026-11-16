@@ -5,11 +5,11 @@ survey set) and prints, per candidate rule, the page-top lines each rule
 would split — evidence for the removal go/no-go decision. Nothing here
 touches the converter and tests never import it.
 
-Usage: python3 dev/dry_run_edge_lines.py [name-substring ...]
-       python3 dev/dry_run_edge_lines.py --journals-dir DIR [name ...]
+Usage: ``python3 dev/dry_run_edge_lines.py [--journals-dir DIR] [name-substring ...]``
 """
 from __future__ import annotations
 
+import argparse
 import re
 import sys
 from collections import Counter
@@ -21,13 +21,11 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from exegesis.analyze import _signature
+from exegesis.const import BOILERPLATE_COVERAGE, EDGE_ZONE
+from exegesis.text import _line_text
 
-ZONE = 0.20       # edge zone, mirroring const.EDGE_ZONE
+JOURNALS = ROOT / "journals"
 LEAD_WINDOW = 4   # leading lines of a block scanned for a head row
-
-
-def _line_text(line):
-    return "".join(s["text"] for s in line["spans"])
 
 
 def leading_rows(pages):
@@ -46,7 +44,7 @@ def leading_rows(pages):
             continue
         for li, line in enumerate(first["lines"][:LEAD_WINDOW]):
             y0f = line["bbox"][1] / height
-            if y0f > ZONE:
+            if y0f > EDGE_ZONE:
                 break
             text = _line_text(line).strip()
             if text:
@@ -100,7 +98,7 @@ def rule_sig_floor(pages, rows):
     on ≥40% of pages (the naive extension — the trap rules must beat).
     Signatures under 4 chars ('r', 'vs', 'c') are dropped here — they
     flood with math/panel labels otherwise."""
-    floor = max(2, int(0.4 * len(pages)))
+    floor = max(2, int(len(pages) * BOILERPLATE_COVERAGE))
     sigs = {}
     for pi, li, y0f, text in rows:
         if li > 1:
@@ -128,43 +126,51 @@ def rule_stable_y(pages, rows):
 
 
 def describe(pdf):
-    try:
-        doc = fitz.open(pdf)
-    except Exception as exc:  # noqa: BLE001 - report, never crash the survey
-        print(f"{pdf.name}: OPEN ERROR {exc}")
-        return
-    pages = [(page, page.get_text("dict")) for page in doc]
-    rows = list(leading_rows(pages))
-    print(f"\n=== {pdf.name} ({len(pages)} pages, {len(rows)} zone rows) ===")
-    folio_hits = rule_folio_anchored(pages, rows)
-    if folio_hits:
-        offs = Counter(h[4] - h[0] for h in folio_hits)
-        print(f"  A folio-anchored: {len(folio_hits)} rows, offsets {dict(offs)}")
-        for h in folio_hits[:8]:
-            print(f"      p{h[0]:>2} y={h[2]:.3f} {h[3][:70]!r}")
-    for name, fn in (("B sig-floor", rule_sig_floor),
-                     ("C sig+stable-y", rule_stable_y)):
-        hits = fn(pages, rows)
-        if hits:
-            total = sum(len(v) for v in hits.values())
-            print(f"  {name}: {len(hits)} sigs, {total} rows")
-            for sig, hs in list(hits.items())[:4]:
-                print(f"      sig={sig[:40]!r} x{len(hs)} e.g. p{hs[0][0]} {hs[0][3][:60]!r}")
-    doc.close()
+    with fitz.open(pdf) as doc:
+        pages = [(page, page.get_text("dict")) for page in doc]
+        rows = list(leading_rows(pages))
+        print(f"\n=== {pdf.name} ({len(pages)} pages, {len(rows)} zone rows) ===")
+        folio_hits = rule_folio_anchored(pages, rows)
+        if folio_hits:
+            offs = Counter(h[4] - h[0] for h in folio_hits)
+            print(f"  A folio-anchored: {len(folio_hits)} rows, offsets {dict(offs)}")
+            for h in folio_hits[:8]:
+                print(f"      p{h[0]:>2} y={h[2]:.3f} {h[3][:70]!r}")
+        for name, fn in (("B sig-floor", rule_sig_floor),
+                         ("C sig+stable-y", rule_stable_y)):
+            hits = fn(pages, rows)
+            if hits:
+                total = sum(len(v) for v in hits.values())
+                print(f"  {name}: {len(hits)} sigs, {total} rows")
+                for sig, hs in list(hits.items())[:4]:
+                    print(f"      sig={sig[:40]!r} x{len(hs)} e.g. p{hs[0][0]} {hs[0][3][:60]!r}")
 
 
 def main(argv):
-    journals_dir = ROOT / "journals"
-    names = [a for a in argv if not a.startswith("--")]
-    if "--journals-dir" in argv:
-        journals_dir = Path(argv[argv.index("--journals-dir") + 1])
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "patterns", nargs="*", help="case-insensitive PDF name substrings"
+    )
+    parser.add_argument(
+        "--journals-dir",
+        type=Path,
+        default=JOURNALS,
+        help="PDF directory (recursive)",
+    )
+    args = parser.parse_args(argv)
+    if args.journals_dir != JOURNALS and not args.journals_dir.is_dir():
+        parser.error(f"not a directory: {args.journals_dir}")
+    pats = [p.lower() for p in args.patterns]
     pdfs = sorted(ROOT.glob("*.pdf"))
-    if journals_dir.is_dir():
-        pdfs += sorted(journals_dir.rglob("*.pdf"))
+    if args.journals_dir.is_dir():
+        pdfs += sorted(args.journals_dir.rglob("*.pdf"))
     for pdf in pdfs:
-        if names and not any(n.lower() in pdf.name.lower() for n in names):
+        if pats and not any(n in pdf.name.lower() for n in pats):
             continue
-        describe(pdf)
+        try:
+            describe(pdf)
+        except Exception as e:  # noqa: BLE001 - report, never crash the survey
+            print(f"{pdf.name}: FAILED {e}")
 
 
 if __name__ == "__main__":
