@@ -18,8 +18,10 @@ from .analyze import (
     _detect_margins,
     _doc_column_edges,
     _drop_invisible_spans,
+    _folio_head_rows,
     _grids_agree,
     _page_grids,
+    _split_folio_heads,
     _split_signature_prefixes,
     _zone_reading_maps,
 )
@@ -83,12 +85,19 @@ def convert(
 
     body_size, line_h = _body_font_size(pages)
     boilerplate = _boilerplate_signatures(pages)
+    # a fused running head inside a page's first block never emits the
+    # signature either arm reads — the doc-wide folio cluster flags
+    # those leading rows so they split off as folio_head furniture
+    folio_rows = _folio_head_rows(pages)
     # pre-pass: a running head fused to the block below it escapes the
     # whole-block signature test — split the matched leading lines off
     # so ordering and every later consumer sees them as furniture
-    for page, pdict in pages:
+    for pi, (page, pdict) in enumerate(pages):
+        blocks = pdict["blocks"]
+        if pi in folio_rows:
+            blocks = _split_folio_heads(blocks, folio_rows[pi])
         pdict["blocks"] = _split_signature_prefixes(
-            pdict["blocks"], page.rect.height, boilerplate, profile
+            blocks, page.rect.height, boilerplate, profile
         )
     # front-matter info boxes are claimed before column-edge voting so
     # their field column can never seed a phantom document edge

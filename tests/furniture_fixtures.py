@@ -510,6 +510,54 @@ def single_block_book_heads(path):
     return _save(doc, path)
 
 
+def stacked_digit_heads(path):
+    """One page opens with three in-zone folio'd head-shaped rows whose
+    offsets cluster — the quorum counts *distinct pages*, so a lone
+    stacked page can never satisfy it and all three lines stay in
+    body flow."""
+    doc = fitz.open()
+    for pi in range(6):
+        page = _page(doc)
+        lead = (
+            [
+                "138 STACKED JOURNAL HEAD",
+                "138 SECOND STACKED HEAD",
+                "139 THIRD STACKED HEAD",
+            ]
+            if pi == 0 else []
+        )
+        _sbp_insert(page, 54, 48, lead + _sbp_body(pi))
+    return _save(doc, path)
+
+
+def lowercase_digit_openers(path):
+    """Every page opens on a lowercase filler line ending in a small
+    digit — prose, not a head. The digits sit inside the cluster's
+    ±1 window on early pages without tracking anything; a lowercase
+    remainder keeps the line out of candidacy at either folio edge."""
+    doc = fitz.open()
+    for pi in range(6):
+        page = _page(doc)
+        _sbp_insert(
+            page, 54, 48,
+            [f"filler words carry the page {pi}"] + _sbp_body(pi),
+        )
+    return _save(doc, path)
+
+
+def multi_block_folio_tops(path):
+    """Every page carries a tracking folio'd head in its own small top
+    block — a multi-block page, not a single-block scan. The span
+    gate skips the page outright, so even a doc-wide folio cluster
+    commits nothing through the folio pass."""
+    doc = fitz.open()
+    for pi in range(6):
+        page = _page(doc)
+        text(page, 200, 48, f"{138 + pi}  MULTI HEAD", size=10)
+        _sbp_insert(page, 54, 200, _sbp_body(pi, 30))
+    return _save(doc, path)
+
+
 RECURRING_OPENER = "The experiment continues with further measurements below."
 
 
@@ -568,4 +616,46 @@ def repeated_bottom_foot(path):
         )
         text(page, 72, 768, BOTTOM_FOOT, size=8)
         text(page, 400, 782, f"© 2024 Example Journal page {tag}", size=8)
+    return _save(doc, path)
+
+
+def tall_top_folio_tops(path):
+    """Multi-block pages whose top block still dominates the height:
+    a tall block holding the folio'd head plus body lines, and a
+    small secondary block below. The span gate scans them — it bounds
+    the heuristic to top-block-dominated pages, not single-block
+    ones — so the tracking heads commit exactly like a fused
+    one-block page's."""
+    doc = fitz.open()
+    for pi in range(3):
+        page = _page(doc)
+        _sbp_insert(
+            page,
+            54,
+            48,
+            [f"{138 + pi} JANE Q. TESTER"] + _sbp_body(pi, 30),
+        )
+        text(page, 300, 700, "a small trailing block", size=10)
+    return _save(doc, path)
+
+
+def folio_head_aside_seed(path):
+    """Two pages whose top blocks each carry two distinct info-label
+    lines ('EDITED BY … folio', 'RECEIVED …') — enough labels to seed
+    a self-contained info box on a scanned page. Page 0's block is
+    marked ``folio_head`` in the test: seeding is the last aside
+    membership path a committed head could take, and the exemption
+    must close it while the unmarked page-1 twin still claims."""
+    doc = fitz.open()
+    for pi in range(2):
+        page = _page(doc)
+        _sbp_insert(
+            page,
+            54,
+            48,
+            [
+                f"EDITED BY Jane Q. Tester  {138 + pi}",
+                "RECEIVED 12 January 2024",
+            ],
+        )
     return _save(doc, path)

@@ -7,6 +7,7 @@
 - B metadata: title='Bewegung fördern, Gesundheit stärken'
 - C coverage: rejoined 192, furniture 20, rasterized table cells 0, superscript splits 0, genuine loss 24
 - D toc: 4 entries, h1=1 h2=3, dupes=none
+- J heads: 0 committed source rows, 0 attributable leaks (folio-anchored top-edge rows only — internal, folio-less, and bottom-placed heads are undetectable)
 - G figures: pdf rasters=3, embedded=3, vector pages=[]
 
 ## Findings (severity-ranked)

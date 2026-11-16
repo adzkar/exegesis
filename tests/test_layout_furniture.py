@@ -61,9 +61,12 @@ from furniture_fixtures import (
     UPRIGHT_TAGS,
     _sbp_body,
     dual_margin_strips,
+    folio_head_aside_seed,
     front_matter_info_box,
     fused_running_head_title,
     long_repeated_running_head,
+    lowercase_digit_openers,
+    multi_block_folio_tops,
     numbered_page_top_lines,
     over_bound_running_head,
     recurring_page_opener,
@@ -73,11 +76,12 @@ from furniture_fixtures import (
     rotated_table_margin_cells,
     rotated_table_staggered_cells,
     single_block_book_heads,
+    stacked_digit_heads,
     stacked_fused_heads,
+    tall_top_folio_tops,
 )
 from helpers import chapter_body_text, doc_html, lint_epub
 from layout_assertions import (
-    SemanticMismatch,
     assert_retained_once,
     require,
     require_absent,
@@ -87,7 +91,9 @@ from exegesis import convert
 from exegesis.analyze import (
     _body_font_size,
     _boilerplate_signatures,
+    _detect_asides,
     _doc_column_edges,
+    _folio_head_rows,
     _is_furniture,
     _is_margin_strip,
     _is_signature_furniture,
@@ -302,7 +308,7 @@ def numbered_pdf(tmp_path_factory):
 
 @pytest.fixture(scope="module")
 def sbp_case(sbp_pdf):
-    """Convert the book-scan source once; #72's strict xfail owns the leak."""
+    """Convert the book-scan source once; the folio split owns the heads."""
     case = _converted_case(sbp_pdf)
     assert_retained_once(
         case.text,
@@ -324,6 +330,53 @@ def recurring_case(recurring_pdf):
 def numbered_case(numbered_pdf):
     """Convert the numbered-top-lines trap once for retention assertions."""
     return _converted_case(numbered_pdf)
+
+
+@pytest.fixture(scope="module")
+def digit_heads_pdf(tmp_path_factory):
+    """Generate the lone-page stacked-rows trap independently."""
+    directory = tmp_path_factory.mktemp("stacked_digit_heads")
+    return stacked_digit_heads(directory / "input.pdf")
+
+
+@pytest.fixture(scope="module")
+def digit_openers_pdf(tmp_path_factory):
+    """Generate the lowercase-digit-openers trap independently."""
+    directory = tmp_path_factory.mktemp("lowercase_digit_openers")
+    return lowercase_digit_openers(directory / "input.pdf")
+
+
+@pytest.fixture(scope="module")
+def multi_folio_pdf(tmp_path_factory):
+    """Generate the multi-block folio-top source independently."""
+    directory = tmp_path_factory.mktemp("multi_block_folio_tops")
+    return multi_block_folio_tops(directory / "input.pdf")
+
+
+@pytest.fixture(scope="module")
+def tall_folio_pdf(tmp_path_factory):
+    """Generate the tall-top-block multi-block source independently."""
+    directory = tmp_path_factory.mktemp("tall_top_folio_tops")
+    return tall_top_folio_tops(directory / "input.pdf")
+
+
+@pytest.fixture(scope="module")
+def folio_seed_pdf(tmp_path_factory):
+    """Generate the folio-head aside-seed trap independently."""
+    directory = tmp_path_factory.mktemp("folio_head_aside_seed")
+    return folio_head_aside_seed(directory / "input.pdf")
+
+
+@pytest.fixture(scope="module")
+def digit_heads_case(digit_heads_pdf):
+    """Convert the stacked-rows trap once for retention assertions."""
+    return _converted_case(digit_heads_pdf)
+
+
+@pytest.fixture(scope="module")
+def digit_openers_case(digit_openers_pdf):
+    """Convert the lowercase-openers trap once for retention assertions."""
+    return _converted_case(digit_openers_pdf)
 
 
 @pytest.fixture(scope="module")
@@ -1423,14 +1476,22 @@ def test_single_block_book_heads_conversion_and_lint(sbp_case):
         assert line.strip() in case.text  # the p6 note region stays body text
 
 
-@pytest.mark.xfail(
-    strict=True, raises=SemanticMismatch,
-    reason="#72: leading running heads fused into single-block pages "
-           "still splice into body flow",
-)
+def test_issue72_folio_head_rows_detection(sbp_pdf):
+    """The doc-wide cluster flags exactly the committed leading rows:
+    p1-4's folio'd heads, the p7 same-y pair — folio line and its head
+    sibling at one y — and nothing else. The p0 opener's bare '7', the
+    p6 suffix head, the p8 folio-less head, and the p9 internal head
+    all stay out (#72)."""
+    with fitz.open(sbp_pdf) as doc:
+        pages = [(page, page.get_text("dict")) for page in doc]
+        assert _folio_head_rows(pages) == {
+            1: [0], 2: [0], 3: [0], 4: [0], 7: [0, 1]
+        }
+
+
 def test_issue72_single_block_leading_heads_absent(sbp_case):
     """The folio'd leading heads must not emit inside body flow — the
-    semantic baseline that fails today and #72 flips."""
+    folio-anchored cluster split keeps them out of the paragraphs."""
     require_absent(
         sbp_case.text,
         f"{SBP_TITLE_HEAD} 138",
@@ -1460,3 +1521,68 @@ def test_numbered_page_top_lines_are_retained(numbered_case):
     for pi in range(9):
         needle = NUMBERED_TOP_LINES[pi % 3].format(pi // 3 + 1)
         assert needle in case.text, needle
+
+
+def test_one_page_cannot_meet_folio_quorum(digit_heads_pdf, digit_heads_case):
+    """A lone page's stacked folio rows are not '≥3 pages' — the quorum
+    counts distinct pages, so nothing commits and the in-zone lines
+    all stay in body flow."""
+    with fitz.open(digit_heads_pdf) as doc:
+        pages = [(page, page.get_text("dict")) for page in doc]
+        assert _folio_head_rows(pages) == {}
+    assert_retained_once(
+        digit_heads_case.text,
+        "138 STACKED JOURNAL HEAD",
+        "138 SECOND STACKED HEAD",
+        "139 THIRD STACKED HEAD",
+    )
+
+
+def test_lowercase_digit_openers_are_not_heads(
+    digit_openers_pdf, digit_openers_case
+):
+    """A lowercase opener trailing a small digit is prose at either
+    folio edge — early-page digits inside the cluster window can't
+    promote it to furniture."""
+    with fitz.open(digit_openers_pdf) as doc:
+        pages = [(page, page.get_text("dict")) for page in doc]
+        assert _folio_head_rows(pages) == {}
+    assert_retained_once(
+        digit_openers_case.text,
+        *(f"filler words carry the page {pi}" for pi in range(6)),
+    )
+
+
+def test_short_top_pages_skip_folio_scan(multi_folio_pdf):
+    """A page whose top block spans under half the page height is not
+    top-block-dominated — the span gate skips it, so tracking
+    folios across the doc still commit nothing through this pass."""
+    with fitz.open(multi_folio_pdf) as doc:
+        pages = [(page, page.get_text("dict")) for page in doc]
+        assert _folio_head_rows(pages) == {}
+
+
+def test_tall_top_multi_block_pages_still_scan(tall_folio_pdf):
+    """The span gate bounds reach to top-block-dominated pages, not
+    single-block ones — a tall top block on a multi-block page is
+    still scanned, and tracking folio heads commit as usual."""
+    with fitz.open(tall_folio_pdf) as doc:
+        pages = [(page, page.get_text("dict")) for page in doc]
+        for _page, pdict in pages:
+            assert len(_text_blocks(pdict)) >= 2
+        assert _folio_head_rows(pages) == {0: [0], 1: [0], 2: [0]}
+
+
+def test_folio_head_cannot_seed_info_box(folio_seed_pdf):
+    """A folio_head piece whose lines carry info labels must not seed
+    a field run — the last aside membership path closed, so a
+    committed head on page 0 stays furniture while its unmarked
+    page-1 twin still claims a sidebar."""
+    with fitz.open(folio_seed_pdf) as doc:
+        pages = [(page, page.get_text("dict")) for page in doc]
+        _body_size, line_h = _body_font_size(pages)
+        marked, unmarked = (_text_blocks(pdict)[0] for _p, pdict in pages)
+        marked["folio_head"] = True
+        _detect_asides(pages, line_h, _boilerplate_signatures(pages))
+        assert marked.get("aside") is None
+        assert unmarked.get("aside") is not None

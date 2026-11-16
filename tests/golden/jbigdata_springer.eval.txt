@@ -7,6 +7,7 @@
 - B metadata: title='CardiaTics: An explainable AI integrated heart disease diagn'
 - C coverage: rejoined 10, furniture 363, rasterized table cells 0, superscript splits 6, genuine loss 31
 - D toc: 13 entries, h1=1 h2=11, dupes=none
+- J heads: 0 committed source rows, 0 attributable leaks (folio-anchored top-edge rows only — internal, folio-less, and bottom-placed heads are undetectable)
 - G figures: pdf rasters=13, embedded=13, vector pages=[14, 16, 18]
 
 ## Findings (severity-ranked)

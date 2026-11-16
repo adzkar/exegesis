@@ -7,6 +7,7 @@
 - B metadata: title='Soil salinization in agriculture: Mitigation and adaptation '
 - C coverage: rejoined 94, furniture 96, rasterized table cells 1571, superscript splits 5, genuine loss 15
 - D toc: 8 entries, h1=1 h2=6, dupes=none
+- J heads: 0 committed source rows, 0 attributable leaks (folio-anchored top-edge rows only — internal, folio-less, and bottom-placed heads are undetectable)
 - G figures: pdf rasters=2, embedded=2, vector pages=[1]
 
 ## Findings (severity-ranked)

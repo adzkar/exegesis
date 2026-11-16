@@ -11,11 +11,14 @@ layout analysis over PyMuPDF blocks — no OCR, no ML dependencies.
   then spot-check a chapter's XHTML for reading order
 - Report: `python3 scripts/build_report.py` (converts root `*.pdf` corpus
   → `docs/report/` for GitHub Pages)
-- Eval: `python3 scripts/eval_epub.py <input.pdf> <output.epub> [--lang en|de|fr|es]` —
+- Eval: `python3 scripts/eval_epub.py <input.pdf> <output.epub> [--lang en|de|fr|es] [--keep-headers]` —
   severity-ranked quality report; exits 1 on High findings (CI gate),
   0 clean, 2 on operational failure or an unsupported language.
   Language-bound patterns ride the `LangProfile` from `--lang`,
-  else `dc:language`, else `en`
+  else `dc:language`, else `en`. `--keep-headers` marks a
+  `convert(--keep-headers)` conversion — the running-head leak check
+  (J) is disabled since kept furniture is intentional; every other
+  check still runs.
 - Release: `scripts/bump.sh X.Y.Z` then `scripts/release.sh X.Y.Z`
   (prep + tag/publish; see `RELEASE.md`)
 - Tests: `python3 -m pytest -q` (self-contained tests run without local PDFs;
@@ -282,6 +285,35 @@ but contributes nothing there).
   the same failure the split fixes. Column-edge voting, the strip clip,
   and render all see the post-split blocks, so a recurring fused head
   can't vote a phantom column edge either.
+  A second pre-pass covers the heads no signature can ever see: on a
+  single-block-page book scan the whole page extracts as one block, so
+  the running head is a *line* inside it and no standalone block ever
+  emits the head's signature. `_folio_head_rows` (doc-wide, before the
+  signature split) scans only pages whose top text block spans at
+  least half the page height — the top-block-dominated shape the
+  heads hide in (a tall top block on a multi-block page still
+  qualifies — a tracking folio fused into a column block is the same
+  pathology) — and reads that block's in-zone leading lines for an
+  edge folio — a standalone integer at either end, bare folios
+  included — with a head-shaped remainder (no terminal punctuation,
+  ≤10 words, no lowercase first word at either edge — prose opens
+  lowercase where heads almost never do). Rows commit only when
+  `folio − page_index` clusters on ≥3 *distinct* pages (mode ±1, each
+  page voting every distinct offset once — a lone stacked page can
+  neither satisfy the quorum nor hijack the mode): a genuine folio
+  tracks the page index while a body number, year, or chapter counter
+  does not — the cluster is the whole evidence, so a page whose
+  leading row merely looks like a head never qualifies on its own,
+  and a recurring first line that is real content
+  (`recurring_page_opener`) carries no clustered folio at all.
+  Committed rows also flag their same-row siblings — a folio and its
+  head text can extract as separate line objects on one printed row —
+  and `_split_folio_heads` lifts the flagged lines into their own
+  `folio_head`-marked blocks, furniture downstream like any other
+  head (dropped by default, kept verbatim at the page edge under
+  `--keep-headers`, and exempted from `_detect_asides` claims like
+  signature furniture); the remainder keeps the ordinary block with a
+  recomputed bbox.
   Rotated margin strips (tall+narrow blocks in the outer 10% margins,
   measured in `page.mediabox` space so /Rotate pages compare correctly)
   qualify by *line direction*, not width: every line with reliable
@@ -672,7 +704,8 @@ cases deselected). Converter heuristics and golden snapshots are unchanged.
   text *by design*, not just furniture: rotated tables leave the flow as
   `images/table_*.png` and figure regions as `images/fig_*.png`, so both
   raster mirrors replay the converter's own preparation through
-  `_claim_pages` (signature splits, asides, margin lifts, document
+  `_claim_pages` (signature splits, folio-head splits, asides, margin
+  lifts, document
   edges) and call `analyze._page_claims` — a replay, not a mirror, so
   aside marks, the provisional-label note mask, table precedence, and
   crop validation can't drift — and a figure page stops flagging "not
@@ -684,6 +717,26 @@ cases deselected). Converter heuristics and golden snapshots are unchanged.
   resolves 'rasterized', not 'missing' — an unmodeled path grades
   intended behavior as loss, the report contradicts itself, and the
   High gate fails a correct conversion.
+  The one deliberate exception is the #73 running-head leak oracle:
+  `source_folio_rows`/`head_leaks` detect *survived* furniture in the
+  emitted text and must NOT mirror the converter's detector — a check
+  keyed to the detector it watches would share its blind spot (the
+  pre-#72 baseline graded 33 leaked heads 'clean' exactly that way).
+  The oracle may be *looser* than the removal rule (its needle-match
+  arm counts folio-less rows the converter can't flag — a false
+  positive costs a finding, not deleted content), while the furniture
+  excuse side still replays `analyze._folio_head_rows`/`_split_folio_heads`
+  so dropped heads can't masquerade as genuine loss.
+  Its needle model is one needle per committed *printed* row:
+  `_row_groups` clusters a page's flat line list by y, so stacked
+  double heads or a needle-matched row beside a flagged one each
+  build their own needle — joining a page into one composite can
+  never match an emitted splice, and pooling rows also corrupts the
+  per-row confirmed/never-learned `issubset` check — and `head_leaks`
+  grades needles longest-first with each claiming its match spans,
+  so a needle nested inside a longer one (`LANGMUIR` vs
+  `LANGMUIR LETTERS`) keeps its own src rows and occurrences instead
+  of double-counting or being deduped away.
 - A repeated regex group must match its text exactly one way — no
   empty-able repeat nested inside it (`(?:<t>x</t>|[^<]*)*`,
   `(?:\.?\s*)*`) and no two alternatives that can consume the same
@@ -693,6 +746,12 @@ cases deselected). Converter heuristics and golden snapshots are unchanged.
   Make each loop step consume one unambiguous unit
   (`(?:[^<]|<(?!/sup>)[^>]*>)*`, `<(?!sup\b)[^>]+>`,
   `(?:[.\s]|</b><b>)*`).
+- Unit tests load `scripts/eval_epub.py` in-process via
+  `importlib.util.spec_from_file_location` — never `sys.path.insert`
+  + `import` + `sys.path.pop`: the module's own top-level
+  `sys.path.insert(0, <repo root>)` runs at import time and lands at
+  index 0, so `pop(0)` removes *that* entry and leaves the test's
+  `scripts/` insertion on `sys.path` for the rest of the session.
 - `dev/` survey tools take args through `argparse` and contain per-file
   failures — a hand-rolled `argv` scan lets a flag's value leak into the
   positional name filter (the documented `--journals-dir DIR` call then

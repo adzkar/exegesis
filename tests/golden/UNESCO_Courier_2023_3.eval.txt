@@ -7,6 +7,7 @@
 - B metadata: title='The call of the forest'
 - C coverage: rejoined 33, furniture 259, rasterized table cells 0, superscript splits 11, genuine loss 1
 - D toc: 148 entries, h1=34 h2=113, dupes=['The call of the forest', 'Discover our offers', 'United States, 1954', 'United Kingdom, 1970']
+- J heads: 0 committed source rows, 0 attributable leaks (folio-anchored top-edge rows only — internal, folio-less, and bottom-placed heads are undetectable)
 - G figures: pdf rasters=47, embedded=47, vector pages=[1, 54, 55, 56, 57, 59, 60]
 
 ## Findings (severity-ranked)

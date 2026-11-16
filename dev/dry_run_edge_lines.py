@@ -21,7 +21,11 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from exegesis.analyze import _signature
-from exegesis.const import BOILERPLATE_COVERAGE, EDGE_ZONE
+from exegesis.const import (
+    BOILERPLATE_COVERAGE,
+    EDGE_ZONE,
+    FOLIO_HEAD_BLOCK_SPAN,
+)
 from exegesis.text import _line_text
 
 JOURNALS = ROOT / "journals"
@@ -62,7 +66,7 @@ def remainder_shape(text):
     """The non-folio remainder should look like a head — or be empty
     (a bare folio is furniture by itself). Returns None when the
     remainder looks like content: a sentence (terminal period, >10
-    words, lowercase continuation after a leading folio)."""
+    words, lowercase first word at either folio edge)."""
     rest = re.sub(r"^\s*\d{1,4}\s*|\s*\d{1,4}\s*$", "", text).strip()
     if not rest:
         return ""
@@ -70,27 +74,47 @@ def remainder_shape(text):
         return None
     if len(rest) > 70 or len(rest.split()) > 10:
         return None
-    if re.match(r"^\d", text) and rest.split()[0][0].islower():
+    if rest.split()[0][0].islower():
         return None
     return rest
 
 
 def rule_folio_anchored(pages, rows):
     """Candidate A: page-top leading row carrying an edge folio whose
-    folio − pdf_page offset clusters (±1 of the mode, ≥3 pages), with a
-    head-shaped or empty remainder."""
+    folio − pdf_page offset clusters (±1 of the mode, ≥3 distinct
+    pages — each page voting a distinct offset once), with a
+    head-shaped or empty remainder. Mirrors the shipped rule's page
+    gate: only a page whose top block spans half the page height is
+    scanned."""
+    eligible = set()
+    for pi, (page, pdict) in enumerate(pages):
+        height = page.rect.height
+        first = next(
+            (b for b in sorted(
+                (b for b in pdict["blocks"] if b["type"] == 0),
+                key=lambda b: b["bbox"][1])),
+            None,
+        )
+        if first is not None and (
+            first["bbox"][3] - first["bbox"][1]
+            >= height * FOLIO_HEAD_BLOCK_SPAN
+        ):
+            eligible.add(pi)
     cand = [
         (pi, li, y0f, text, edge_folio(text))
         for pi, li, y0f, text in rows
-        if remainder_shape(text) is not None
+        if pi in eligible and remainder_shape(text) is not None
     ]
     cand = [c for c in cand if c[4] is not None]
     if not cand:
         return []
-    offs = Counter(c[4] - c[0] for c in cand)
+    page_offs = {}
+    for c in cand:
+        page_offs.setdefault(c[0], set()).add(c[4] - c[0])
+    offs = Counter(o for so in page_offs.values() for o in so)
     mode = offs.most_common(1)[0][0]
     hits = [c for c in cand if abs(c[4] - c[0] - mode) <= 1]
-    return hits if len(hits) >= 3 else []
+    return hits if len({c[0] for c in hits}) >= 3 else []
 
 
 def rule_sig_floor(pages, rows):

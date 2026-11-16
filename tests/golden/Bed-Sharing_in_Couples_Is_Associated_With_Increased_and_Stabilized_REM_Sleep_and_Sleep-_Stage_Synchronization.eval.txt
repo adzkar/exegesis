@@ -7,6 +7,7 @@
 - B metadata: title='Bed-Sharing in Couples Is Associated With Increased and Stab'
 - C coverage: rejoined 29, furniture 227, rasterized table cells 0, superscript splits 10, genuine loss 3
 - D toc: 20 entries, h1=1 h2=18, dupes=none
+- J heads: 0 committed source rows, 0 attributable leaks (folio-anchored top-edge rows only — internal, folio-less, and bottom-placed heads are undetectable)
 - G figures: pdf rasters=8, embedded=8, vector pages=[1]
 
 ## Findings (severity-ranked)
