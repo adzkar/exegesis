@@ -29,8 +29,8 @@
 ## Classified word loss
 | class | words | top examples |
 |-------|-------|--------------|
-| rejoined hyphenation | 132 | ing, re, de, fig, ures, con, exam, ple |
-| stripped furniture | 128 | 16, and, of, s, bianchini, nchez, baracaldo, 10 |
+| rejoined hyphenation | 132 | ing, de, re, con, exam, fig, man, map |
+| stripped furniture | 128 | 16, and, baracaldo, bianchini, nchez, of, s, 10 |
 | rasterized table cells | 0 |  |
 | superscript splits | 0 |  |
-| genuine loss | 8 | formed, dividual, clia, javascriptb, guic, ain, bthe, cin |
+| genuine loss | 8 | ain, bthe, cin, clia, dividual, formed, guic, javascriptb |

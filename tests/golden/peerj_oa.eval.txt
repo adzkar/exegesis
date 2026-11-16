@@ -18,8 +18,8 @@
 ## Classified word loss
 | class | words | top examples |
 |-------|-------|--------------|
-| rejoined hyphenation | 38 | long, term, potas, sium, field, nutrient, sustain, manage |
-| stripped furniture | 263 | peerj, 2026, doi, 7717, 21912, et, al, pruksangkul |
+| rejoined hyphenation | 38 | long, term, potas, sium, ability, ammonia, applica, based |
+| stripped furniture | 263 | peerj, 2026, 21912, 7717, al, doi, et, pruksangkul |
 | rasterized table cells | 0 |  |
-| superscript splits | 253 | n0, n2, n1, 31a, 41a, 19a, 40a, ch4 |
-| genuine loss | 21 | t3a, y1a, nh4no3, p2o5, k2o, t1a, t2a, occurrence |
+| superscript splits | 253 | n0, n2, n1, 31a, 19a, 40a, 41a, ch4 |
+| genuine loss | 21 | t3a, y1a, nh4no3, k2o, occurrence, p2o5, t1a, t2a |

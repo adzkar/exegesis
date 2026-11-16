@@ -26,8 +26,8 @@
 ## Classified word loss
 | class | words | top examples |
 |-------|-------|--------------|
-| rejoined hyphenation | 170 | tion, pub, sci, dis, pre, ence, set, com |
-| stripped furniture | 515 | plos, one, 10, 19, org, https, doi, 1371 |
+| rejoined hyphenation | 170 | tion, dis, pre, pub, sci, cita, com, ence |
+| stripped furniture | 515 | one, plos, 10, 19, 0311493, 1371, 2024, 30 |
 | rasterized table cells | 0 |  |
 | superscript splits | 8 | r2, dozot4, rappo4 |
-| genuine loss | 19 | shar, ing, research, pre, prints, data, colavizzaid1, cadwalladerid3 |
+| genuine loss | 19 | ing, shar, pre, prints, research, cadwalladerid3, colavizzaid1, data |

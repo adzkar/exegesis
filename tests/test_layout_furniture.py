@@ -31,13 +31,21 @@ from furniture_fixtures import (
     LONG_HEAD_LINES,
     NORMAL_MARGIN_LINES,
     NORMAL_MARGIN_TEXT,
+    NUMBERED_TOP_LINES,
     OVER_BOUND_BODY,
     OVER_CHAR_HEAD,
     OVER_LINE_HEAD,
+    RECURRING_OPENER,
     ROTATED_PARAGRAPH,
     ROTATED_PREFIX,
     ROTATED_STAMP,
     ROTATED_SUFFIX,
+    SBP_AUTHOR_HEAD,
+    SBP_AUTHOR_VARIANT,
+    SBP_FOOTNOTE_LINES,
+    SBP_OPENER,
+    SBP_TITLE,
+    SBP_TITLE_HEAD,
     STACKED_BODY,
     STACKED_HEAD_LINES,
     STACKED_TITLE,
@@ -51,20 +59,25 @@ from furniture_fixtures import (
     UPRIGHT_EDGE_LINE,
     UPRIGHT_EDGE_LINES,
     UPRIGHT_TAGS,
+    _sbp_body,
     dual_margin_strips,
     front_matter_info_box,
     fused_running_head_title,
     long_repeated_running_head,
+    numbered_page_top_lines,
     over_bound_running_head,
+    recurring_page_opener,
     repeated_bottom_foot,
     rotated_margin_stamp,
     rotated_page_upright_margin,
     rotated_table_margin_cells,
     rotated_table_staggered_cells,
+    single_block_book_heads,
     stacked_fused_heads,
 )
 from helpers import chapter_body_text, doc_html, lint_epub
 from layout_assertions import (
+    SemanticMismatch,
     assert_retained_once,
     require,
     require_absent,
@@ -264,6 +277,53 @@ def dual_strips_pdf(tmp_path_factory):
     """Generate the dual-margin-strips source independently of conversion."""
     directory = tmp_path_factory.mktemp("dual_margin_strips")
     return dual_margin_strips(directory / "input.pdf")
+
+
+@pytest.fixture(scope="module")
+def sbp_pdf(tmp_path_factory):
+    """Generate the single-block book-scan source before any conversion."""
+    directory = tmp_path_factory.mktemp("single_block_book_heads")
+    return single_block_book_heads(directory / "input.pdf")
+
+
+@pytest.fixture(scope="module")
+def recurring_pdf(tmp_path_factory):
+    """Generate the recurring-opener retention-trap source independently."""
+    directory = tmp_path_factory.mktemp("recurring_page_opener")
+    return recurring_page_opener(directory / "input.pdf")
+
+
+@pytest.fixture(scope="module")
+def numbered_pdf(tmp_path_factory):
+    """Generate the numbered-top-lines retention-trap source independently."""
+    directory = tmp_path_factory.mktemp("numbered_page_top_lines")
+    return numbered_page_top_lines(directory / "input.pdf")
+
+
+@pytest.fixture(scope="module")
+def sbp_case(sbp_pdf):
+    """Convert the book-scan source once; #72's strict xfail owns the leak."""
+    case = _converted_case(sbp_pdf)
+    assert_retained_once(
+        case.text,
+        SBP_TITLE, "TEST UNIVERSITY",
+        *SBP_OPENER[6:9],
+        *(line.strip() for line in SBP_FOOTNOTE_LINES[1:]),
+        *(line for pi in range(12) for line in _sbp_body(pi, 2)),
+    )
+    return case
+
+
+@pytest.fixture(scope="module")
+def recurring_case(recurring_pdf):
+    """Convert the recurring-opener trap once for retention assertions."""
+    return _converted_case(recurring_pdf)
+
+
+@pytest.fixture(scope="module")
+def numbered_case(numbered_pdf):
+    """Convert the numbered-top-lines trap once for retention assertions."""
+    return _converted_case(numbered_pdf)
 
 
 @pytest.fixture(scope="module")
@@ -1273,3 +1333,130 @@ def test_staggered_cells_rasterize_whole(stag_cells_case):
     assert lint_epub(case.epub) == []
     for cell in STAG_CELLS:
         assert cell not in case.text
+
+
+def test_single_block_book_heads_extraction_contract(sbp_pdf):
+    """Pin the book-scan shape (#69): every text page extracts as ONE
+    page-long body-size block; the alternating running heads are fused
+    as leading lines inside the top edge zone — invisible to the
+    whole-block signature arm — and the residual positions (suffix,
+    internal, same-y variant, folio-less) reproduce the measured scan."""
+    with fitz.open(sbp_pdf) as doc:
+        pages = [(page, page.get_text("dict")) for page in doc]
+        assert len(pages) == 12
+        blocks_of = {
+            pi: _text_blocks(pdict) for pi, (_page, pdict) in enumerate(pages)
+        }
+        for pi, blocks in blocks_of.items():
+            assert len(blocks) == 1, f"page {pi} split into {len(blocks)} blocks"
+            block = blocks[0]
+            assert all(
+                span["size"] == BODY
+                for line in block["lines"] for span in line["spans"]
+            ), f"page {pi} carries a non-body-size span"
+            assert block["bbox"][3] > H * 0.6, f"page {pi} block is not page-long"
+        # leading head rows on p1-4: head + folio on one line, inside
+        # the top edge zone, followed by a whitespace-only line
+        for pi in (1, 2, 3, 4):
+            line = blocks_of[pi][0]["lines"][0]
+            text = _line_text(line)
+            assert str(137 + pi) in text
+            assert (SBP_TITLE_HEAD in text) != (SBP_AUTHOR_HEAD.upper() in text)
+            assert line["bbox"][1] < H * 0.10
+            assert _line_text(blocks_of[pi][0]["lines"][1]).strip() == ""
+        # p7 variant: folio and partial head text are separate line
+        # objects on one row inside the page block
+        variant = blocks_of[7][0]["lines"]
+        assert [_line_text(line).strip() for line in variant[:3]] == [
+            "144", SBP_AUTHOR_VARIANT, ""]
+        assert variant[0]["bbox"][1] == pytest.approx(variant[1]["bbox"][1])
+        # p8 folio-less leading head
+        assert _line_text(
+            blocks_of[8][0]["lines"][0]).strip() == SBP_TITLE_HEAD
+        # p6 suffix head sits at the block's end, past the note region
+        tail = [_line_text(line).strip() for line in blocks_of[6][0]["lines"]]
+        assert SBP_TITLE_HEAD in tail[-1] and "143" in tail[-1]
+        assert tail[-2] == ""
+        note_top = blocks_of[6][0]["lines"][-3]["bbox"][1]
+        assert note_top > H * 0.6
+        # p9 internal head at line index 10, outside the edge zone
+        internal = blocks_of[9][0]["lines"][10]
+        assert "146" in _line_text(internal)
+        assert SBP_AUTHOR_HEAD.upper() in _line_text(internal)
+        assert internal["bbox"][1] > H * 0.20
+        # p0 opener: chapter number, rule, blank, folio-free byline
+        opener = [
+            _line_text(line).strip() for line in blocks_of[0][0]["lines"][:6]]
+        assert opener == [
+            "7", "___________________", "", SBP_AUTHOR_HEAD.upper(),
+            "TEST UNIVERSITY", ""]
+        # head-less pages carry no head line
+        for pi in (5, 10, 11):
+            first = _line_text(blocks_of[pi][0]["lines"][0])
+            assert SBP_TITLE_HEAD not in first
+            assert SBP_AUTHOR_HEAD.upper() not in first
+        # the learned signature set stays empty: recurrence below the
+        # floor and the whole-block bound both hide the fused heads
+        assert _boilerplate_signatures(pages) == set()
+        # single-block pages abstain from the doc column quorum — one
+        # x0 per page can't cluster, so every page returns the [0.0]
+        # sentinel and the document keeps its fallback edge
+        boilerplate = _boilerplate_signatures(pages)
+        edges = _doc_column_edges(pages, boilerplate)
+        assert edges == [0.0]
+        for page, pdict in pages:
+            assert _rotated_table_region(pdict["blocks"]) is None
+
+
+def test_single_block_book_heads_conversion_and_lint(sbp_case):
+    """Packaging stays healthy while heads leak: valid EPUB, one chapter,
+    the head-less image page embeds, and the folio-less byline plus the
+    note region survive — retention traps #72 must not break."""
+    case = sbp_case
+    assert case.epub.is_file()
+    assert case.stats["pages"] == 12
+    assert case.stats["images"] == 1
+    assert case.stats["chapters"] >= 1
+    assert lint_epub(case.epub) == []
+    assert SBP_AUTHOR_HEAD.upper() in case.text  # the opener byline
+    for line in SBP_FOOTNOTE_LINES[1:]:
+        assert line.strip() in case.text  # the p6 note region stays body text
+
+
+@pytest.mark.xfail(
+    strict=True, raises=SemanticMismatch,
+    reason="#72: leading running heads fused into single-block pages "
+           "still splice into body flow",
+)
+def test_issue72_single_block_leading_heads_absent(sbp_case):
+    """The folio'd leading heads must not emit inside body flow — the
+    semantic baseline that fails today and #72 flips."""
+    require_absent(
+        sbp_case.text,
+        f"{SBP_TITLE_HEAD} 138",
+        "139 JANE Q. TESTER",
+        f"{SBP_TITLE_HEAD} 140",
+        "141 JANE Q. TESTER",
+        issue="#72: leading running heads leak into single-block page flow",
+    )
+
+
+def test_recurring_page_opener_is_retained(recurring_case):
+    """A first line that recurs on every page but is *content*, not
+    furniture, must survive — the trap against bare recurrence rules."""
+    case = recurring_case
+    assert case.epub.is_file()
+    assert lint_epub(case.epub) == []
+    assert case.text.count(RECURRING_OPENER) == 6
+
+
+def test_numbered_page_top_lines_are_retained(numbered_case):
+    """Numbered page-top lines collapsing to one digit-stripped signature
+    ('figure', 'table', 'columnlabel') are content and must survive —
+    the trap against signature-collision rules."""
+    case = numbered_case
+    assert case.epub.is_file()
+    assert lint_epub(case.epub) == []
+    for pi in range(9):
+        needle = NUMBERED_TOP_LINES[pi % 3].format(pi // 3 + 1)
+        assert needle in case.text, needle

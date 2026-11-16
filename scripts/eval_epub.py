@@ -1728,7 +1728,10 @@ def main() -> int:
     for label, c in (("rejoined hyphenation", rejoined), ("stripped furniture", furn),
                      ("rasterized table cells", raster_vocab),
                      ("superscript splits", supers), ("genuine loss", genuine)):
-        ex = ", ".join(w for w, _ in c.most_common(8))
+        # count-desc then word-asc: most_common ties ride set/claim
+        # iteration order, so equal-count samples flapped between runs
+        ex = ", ".join(
+            w for w, _ in sorted(c.items(), key=lambda kv: (-kv[1], kv[0]))[:8])
         print(f"| {label} | {sum(c.values())} | {ex} |")
     return min(n_high, 1)
 

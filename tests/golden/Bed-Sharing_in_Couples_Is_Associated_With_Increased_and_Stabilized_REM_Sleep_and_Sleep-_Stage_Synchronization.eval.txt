@@ -23,8 +23,8 @@
 ## Classified word loss
 | class | words | top examples |
 |-------|-------|--------------|
-| rejoined hyphenation | 29 | co, sleep, cross, recurrence, partner, sleeping, lab, based |
-| stripped furniture | 227 | in, 11, psychiatry, frontiers, www, frontiersin, org, june |
+| rejoined hyphenation | 29 | co, cross, recurrence, sleep, based, de, driven, fear |
+| stripped furniture | 227 | in, 11, 2020, 583, article, frontiers, frontiersin, june |
 | rasterized table cells | 0 |  |
-| superscript splits | 10 | drews1, wallot2, brysch3, johannsen3, weinhold1, mitkidis4, baier1, lechinger1 |
-| genuine loss | 3 | bed, sharing, in |
+| superscript splits | 10 | baier1, brysch3, der1, drews1, johannsen3, lechinger1, mitkidis4, roepstorff6 |
+| genuine loss | 3 | bed, in, sharing |

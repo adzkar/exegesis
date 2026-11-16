@@ -20,8 +20,8 @@
 ## Classified word loss
 | class | words | top examples |
 |-------|-------|--------------|
-| rejoined hyphenation | 236 | ing, gen, erative, writ, re, in, par, ticipants |
-| stripped furniture | 358 | e, c, s, a, r, 2024, i, n |
+| rejoined hyphenation | 236 | ing, erative, gen, writ, re, ers, evalu, hu |
+| stripped furniture | 358 | e, c, a, r, s, 2024, i, n |
 | rasterized table cells | 0 |  |
-| superscript splits | 5 | doshi1, hauser2, 1department, 2department, 3institute |
+| superscript splits | 5 | 1department, 2department, 3institute, doshi1, hauser2 |
 | genuine loss | 0 |  |

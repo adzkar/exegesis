@@ -28,8 +28,8 @@
 ## Classified word loss
 | class | words | top examples |
 |-------|-------|--------------|
-| rejoined hyphenation | 34 | value, carried, mindful, ness, intervention, post, mind, non |
-| stripped furniture | 144 | 13, j, clin, med, 2024, 1, 15, of |
+| rejoined hyphenation | 34 | value, carried, mindful, ness, analytic, culties, de, diffi |
+| stripped furniture | 144 | 13, 1, 15, 2024, clin, j, med, of |
 | rasterized table cells | 0 |  |
 | superscript splits | 0 |  |
 | genuine loss | 1 | based |

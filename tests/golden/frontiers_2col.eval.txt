@@ -34,8 +34,8 @@
 ## Classified word loss
 | class | words | top examples |
 |-------|-------|--------------|
-| rejoined hyphenation | 23 | self, reported, dressed, poorly, decision, making, attitudes, about |
-| stripped furniture | 234 | frontiers, in, psychology, frontiersin, org, 2024, 10, wong |
+| rejoined hyphenation | 23 | self, reported, dressed, poorly, 20e, about, attitudes, decision |
+| stripped furniture | 234 | 10, 2024, frontiers, frontiersin, in, org, psychology, 1412131 |
 | rasterized table cells | 1143 | 0, 015, 012, 007, 009, 010, 016, 017 |
 | superscript splits | 2 | r2 |
 | genuine loss | 1 | 06 |

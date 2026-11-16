@@ -66,8 +66,8 @@
 ## Classified word loss
 | class | words | top examples |
 |-------|-------|--------------|
-| rejoined hyphenation | 33 | non, indigenous, policy, jean, present, native, ever, year |
-| stripped furniture | 259 | unesco, 2023, the, courier, july, september, lillian, erud |
+| rejoined hyphenation | 33 | non, anthropo, approx, bertrand, bon, car, driven, ever |
+| stripped furniture | 259 | unesco, 2023, courier, the, july, september, erud, lillian |
 | rasterized table cells | 0 |  |
 | superscript splits | 11 | co2, km2 |
 | genuine loss | 1 | world |

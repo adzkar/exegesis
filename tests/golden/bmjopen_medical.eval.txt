@@ -21,8 +21,8 @@
 ## Classified word loss
 | class | words | top examples |
 |-------|-------|--------------|
-| rejoined hyphenation | 142 | tion, refer, ence, in, weight, over, ment, preg |
-| stripped furniture | 168 | open, dao, k, et, al, bmj, 2024, e083550 |
-| rasterized table cells | 258 | 1, of, to, n, 0, 2, pregnancies, group |
-| superscript splits | 23 | m2, unplanned5, 10th, diabetes25, 1swiss, 2the, 3charit, 4the |
+| rejoined hyphenation | 142 | tion, ence, refer, in, ment, over, preg, weight |
+| stripped furniture | 168 | open, 083550, 1136, 2023, 2024, access, al, bmj |
+| rasterized table cells | 258 | 1, 0, n, of, to, 2, group, pregnancies |
+| superscript splits | 23 | m2, 10department, 10th, 11materno, 12endocrinology, 13endocrinology, 14institute, 15service |
 | genuine loss | 3 | hradj |

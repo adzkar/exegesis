@@ -19,8 +19,8 @@
 ## Classified word loss
 | class | words | top examples |
 |-------|-------|--------------|
-| rejoined hyphenation | 94 | con, salt, envi, ronmental, com, compre, hensive, tion |
-| stripped furniture | 96 | iscience, open, access, ll, perspective, 16, 2024, 108830 |
-| rasterized table cells | 1571 | and, j, in, of, m, t, h, a |
+| rejoined hyphenation | 94 | con, com, compre, envi, hensive, ronmental, salt, tion |
+| stripped furniture | 96 | iscience, access, ll, open, 108830, 16, 2024, 27 |
+| rasterized table cells | 1571 | and, in, j, of, m, t, a, h |
 | superscript splits | 5 | 1department, 2inner, 3earth, 4department, sciences81 |
-| genuine loss | 15 | c, mangrove, long, term, micro, irri, gation, res |
+| genuine loss | 15 | c, 069, cveji, delmotte, gation, irri, kondi, long |

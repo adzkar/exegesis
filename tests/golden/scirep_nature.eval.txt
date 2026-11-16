@@ -20,8 +20,8 @@
 ## Classified word loss
 | class | words | top examples |
 |-------|-------|--------------|
-| rejoined hyphenation | 4 | vision, two, based, sample |
-| stripped furniture | 237 | 10, 7, scientific, reports, 2024, 14, 29223, https |
+| rejoined hyphenation | 4 | based, sample, two, vision |
+| stripped furniture | 237 | 10, 7, 024, 1038, 14, 2024, 29223, 79845 |
 | rasterized table cells | 0 |  |
-| superscript splits | 47 | quinn1, murtough2, winton1, frew1, zane1, sousa1, kempapidis3, gomes3 |
-| genuine loss | 3 | 3d4, values, p |
+| superscript splits | 47 | 1makesense, 2manipulation, 3bravo, 4northern, animal9, ankle22, applicable39, behaviour6 |
+| genuine loss | 3 | 3d4, p, values |

@@ -30,8 +30,8 @@
 ## Classified word loss
 | class | words | top examples |
 |-------|-------|--------------|
-| rejoined hyphenation | 10 | slope, n2genetic, nusvm, validation, per, instance, cross, grad |
-| stripped furniture | 363 | of, 13, 27, 2026, and, ghose, jamil, journal |
+| rejoined hyphenation | 10 | cam, cross, grad, instance, n2genetic, nusvm, per, slope |
+| stripped furniture | 363 | of, 13, 27, 2026, 59, and, big, data |
 | rasterized table cells | 0 |  |
 | superscript splits | 6 | f1, 1department, 2department, cva1, cva2 |
-| genuine loss | 31 | yi, xi, ei, ai, oi, cvak, modelx, omax |
+| genuine loss | 31 | yi, ei, xi, ai, cvak, fcardiat, modelx, oi |
