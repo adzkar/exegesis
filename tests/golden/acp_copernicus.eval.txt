@@ -7,6 +7,7 @@
 - B metadata: title='Seasonal variations in photooxidant formation and light abso'
 - C coverage: rejoined 763, furniture 547, rasterized table cells 0, superscript splits 18, genuine loss 114
 - D toc: 5 entries, h1=1 h2=3, dupes=none
+- J heads: 20 committed source rows, 0 attributable leaks (folio-anchored top-edge rows only — internal, folio-less, and bottom-placed heads are undetectable)
 - G figures: pdf rasters=9, embedded=9, vector pages=[1]
 
 ## Findings (severity-ranked)
@@ -19,8 +20,8 @@
 ## Classified word loss
 | class | words | top examples |
 |-------|-------|--------------|
-| rejoined hyphenation | 763 | con, tion, ing, sam, tions, ox, re, centrations |
-| stripped furniture | 547 | 24, 2024, 21, 10, chem, phys, https, doi |
+| rejoined hyphenation | 763 | con, tion, ing, sam, tions, centrations, ox, re |
+| stripped furniture | 547 | 2024, 24, 10, 21, 5194, acp, chem, doi |
 | rasterized table cells | 0 |  |
-| superscript splits | 18 | 3c, 3dmb, o2, ma1, worland1, heinlein1, guzman1, jiang2 |
-| genuine loss | 114 | 81o, in, pho, tooxidant, chem, acp, light, at |
+| superscript splits | 18 | 3c, 3dmb, o2, anastasio1, bein3, guzman1, heinlein1, jiang2 |
+| genuine loss | 114 | 81o, in, pho, tooxidant, acp, at, chem, forma |

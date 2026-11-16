@@ -7,6 +7,7 @@
 - B metadata: title='Use of GLP1 receptor agonists in early pregnancy and reprodu'
 - C coverage: rejoined 142, furniture 168, rasterized table cells 258, superscript splits 23, genuine loss 3
 - D toc: 7 entries, h1=1 h2=5, dupes=none
+- J heads: 0 committed source rows, 0 attributable leaks (folio-anchored top-edge rows only — internal, folio-less, and bottom-placed heads are undetectable)
 - G figures: pdf rasters=1, embedded=1, vector pages=[1, 5, 6, 8]
 
 ## Findings (severity-ranked)
@@ -21,8 +22,8 @@
 ## Classified word loss
 | class | words | top examples |
 |-------|-------|--------------|
-| rejoined hyphenation | 142 | tion, refer, ence, in, weight, over, ment, preg |
-| stripped furniture | 168 | open, dao, k, et, al, bmj, 2024, e083550 |
-| rasterized table cells | 258 | 1, of, to, n, 0, 2, pregnancies, group |
-| superscript splits | 23 | m2, unplanned5, 10th, diabetes25, 1swiss, 2the, 3charit, 4the |
+| rejoined hyphenation | 142 | tion, ence, refer, in, ment, over, preg, weight |
+| stripped furniture | 168 | open, 083550, 1136, 2023, 2024, access, al, bmj |
+| rasterized table cells | 258 | 1, 0, n, of, to, 2, group, pregnancies |
+| superscript splits | 23 | m2, 10department, 10th, 11materno, 12endocrinology, 13endocrinology, 14institute, 15service |
 | genuine loss | 3 | hradj |

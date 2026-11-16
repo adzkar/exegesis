@@ -23,7 +23,7 @@ comparable across documents and regressions are visible. Runs
 ## Usage
 
 ```bash
-python3 scripts/eval_epub.py <input.pdf> <output.epub> [--lang CODE]
+python3 scripts/eval_epub.py <input.pdf> <output.epub> [--lang CODE] [--keep-headers]
 ```
 
 Prints a markdown report. Exit code is `1` when any High-severity
@@ -151,6 +151,18 @@ profile the same way the converter's do: `--lang` overrides the EPUB's
 - **I. Fidelity** — `U+FFFD` replacement chars are verified against
   the PDF's raw text layer: present in source → source-faithful (OK),
   absent → converter-introduced (Med).
+- **J. Running-head leak** — furniture that *survived* into body
+  text, not furniture that's missing. An independent oracle
+  (`source_folio_rows`, deliberately *not* the converter's detector —
+  a check keyed to the detector it watches shares its blind spot)
+  commits page-top folio-anchored leading rows, then counts emitted
+  occurrences per head needle: word-bounded hits are ambiguous (legit
+  title/byline/prose mentions get a budget), glued mid-word splices
+  are unambiguous. Med per attributable leak; High when ≥2 leaks cover
+  ≥40% of committed source rows. Disabled under `--keep-headers`
+  (kept furniture is intentional). Limits: internal, folio-less, and
+  bottom-placed heads are undetectable (UNESCO's h2-leaked heads sit
+  below the scanned zone).
 
 ## How the comparison works
 

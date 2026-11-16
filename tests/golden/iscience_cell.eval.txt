@@ -7,6 +7,7 @@
 - B metadata: title='Soil salinization in agriculture: Mitigation and adaptation '
 - C coverage: rejoined 94, furniture 96, rasterized table cells 1571, superscript splits 5, genuine loss 15
 - D toc: 8 entries, h1=1 h2=6, dupes=none
+- J heads: 0 committed source rows, 0 attributable leaks (folio-anchored top-edge rows only — internal, folio-less, and bottom-placed heads are undetectable)
 - G figures: pdf rasters=2, embedded=2, vector pages=[1]
 
 ## Findings (severity-ranked)
@@ -19,8 +20,8 @@
 ## Classified word loss
 | class | words | top examples |
 |-------|-------|--------------|
-| rejoined hyphenation | 94 | con, salt, envi, ronmental, com, compre, hensive, tion |
-| stripped furniture | 96 | iscience, open, access, ll, perspective, 16, 2024, 108830 |
-| rasterized table cells | 1571 | and, j, in, of, m, t, h, a |
+| rejoined hyphenation | 94 | con, com, compre, envi, hensive, ronmental, salt, tion |
+| stripped furniture | 96 | iscience, access, ll, open, 108830, 16, 2024, 27 |
+| rasterized table cells | 1571 | and, in, j, of, m, t, a, h |
 | superscript splits | 5 | 1department, 2inner, 3earth, 4department, sciences81 |
-| genuine loss | 15 | c, mangrove, long, term, micro, irri, gation, res |
+| genuine loss | 15 | c, 069, cveji, delmotte, gation, irri, kondi, long |

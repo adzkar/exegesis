@@ -7,6 +7,7 @@
 - B metadata: title='Bewegung fördern, Gesundheit stärken'
 - C coverage: rejoined 192, furniture 20, rasterized table cells 0, superscript splits 0, genuine loss 24
 - D toc: 4 entries, h1=1 h2=3, dupes=none
+- J heads: 0 committed source rows, 0 attributable leaks (folio-anchored top-edge rows only — internal, folio-less, and bottom-placed heads are undetectable)
 - G figures: pdf rasters=3, embedded=3, vector pages=[]
 
 ## Findings (severity-ranked)
@@ -20,8 +21,8 @@
 ## Classified word loss
 | class | words | top examples |
 |-------|-------|--------------|
-| rejoined hyphenation | 192 | ge, be, ver, de, ter, gen, ent, gli |
-| stripped furniture | 20 | 2026, bundesgesundheitsblatt, gesundheitsforschung, gesundheitsschutz, 11, editorial, 1257, 1259 |
+| rejoined hyphenation | 192 | be, ge, auf, che, chen, cksich, de, ent |
+| stripped furniture | 20 | 11, 2026, bundesgesundheitsblatt, gesundheitsforschung, gesundheitsschutz, editorial, 1257, 1258 |
 | rasterized table cells | 0 |  |
 | superscript splits | 0 |  |
-| genuine loss | 24 | f, t, s, r, in, de, tigungen, perlich |
+| genuine loss | 24 | f, t, ak, all, bewegungs, de, degesundheitsausgabensowiewachsen, in |

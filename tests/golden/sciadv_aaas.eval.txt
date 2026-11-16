@@ -7,6 +7,7 @@
 - B metadata: title='Science Journals — AAAS'
 - C coverage: rejoined 236, furniture 358, rasterized table cells 0, superscript splits 5, genuine loss 0
 - D toc: 3 entries, h1=1 h2=1, dupes=none
+- J heads: 0 committed source rows, 0 attributable leaks (folio-anchored top-edge rows only — internal, folio-less, and bottom-placed heads are undetectable)
 - G figures: pdf rasters=4, embedded=4, vector pages=[]
 
 ## Findings (severity-ranked)
@@ -20,8 +21,8 @@
 ## Classified word loss
 | class | words | top examples |
 |-------|-------|--------------|
-| rejoined hyphenation | 236 | ing, gen, erative, writ, re, in, par, ticipants |
-| stripped furniture | 358 | e, c, s, a, r, 2024, i, n |
+| rejoined hyphenation | 236 | ing, erative, gen, writ, re, ers, evalu, hu |
+| stripped furniture | 358 | e, c, a, r, s, 2024, i, n |
 | rasterized table cells | 0 |  |
-| superscript splits | 5 | doshi1, hauser2, 1department, 2department, 3institute |
+| superscript splits | 5 | 1department, 2department, 3institute, doshi1, hauser2 |
 | genuine loss | 0 |  |
