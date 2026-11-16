@@ -85,4 +85,4 @@ published numbers.
 
 ## License
 
-MIT
+[MIT](LICENSE.md)
