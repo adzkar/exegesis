@@ -200,6 +200,12 @@ def test_pdf_extension_title_normalized(tmp_path):
     # an explicit --title ending in the extension normalizes likewise
     stats = convert(pdf, tmp_path / "cli.epub", title="My Book.pdf")
     assert stats["title"] == "My Book"
+    # a space before the extension leaves no trailing whitespace behind
+    stats = convert(pdf, tmp_path / "spaced.epub", title="My Book .pdf")
+    assert stats["title"] == "My Book"
+    # a title that is only the extension stays non-empty
+    stats = convert(pdf, tmp_path / "bare.epub", title=".PDF")
+    assert stats["title"] == ".PDF"
     # a double-extension filename strips at the stem source as well
     doc = fitz.open()
     p = _page(doc)

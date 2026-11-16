@@ -198,8 +198,13 @@ def convert(
     title = _sanitize_text(title)
     author = _sanitize_text(author)
     # embedded titles often carry the source filename wholesale —
-    # 'paper.PDF' — the extension is not part of the work's name
-    title = re.sub(r"(?:\.pdf)+$", "", title.strip(), flags=re.IGNORECASE)
+    # 'paper.PDF' — the extension is not part of the work's name; a
+    # bare '.pdf' title keeps the junk string rather than emitting an
+    # empty dc:title
+    title = (
+        re.sub(r"(?:\s*\.pdf)+\s*$", "", title, flags=re.IGNORECASE).strip()
+        or title
+    )
     book.set_title(title)
     book.set_language(profile.code)
     book.add_author(author)
