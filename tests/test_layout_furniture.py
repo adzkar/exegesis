@@ -64,6 +64,8 @@ from furniture_fixtures import (
     front_matter_info_box,
     fused_running_head_title,
     long_repeated_running_head,
+    lowercase_digit_openers,
+    multi_block_folio_tops,
     numbered_page_top_lines,
     over_bound_running_head,
     recurring_page_opener,
@@ -73,6 +75,7 @@ from furniture_fixtures import (
     rotated_table_margin_cells,
     rotated_table_staggered_cells,
     single_block_book_heads,
+    stacked_digit_heads,
     stacked_fused_heads,
 )
 from helpers import chapter_body_text, doc_html, lint_epub
@@ -302,7 +305,7 @@ def numbered_pdf(tmp_path_factory):
 
 @pytest.fixture(scope="module")
 def sbp_case(sbp_pdf):
-    """Convert the book-scan source once; #72's strict xfail owns the leak."""
+    """Convert the book-scan source once; the folio split owns the heads."""
     case = _converted_case(sbp_pdf)
     assert_retained_once(
         case.text,
@@ -324,6 +327,39 @@ def recurring_case(recurring_pdf):
 def numbered_case(numbered_pdf):
     """Convert the numbered-top-lines trap once for retention assertions."""
     return _converted_case(numbered_pdf)
+
+
+@pytest.fixture(scope="module")
+def digit_heads_pdf(tmp_path_factory):
+    """Generate the lone-page stacked-rows trap independently."""
+    directory = tmp_path_factory.mktemp("stacked_digit_heads")
+    return stacked_digit_heads(directory / "input.pdf")
+
+
+@pytest.fixture(scope="module")
+def digit_openers_pdf(tmp_path_factory):
+    """Generate the lowercase-digit-openers trap independently."""
+    directory = tmp_path_factory.mktemp("lowercase_digit_openers")
+    return lowercase_digit_openers(directory / "input.pdf")
+
+
+@pytest.fixture(scope="module")
+def multi_folio_pdf(tmp_path_factory):
+    """Generate the multi-block folio-top source independently."""
+    directory = tmp_path_factory.mktemp("multi_block_folio_tops")
+    return multi_block_folio_tops(directory / "input.pdf")
+
+
+@pytest.fixture(scope="module")
+def digit_heads_case(digit_heads_pdf):
+    """Convert the stacked-rows trap once for retention assertions."""
+    return _converted_case(digit_heads_pdf)
+
+
+@pytest.fixture(scope="module")
+def digit_openers_case(digit_openers_pdf):
+    """Convert the lowercase-openers trap once for retention assertions."""
+    return _converted_case(digit_openers_pdf)
 
 
 @pytest.fixture(scope="module")
@@ -1468,3 +1504,42 @@ def test_numbered_page_top_lines_are_retained(numbered_case):
     for pi in range(9):
         needle = NUMBERED_TOP_LINES[pi % 3].format(pi // 3 + 1)
         assert needle in case.text, needle
+
+
+def test_one_page_cannot_meet_folio_quorum(digit_heads_pdf, digit_heads_case):
+    """A lone page's stacked folio rows are not '≥3 pages' — the quorum
+    counts distinct pages, so nothing commits and the in-zone lines
+    all stay in body flow."""
+    with fitz.open(digit_heads_pdf) as doc:
+        pages = [(page, page.get_text("dict")) for page in doc]
+        assert _folio_head_rows(pages) == {}
+    assert_retained_once(
+        digit_heads_case.text,
+        "138 STACKED JOURNAL HEAD",
+        "138 SECOND STACKED HEAD",
+        "139 THIRD STACKED HEAD",
+    )
+
+
+def test_lowercase_digit_openers_are_not_heads(
+    digit_openers_pdf, digit_openers_case
+):
+    """A lowercase opener trailing a small digit is prose at either
+    folio edge — early-page digits inside the cluster window can't
+    promote it to furniture."""
+    with fitz.open(digit_openers_pdf) as doc:
+        pages = [(page, page.get_text("dict")) for page in doc]
+        assert _folio_head_rows(pages) == {}
+    assert_retained_once(
+        digit_openers_case.text,
+        *(f"filler words carry the page {pi}" for pi in range(6)),
+    )
+
+
+def test_multi_block_pages_skip_folio_scan(multi_folio_pdf):
+    """A page whose top block spans under half the page height is not
+    single-block-dominated — the span gate skips it, so tracking
+    folios across the doc still commit nothing through this pass."""
+    with fitz.open(multi_folio_pdf) as doc:
+        pages = [(page, page.get_text("dict")) for page in doc]
+        assert _folio_head_rows(pages) == {}

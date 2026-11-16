@@ -23,6 +23,7 @@ from .const import (
     FIGURE_LABEL_CHARS,
     FIGURE_LABEL_PAD,
     FIGURE_MIN_LABELS,
+    FOLIO_HEAD_BLOCK_SPAN,
     FOLIO_HEAD_LEAD_LINES,
     FOLIO_HEAD_MIN_PAGES,
     FRAG_PROSE_SHARE,
@@ -352,6 +353,7 @@ def _field_runs(texts, first_of, h, boilerplate, line_h):
                     <= INFO_RUN_MAX_LINES
                 )
                 or cand.get("aside") is not None
+                or cand.get("folio_head") is not None
                 or _is_signature_furniture(cand, h, boilerplate)
             ):
                 break
@@ -424,9 +426,11 @@ def _detect_asides(pages, line_h, boilerplate, lang: LangProfile = EN):
     (info boxes are front matter) and only grid-independent evidence:
     labels open fields, aligned wraps extend them, adjacent
     distinct-label runs form a box, and the frozen core admits only
-    inside-evidence members. ``pages`` is ``convert``'s extracted
-    ``(page, pdict)`` list; each validated member gets a shared
-    region key the render's aside path lifts wholesale.
+    inside-evidence members. A committed ``folio_head`` split holds
+    signature furniture's exemptions — a page-0/1 head can neither
+    extend a run nor attach to a box. ``pages`` is ``convert``'s
+    extracted ``(page, pdict)`` list; each validated member gets a
+    shared region key the render's aside path lifts wholesale.
     """
     lead_re = _info_lead_re(lang)
     if lead_re is None:
@@ -474,6 +478,7 @@ def _detect_asides(pages, line_h, boilerplate, lang: LangProfile = EN):
                     continue
                 if b["type"] == 1 or (
                     len(_block_lines(b)) <= INFO_MEMBER_MAX_LINES
+                    and b.get("folio_head") is None
                     and not _is_signature_furniture(b, h, boilerplate)
                     and not re.search(
                         r"[.!?…][\"”’)\]]*$",
@@ -507,6 +512,7 @@ def _detect_asides(pages, line_h, boilerplate, lang: LangProfile = EN):
                 if (
                     id(b) in member_ids | attached_ids
                     or b.get("aside") is not None
+                    or b.get("folio_head") is not None
                     or _is_signature_furniture(b, h, boilerplate)
                     or not (
                         b["bbox"][2] > cx0 and b["bbox"][0] < cx1
@@ -1541,8 +1547,8 @@ def _head_remainder(text):
     """The non-folio remainder should look like a head — or be empty
     (a bare folio is furniture by itself). Returns ``None`` when the
     remainder looks like content: a sentence (terminal punctuation,
-    more than ten words, or a lowercase continuation after a leading
-    folio)."""
+    more than ten words, or a lowercase first word — prose opens
+    lowercase at either folio edge while heads almost never do)."""
     rest = re.sub(r"^\s*\d{1,4}\s*|\s*\d{1,4}\s*$", "", text).strip()
     if not rest:
         return ""
@@ -1550,7 +1556,7 @@ def _head_remainder(text):
         return None
     if len(rest) > 70 or len(rest.split()) > 10:
         return None
-    if re.match(r"^\d", text) and rest.split()[0][0].islower():
+    if rest.split()[0][0].islower():
         return None
     return rest
 
@@ -1560,13 +1566,20 @@ def _folio_head_rows(pages):
     text block — the fused running heads a single-block page hides
     inside body prose (#72).
 
-    A candidate row sits among the block's leading lines inside the top
-    edge zone and carries an edge folio with a head-shaped (or empty)
-    remainder. Rows commit only when ``folio − page_index`` clusters:
-    a genuine folio tracks the page index across the document while a
-    body number, year, or section counter does not — the cluster is
-    the whole evidence, so a page whose leading row merely looks like
-    a head never qualifies on its own."""
+    Only a page whose top block spans at least half the page height is
+    scanned — the single-block-dominated shape the heads hide in; a
+    multi-block page's top block never qualifies, so the heuristic
+    can't reach ordinary articles. A candidate row sits among the
+    block's leading lines inside the top edge zone and carries an
+    edge folio with a head-shaped (or empty) remainder. Rows commit
+    only when ``folio − page_index`` clusters on
+    ``FOLIO_HEAD_MIN_PAGES`` distinct pages: a genuine folio tracks
+    the page index across the document while a body number, year, or
+    section counter does not — the cluster is the whole evidence, so
+    a page whose leading row merely looks like a head never qualifies
+    on its own. Each page votes every distinct offset once and the
+    quorum counts pages, not rows — one stacked page can neither
+    hijack the mode nor satisfy the floor alone."""
     rows = []  # (pi, line_index, folio)
     firsts = {}
     for pi, (page, pdict) in enumerate(pages):
@@ -1581,7 +1594,10 @@ def _folio_head_rows(pages):
             ),
             None,
         )
-        if first is None:
+        if first is None or (
+            first["bbox"][3] - first["bbox"][1]
+            < height * FOLIO_HEAD_BLOCK_SPAN
+        ):
             continue
         firsts[pi] = first
         for li, line in enumerate(_block_lines(first)[:FOLIO_HEAD_LEAD_LINES]):
@@ -1593,14 +1609,19 @@ def _folio_head_rows(pages):
                 rows.append((pi, li, folio))
     if not rows:
         return {}
-    offs = Counter(folio - pi for pi, _li, folio in rows)
+    page_offsets = {}
+    for pi, _li, folio in rows:
+        page_offsets.setdefault(pi, set()).add(folio - pi)
+    offs = Counter(
+        offset for offsets in page_offsets.values() for offset in offsets
+    )
     mode = offs.most_common(1)[0][0]
     hits = [
         (pi, li)
         for pi, li, folio in rows
         if abs(folio - pi - mode) <= 1
     ]
-    if len(hits) < FOLIO_HEAD_MIN_PAGES:
+    if len({pi for pi, _li in hits}) < FOLIO_HEAD_MIN_PAGES:
         return {}
     out = {}
     for pi, li in hits:
