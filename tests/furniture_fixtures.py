@@ -619,6 +619,26 @@ def repeated_bottom_foot(path):
     return _save(doc, path)
 
 
+def tall_top_folio_tops(path):
+    """Multi-block pages whose top block still dominates the height:
+    a tall block holding the folio'd head plus body lines, and a
+    small secondary block below. The span gate scans them — it bounds
+    the heuristic to top-block-dominated pages, not single-block
+    ones — so the tracking heads commit exactly like a fused
+    one-block page's."""
+    doc = fitz.open()
+    for pi in range(3):
+        page = _page(doc)
+        _sbp_insert(
+            page,
+            54,
+            48,
+            [f"{138 + pi} JANE Q. TESTER"] + _sbp_body(pi, 30),
+        )
+        text(page, 300, 700, "a small trailing block", size=10)
+    return _save(doc, path)
+
+
 def folio_head_aside_seed(path):
     """Two pages whose top blocks each carry two distinct info-label
     lines ('EDITED BY … folio', 'RECEIVED …') — enough labels to seed

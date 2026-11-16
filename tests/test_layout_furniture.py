@@ -78,6 +78,7 @@ from furniture_fixtures import (
     single_block_book_heads,
     stacked_digit_heads,
     stacked_fused_heads,
+    tall_top_folio_tops,
 )
 from helpers import chapter_body_text, doc_html, lint_epub
 from layout_assertions import (
@@ -350,6 +351,13 @@ def multi_folio_pdf(tmp_path_factory):
     """Generate the multi-block folio-top source independently."""
     directory = tmp_path_factory.mktemp("multi_block_folio_tops")
     return multi_block_folio_tops(directory / "input.pdf")
+
+
+@pytest.fixture(scope="module")
+def tall_folio_pdf(tmp_path_factory):
+    """Generate the tall-top-block multi-block source independently."""
+    directory = tmp_path_factory.mktemp("tall_top_folio_tops")
+    return tall_top_folio_tops(directory / "input.pdf")
 
 
 @pytest.fixture(scope="module")
@@ -1552,6 +1560,15 @@ def test_multi_block_pages_skip_folio_scan(multi_folio_pdf):
     with fitz.open(multi_folio_pdf) as doc:
         pages = [(page, page.get_text("dict")) for page in doc]
         assert _folio_head_rows(pages) == {}
+
+
+def test_tall_top_multi_block_pages_still_scan(tall_folio_pdf):
+    """The span gate bounds reach to top-block-dominated pages, not
+    single-block ones — a tall top block on a multi-block page is
+    still scanned, and tracking folio heads commit as usual."""
+    with fitz.open(tall_folio_pdf) as doc:
+        pages = [(page, page.get_text("dict")) for page in doc]
+        assert _folio_head_rows(pages) == {0: [0], 1: [0], 2: [0]}
 
 
 def test_folio_head_cannot_seed_info_box(folio_seed_pdf):
