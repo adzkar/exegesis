@@ -693,6 +693,15 @@ cases deselected). Converter heuristics and golden snapshots are unchanged.
   Make each loop step consume one unambiguous unit
   (`(?:[^<]|<(?!/sup>)[^>]*>)*`, `<(?!sup\b)[^>]+>`,
   `(?:[.\s]|</b><b>)*`).
+- `dev/` survey tools take args through `argparse` and contain per-file
+  failures — a hand-rolled `argv` scan lets a flag's value leak into the
+  positional name filter (the documented `--journals-dir DIR` call then
+  silently reports nothing) and `argv.index(flag) + 1` crashes when the
+  flag is last; a `try` around only `fitz.open` lets one corrupt PDF kill
+  the survey and leak the open document. Wrap each per-PDF unit in the
+  caller's loop and open documents under `with fitz.open(...)`.
+  Reference implementation: `dev/diagnose_layouts.py`'s `main` (argparse
+  + per-PDF try) and `dev/dry_run_edge_lines.py`.
 
 ## Git hygiene
 
