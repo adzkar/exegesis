@@ -557,6 +557,12 @@ BOOK_H2_RUN = " ".join(BOOK_H2_RUN_LINES)
 # 'Neuroscience' / 'TOOLS AND RESOURCES' pair)
 BOOK_STYLE_HEADS = ("Neuro Section", "Tools Header", "Colored Head")
 BOOK_SIZE_HEADS = ("Wide Section", "Narrow Section")
+# a monotone size drift — every step inside the ±0.3pt merge bound but
+# past it end-to-end — must split at the run leader's anchored size,
+# not chain into one heading (a part/chapter/section staircase keeps
+# its chapter splits)
+BOOK_DRIFT_HEADS = ("Drift Alpha", "Drift Beta", "Drift Gamma")
+BOOK_DRIFT_LEADER = " ".join(BOOK_DRIFT_HEADS[:2])
 
 
 def _book_body(tag, repeats=3):
@@ -610,6 +616,9 @@ def book_heading_run(path):
         f'<b><span style="font-size:15pt">{BOOK_H2_RUN_LINES[1]}</span></b><br>'
         f'<span style="font-size:16pt">{BOOK_SIZE_HEADS[0]}</span><br>'
         f'<span style="font-size:15.5pt">{BOOK_SIZE_HEADS[1]}</span><br>'
+        f'<span style="font-size:16pt">{BOOK_DRIFT_HEADS[0]}</span><br>'
+        f'<span style="font-size:15.8pt">{BOOK_DRIFT_HEADS[1]}</span><br>'
+        f'<span style="font-size:15.6pt">{BOOK_DRIFT_HEADS[2]}</span><br>'
         # enough body lines that the block's median span size stays
         # body-sized — a short tail would push the median into the
         # head band and the whole block would classify as a byline

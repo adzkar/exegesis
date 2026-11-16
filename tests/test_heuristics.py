@@ -118,6 +118,24 @@ def test_standalone_heading_levels():
     assert render._standalone_heading_level(mixed, 10) is None
 
 
+def test_heading_run_size_anchors_to_leader():
+    """The ±0.3pt size bound anchors to the run leader, not pairwise:
+    a monotone drift of 0.2pt steps exceeds the bound end-to-end and
+    must split — graduated heads (a part/chapter/section staircase in
+    a fused book block) would otherwise collapse into one heading and
+    lose their chapter splits."""
+    drift = [
+        line("Head", size=20.0 + 0.2 * i, y0=i * 24, y1=i * 24 + 18)
+        for i in range(5)
+    ]
+    assert render._heading_run_end(drift, 0, [1] * 5, 12) == 2
+    same = [
+        line("Head", size=20.0, y0=i * 24, y1=i * 24 + 18)
+        for i in range(3)
+    ]
+    assert render._heading_run_end(same, 0, [1] * 3, 12) == 3
+
+
 # --- section labels / front matter -------------------------------------
 
 def test_section_label_split():

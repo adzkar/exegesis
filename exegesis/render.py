@@ -175,8 +175,9 @@ def _heading_run_end(lines, start, levels, line_h):
     Wrapped titles land as adjacent lines inside one block — the cover's
     three title lines each classify h1 and emit three fragments. Lines
     join the run only while every member holds the same gated level, an
-    identical style fingerprint (size within ±0.3pt — pairwise, so a
-    slow drift can't chain), and a vertical gap under 1.6× body leading.
+    identical style fingerprint (size within ±0.3pt of the run leader —
+    anchored, so a slow drift can't chain), and a vertical gap under
+    1.6× body leading.
     """
     end = start + 1
     prev = lines[start]
@@ -192,7 +193,7 @@ def _heading_run_end(lines, start, levels, line_h):
         ):
             break
         end += 1
-        prev, fp = nxt, nfp
+        prev = nxt
     return end
 
 

@@ -20,6 +20,8 @@ from layout_fixtures import (
     BOOK_BYLINE,
     BOOK_COVER_LINES,
     BOOK_COVER_TITLE,
+    BOOK_DRIFT_HEADS,
+    BOOK_DRIFT_LEADER,
     BOOK_H2_RUN,
     BOOK_SIZE_HEADS,
     BOOK_STYLE_HEADS,
@@ -171,6 +173,7 @@ REQUIRED_CONTENT = {
     "book_heading_run": [
         "edited by", "JANE Q. EDITOR", BOOK_BYLINE, "TEST UNIVERSITY",
         "Introduction", *BOOK_STYLE_HEADS, *BOOK_SIZE_HEADS,
+        *BOOK_DRIFT_HEADS,
         "A plain body page closes the document",
     ],
 }
@@ -718,6 +721,13 @@ def _contract_book_run(pages):
     assert stexts[5:7] == list(BOOK_SIZE_HEADS)
     assert _line_max_size(style_lines[5]) - _line_max_size(
         style_lines[6]) > 0.3
+    assert stexts[7:10] == list(BOOK_DRIFT_HEADS)
+    drift = [_line_max_size(l) for l in style_lines[7:10]]
+    # every adjacent step fits the ±0.3pt bound while the end-to-end
+    # spread exceeds it — the shape that discriminates an anchored
+    # fingerprint from a pairwise one
+    assert all(a - b <= 0.3 for a, b in zip(drift, drift[1:]))
+    assert drift[0] - drift[-1] > 0.3
 
 
 CONTRACTS = {
@@ -1099,11 +1109,16 @@ def _semantic_book_run(result):
             "#70 chapter title lines merge into one h1")
     require(f">{BOOK_H2_RUN}</h2>" in chaps,
             "#70 same-style h2 run merges into one heading")
-    require(chaps.count("<h2") == 6,
+    require(chaps.count("<h2") == 8,
             "#70 style and size shifts keep adjacent heads separate")
+    require(f">{BOOK_DRIFT_LEADER}</h2>" in chaps,
+            "#70 drift run merges only inside the leader's ±0.3pt")
+    require(f">{BOOK_DRIFT_HEADS[2]}</h2>" in chaps,
+            "#70 the drift's tail keeps its own heading")
     for needle in (
         f">{BOOK_STYLE_HEADS[0]} {BOOK_STYLE_HEADS[1]}",
         f"{BOOK_SIZE_HEADS[0]} {BOOK_SIZE_HEADS[1]}",
+        " ".join(BOOK_DRIFT_HEADS),
     ):
         require(needle not in chaps,
                 "#70 unlike styles never merge into one heading")
