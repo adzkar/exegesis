@@ -279,6 +279,7 @@ LEAK_RETAIN_BUDGET = 2   # legit mentions a head text may earn (title, byline, c
 LEAK_MIN_NEEDLE = 8      # collapsed alnum chars — shorter head texts are undetectable
 LEAK_HIGH_SHARE = 0.4    # attributable leaks >= this share of source rows -> High
 LEAK_LEAD_LINES = 4      # leading rows of a page's first block scanned
+LEAK_ROW_Y_TOL = 2.0     # same-y lines belong to one printed row
 
 
 def _src_edge_folio(text: str):
@@ -307,6 +308,29 @@ def _src_head_rest(text: str):
     return rest
 
 
+def _row_groups(rs):
+    """Cluster a page's committed row-lines into printed rows by y —
+    same-y siblings (a folio and its head text extracting as separate
+    line objects on one printed row) join one needle, while lines at
+    distinct y are distinct head rows — stacked double heads, or a
+    needle-matched folio-less row beside a flagged one — that must
+    each grade their own emitted hits."""
+    groups = []
+    for li, y, t in sorted(rs, key=lambda r: r[1]):
+        if groups and y - groups[-1][-1][1] <= LEAK_ROW_Y_TOL:
+            groups[-1].append((li, y, t))
+        else:
+            groups.append([(li, y, t)])
+    return groups
+
+
+def _free_span(m, claimed):
+    """True when regex match ``m`` overlaps no ``(start, end)`` span a
+    longer needle already claimed — a hit inside a containing head's
+    occurrence belongs to that head, not the nested needle."""
+    return not any(m.start() < ce and m.end() > cs for cs, ce in claimed)
+
+
 def source_folio_rows(pages):
     """Committed running-head rows in the source, report-only.
 
@@ -320,7 +344,12 @@ def source_folio_rows(pages):
     number or year does not. Returns ``{pi: [(li, y0, text)]}``
     including the committed row's same-y sibling lines — a folio and
     its head text can extract as separate line objects on one printed
-    row, so the row joins them for the needle — plus a second, looser
+    row, so the row joins them for the needle. A page can carry
+    several committed rows (stacked double heads, or a needle-matched
+    row beside a flagged one): the flat entry list clusters per
+    printed row (`_row_groups`), and each row builds its own needle —
+    joining the page into one composite would never match an emitted
+    splice — plus a second, looser
     arm the converter deliberately doesn't have: an in-zone leading
     line whose collapsed text equals a committed head needle is the
     same head on a folio-less page (no clustered folio to flag it).
@@ -371,7 +400,7 @@ def source_folio_rows(pages):
             (i, l["bbox"][1], _line_text(l).strip())
             for i, l in enumerate(lines)
             if l["bbox"][1] <= page.rect.height * 0.20
-            and min(abs(l["bbox"][1] - y) for y in ys) <= 2.0
+            and min(abs(l["bbox"][1] - y) for y in ys) <= LEAK_ROW_Y_TOL
         ]
         if rows:
             out[pi] = rows
@@ -383,8 +412,9 @@ def source_folio_rows(pages):
     # lands in the never-learned bucket rather than pretending the
     # folio rule saw it
     needles = {
-        _head_needle(" ".join(t for _i, _y, t in rs))[1]
+        _head_needle(" ".join(t for _i, _y, t in g))[1]
         for rs in out.values()
+        for g in _row_groups(rs)
     }
     needles = {n for n in needles if len(n) >= LEAK_MIN_NEEDLE}
     flagged_lines = {pi: {i for i, _y, _t in rs} for pi, rs in out.items()}
@@ -425,12 +455,17 @@ def head_leaks(rows, epub_text: str, conv_rows=None):
 
     ``rows`` is ``source_folio_rows`` output; ``epub_text`` is the
     chapter-body text (``xhtml_text`` already drops the head/title
-    members). For each distinct head needle — the row text minus its
-    folio, deduped so a needle nested inside another isn't counted
-    twice — count word-bounded hits (legit mentions or clean splices;
+    members). For each distinct head needle — one per committed row,
+    the row's same-y siblings joined and its edge folio stripped —
+    count word-bounded hits (legit mentions or clean splices;
     ambiguous) and collapsed hits (mid-word splices like
     'mat168ROBERT'/'oviposiParental' — unambiguous: no one writes
-    glued text on purpose). Occurrences past LEAK_RETAIN_BUDGET are
+    glued text on purpose). Needles grade longest-first and each
+    claims its match spans: a needle nested inside a longer one
+    ('LANGMUIR' verso vs 'LANGMUIR LETTERS' recto) is a distinct head,
+    not a duplicate — it grades only hits outside the longer needle's
+    matches, keeping its own source rows and occurrences instead of
+    double-counting one head. Occurrences past LEAK_RETAIN_BUDGET are
     attributable, capped at that needle's source-row count.
     ``conv_rows`` is the converter's own ``_folio_head_rows`` map —
     each source row carries a class: converter-confirmed (the folio
@@ -446,31 +481,44 @@ def head_leaks(rows, epub_text: str, conv_rows=None):
     needles = {}
     conv_rows = conv_rows or {}
     for pi, rs in rows.items():
-        # one needle per committed row; same-y siblings join into it
-        text = " ".join(t for _i, _y, t in rs)
-        sp, col = _head_needle(text)
-        if len(col) >= LEAK_MIN_NEEDLE:
-            lis = {i for i, _y, _t in rs}
-            confirmed = lis.issubset(set(conv_rows.get(pi, [])))
+        conv_lis = set(conv_rows.get(pi, []))
+        # one needle per committed row — a page can carry several
+        # (stacked double heads, or a folio-less needle-matched row
+        # beside a flagged one); same-y siblings join into their row,
+        # and each row checks its own lines against the converter's
+        # flags so an unflagged line can't mislabel the row it pooled
+        # with as never-learned
+        for g in _row_groups(rs):
+            text = " ".join(t for _i, _y, t in g)
+            sp, col = _head_needle(text)
+            if len(col) < LEAK_MIN_NEEDLE:
+                continue
+            lis = {i for i, _y, _t in g}
+            confirmed = lis.issubset(conv_lis)
             e = needles.setdefault(
                 col, {"sp": sp, "src": 0, "confirmed": 0})
             e["src"] += 1
             e["confirmed"] += confirmed
-    # dedupe nested needles — a needle contained in a longer one
-    # double-counts one head
-    for n in list(needles):
-        if any(n != o and n in o for o in needles):
-            del needles[n]
     total_src = sum(e["src"] for e in needles.values())
     leaks = 0
     details = []
-    for col, e in needles.items():
+    claimed_col = []   # (start, end) spans in `collapsed`
+    claimed_sp = []    # (start, end) spans in `spaced`
+    for col, e in sorted(needles.items(), key=lambda kv: -len(kv[0])):
         src, sp = e["src"], e["sp"]
-        glued = collapsed.count(col)
-        if not glued:
+        col_hits = [
+            m for m in re.finditer(re.escape(col), collapsed)
+            if _free_span(m, claimed_col)]
+        claimed_col += [(m.start(), m.end()) for m in col_hits]
+        if not col_hits:
             continue
-        ambiguous = len(re.findall(
-            r"(?<!\w)" + re.escape(sp) + r"(?!\w)", spaced))
+        sp_hits = [
+            m for m in re.finditer(
+                r"(?<!\w)" + re.escape(sp) + r"(?!\w)", spaced)
+            if _free_span(m, claimed_sp)]
+        claimed_sp += [(m.start(), m.end()) for m in sp_hits]
+        glued = len(col_hits)
+        ambiguous = len(sp_hits)
         splice = max(0, glued - ambiguous)
         attributable = splice + max(0, ambiguous - LEAK_RETAIN_BUDGET)
         leaked = min(attributable, src)

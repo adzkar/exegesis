@@ -808,8 +808,11 @@ def test_eval_head_leak_never_learned_class(tmp_path):
     """Unit-level: with an empty converter-confirmation replay every
     leaked row reports never-learned — the class split works without
     the optional local corpus (#73 discovery-miss positive)."""
-    sys.path.insert(0, str(EVAL.parent))
-    import eval_epub
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("eval_epub", EVAL)
+    eval_epub = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(eval_epub)
 
     rows = {
         1: [(0, 48.0, "Journal of Synthetic Layouts     138")],
@@ -820,4 +823,48 @@ def test_eval_head_leak_never_learned_class(tmp_path):
     src, leaks, details = eval_epub.head_leaks(rows, text)
     assert src == 2 and leaks == 2
     assert all(never == src for _s, _l, src, _c, never in details)
-    sys.path.pop(0)
+
+
+def test_eval_head_leak_multi_row_page(tmp_path):
+    """A page carrying two distinct head rows grades each row's own
+    needle — a flagged folio row beside a needle-matched folio-less
+    line joins no composite, the emitted splice attributes, and the
+    class split labels rows, not pages (#83 review)."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("eval_epub", EVAL)
+    eval_epub = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(eval_epub)
+
+    rows = {0: [(0, 48.0, "139  JANE Q. TESTER"),
+                (3, 75.0, "JANE Q. TESTER")]}
+    src, leaks, details = eval_epub.head_leaks(
+        rows, "prose mat139JANE Q. TESTER mid-sentence",
+        conv_rows={0: [0]})
+    assert src == 2 and leaks == 1
+    (_sp, _lk, src_n, conf, never), = details
+    assert src_n == 2 and conf == 1 and never == 1
+
+
+def test_eval_head_leak_nested_needles(tmp_path):
+    """Prefix-related alternating heads keep separate accounting — the
+    shorter needle grades hits outside the longer one's matches
+    instead of being deduped away (#83 review)."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("eval_epub", EVAL)
+    eval_epub = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(eval_epub)
+
+    rows = {1: [(0, 48.0, "137  LANGMUIR")],
+            2: [(0, 48.0, "LANGMUIR LETTERS  138")]}
+    src, leaks, details = eval_epub.head_leaks(
+        rows, "prose xx137LANGMUIR tail")
+    assert src == 2 and leaks == 1
+    assert details[0][0] == "langmuir"
+    # both heads leaking: the longer needle claims its match span, so
+    # the shorter one's own splice still counts — no double-count
+    src, leaks, details = eval_epub.head_leaks(
+        rows, "aaLANGMUIR LETTERS mid bbLANGMUIR tail")
+    assert src == 2 and leaks == 2
+    assert {d[0] for d in details} == {"langmuir", "langmuir letters"}
