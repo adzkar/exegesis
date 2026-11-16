@@ -3,9 +3,9 @@
 > *exegesis* — Greek ἐξήγησις, "to lead out." This tool leads the text out of
 > its fixed layout.
 
-Convert PDFs — especially **multi-column academic papers and journals** — into
-clean, reflowable EPUB ebooks for e-readers. Pure Python, rule-based layout
-analysis, no OCR or ML dependencies.
+A PDF → EPUB converter tuned for **multi-column academic papers and
+journals**. Pure Python, rule-based layout analysis, no OCR or ML
+dependencies.
 
 ## Features
 
