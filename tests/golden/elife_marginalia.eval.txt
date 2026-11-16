@@ -7,6 +7,7 @@
 - B metadata: title='Whole-\xadbrain in situ mapping of neuronal activation in Droso'
 - C coverage: rejoined 84, furniture 438, rasterized table cells 123, superscript splits 9, genuine loss 127
 - D toc: 40 entries, h1=1 h2=38, dupes=none
+- J heads: 0 committed source rows, 0 attributable leaks (folio-anchored top-edge rows only — internal, folio-less, and bottom-placed heads are undetectable)
 - G figures: pdf rasters=99, embedded=99, vector pages=[1, 3, 5, 7, 9, 15]
 
 ## Findings (severity-ranked)

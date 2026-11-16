@@ -7,6 +7,7 @@
 - B metadata: title='A shape-changing haptic navigation interface for vision impa'
 - C coverage: rejoined 4, furniture 237, rasterized table cells 0, superscript splits 47, genuine loss 3
 - D toc: 33 entries, h1=1 h2=31, dupes=none
+- J heads: 0 committed source rows, 0 attributable leaks (folio-anchored top-edge rows only — internal, folio-less, and bottom-placed heads are undetectable)
 - G figures: pdf rasters=7, embedded=7, vector pages=[1, 4]
 
 ## Findings (severity-ranked)
