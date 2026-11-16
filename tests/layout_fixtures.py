@@ -544,6 +544,80 @@ def banded_sections(path):
     return _save(doc, path)
 
 
+BOOK_COVER_LINES = (
+    "SYNTHETIC SELECTION", "AND THE", "DESCENT OF FIXTURES 1871-1971")
+BOOK_COVER_TITLE = " ".join(BOOK_COVER_LINES)
+BOOK_TITLE_LINES = ("Fused Evidence and", "Synthetic Heads")
+BOOK_TITLE = " ".join(BOOK_TITLE_LINES)
+BOOK_BYLINE = "JANE Q. TESTER"
+BOOK_H2_RUN_LINES = ("Methods and", "Procedures")
+BOOK_H2_RUN = " ".join(BOOK_H2_RUN_LINES)
+# adjacent same-size heads whose style fingerprints differ — weight,
+# family, or color — must stay separate headings (eLife's
+# 'Neuroscience' / 'TOOLS AND RESOURCES' pair)
+BOOK_STYLE_HEADS = ("Neuro Section", "Tools Header", "Colored Head")
+BOOK_SIZE_HEADS = ("Wide Section", "Narrow Section")
+
+
+def _book_body(tag, repeats=3):
+    """Unique-tagged page filler — identical across repetitions would
+    collide under assert_retained_once's exact-count check."""
+    return " ".join(
+        f"{tag} prose {i} keeps the measured argument moving across "
+        "the page so the block carries real content below its title lines."
+        for i in range(repeats))
+
+
+def book_heading_run(path):
+    """Book-scan pages whose text layer fuses heading lines and body
+    into one block (#70): the cover's three title lines and the
+    chapter title's two lines sit among non-title lines at shared
+    x0 — they merge into one heading each, while adjacent heads whose
+    style or size differs stay separate."""
+    doc = fitz.open()
+    page = _page(doc)
+    page.insert_htmlbox(
+        fitz.Rect(54, 60, 540, 720),
+        '<p><span style="font-size:21.8pt">'
+        + "<br>".join(BOOK_COVER_LINES)
+        + '</span><br>'
+        '<span style="font-size:12pt">edited by<br>JANE Q. EDITOR</span><br>'
+        + f'<span style="font-size:11.2pt">{_book_body("Cover")}</span></p>',
+    )
+    page = _page(doc)
+    page.insert_htmlbox(
+        fitz.Rect(54, 60, 540, 720),
+        '<b><span style="font-size:20.2pt">7</span></b><br>'
+        '<span style="font-size:12pt">' + BOOK_BYLINE + "</span><br>"
+        '<span style="font-size:9.8pt">TEST UNIVERSITY</span><br>'
+        '<b><span style="font-size:20.2pt">'
+        + "<br>".join(BOOK_TITLE_LINES)
+        + "</span></b><br>"
+        '<span style="font-size:11.2pt">Introduction</span><br>'
+        + f'<span style="font-size:11.2pt">{_book_body("Opener")}</span></p>',
+    )
+    page = _page(doc)
+    paragraph(page, (54, 140, 540, 400),
+              "A plain body page closes the document so the heading "
+              "flow and chapters look ordinary beyond the fused pages.")
+    page = _page(doc)
+    page.insert_htmlbox(
+        fitz.Rect(54, 60, 540, 720),
+        f'<b><span style="font-size:16pt">{BOOK_STYLE_HEADS[0]}</span></b><br>'
+        f'<span style="font-size:16pt">{BOOK_STYLE_HEADS[1]}</span><br>'
+        f'<span style="font-size:16pt;color:#cc0000">{BOOK_STYLE_HEADS[2]}</span><br>'
+        f'<b><span style="font-size:15pt">{BOOK_H2_RUN_LINES[0]}</span></b><br>'
+        f'<b><span style="font-size:15pt">{BOOK_H2_RUN_LINES[1]}</span></b><br>'
+        f'<span style="font-size:16pt">{BOOK_SIZE_HEADS[0]}</span><br>'
+        f'<span style="font-size:15.5pt">{BOOK_SIZE_HEADS[1]}</span><br>'
+        # enough body lines that the block's median span size stays
+        # body-sized — a short tail would push the median into the
+        # head band and the whole block would classify as a byline
+        + f'<span style="font-size:11.2pt">{_book_body("Style", 9)}</span></p>',
+    )
+    return _save(doc, path)
+
+
 GENERATORS = {
     "mixed_1col_plus_2col": mixed_1col_plus_2col,
     "mixed_parity_2col": mixed_parity_2col,
@@ -569,4 +643,5 @@ GENERATORS = {
     "mid_page_span": mid_page_span,
     "banded_sections": banded_sections,
     "invisible_text": invisible_text,
+    "book_heading_run": book_heading_run,
 }

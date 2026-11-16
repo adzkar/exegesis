@@ -136,6 +136,66 @@ def _heading_level(line, body_size):
     return None
 
 
+def _line_level_gated(line, body_size, bold_h2_ok, lang, marker_block):
+    """Per-line heading level after the shared gates: footnote-marker
+    blocks demote every line, name-list lines veto to byline material,
+    and a bold-band h2 inside a mixed-weight block only promotes when
+    its column carries a body follower."""
+    if marker_block:
+        return None
+    level = _heading_level(line, body_size)
+    if level and _author_line(_line_text(line).strip(), lang.name_joiner):
+        return None
+    if (
+        level == 2
+        and _line_max_size(line) < body_size * 1.08
+        and not bold_h2_ok
+    ):
+        return None
+    return level
+
+
+def _heading_fingerprint(line):
+    """Style identity of one line for heading-run merges: max span size,
+    span font set, bold/italic flag set, and color set. A same-size
+    style shift (eLife's category line under its head) differs on at
+    least one component, so unlike neighbors never merge."""
+    spans = line["spans"]
+    return (
+        round(_line_max_size(line), 1),
+        frozenset(s.get("font") for s in spans),
+        frozenset(s.get("flags", 0) & 0x12 for s in spans),
+        frozenset(s.get("color") for s in spans),
+    )
+
+
+def _heading_run_end(lines, start, levels, line_h):
+    """End index (exclusive) of the heading run opening at ``start``.
+
+    Wrapped titles land as adjacent lines inside one block — the cover's
+    three title lines each classify h1 and emit three fragments. Lines
+    join the run only while every member holds the same gated level, an
+    identical style fingerprint (size within ±0.3pt — pairwise, so a
+    slow drift can't chain), and a vertical gap under 1.6× body leading.
+    """
+    end = start + 1
+    prev = lines[start]
+    fp = _heading_fingerprint(prev)
+    while end < len(lines):
+        nxt = lines[end]
+        nfp = _heading_fingerprint(nxt)
+        if (
+            levels[end] != levels[start]
+            or nfp[1:] != fp[1:]
+            or abs(nfp[0] - fp[0]) > 0.3
+            or nxt["bbox"][1] - prev["bbox"][3] > line_h * 1.6
+        ):
+            break
+        end += 1
+        prev, fp = nxt, nfp
+    return end
+
+
 def _standalone_heading_level(block, body_size):
     """Classify a single-line block as a heading (h1/h2) or None.
 
@@ -1214,7 +1274,20 @@ def _render_page(page, page_index: int, state: PipelineState):
             len(state.par) == 1 and len(state.par[0]) == 1
         ):
             flush_par()
-        for li, line in enumerate(_block_lines(block)):
+        # blocks opening with a footnote marker are note material —
+        # none of their lines may classify as headings. A demoted
+        # block's *size-signaled* lines may still emit; only its
+        # bold-band lines are silenced by the gated level
+        marker_block = btext[:1] in "*†‡§"
+        line_levels = [
+            _line_level_gated(
+                l, body_size, bold_h2_ok, state.lang, marker_block)
+            for l in block_lines
+        ]
+        run_done = set()
+        for li, line in enumerate(block_lines):
+            if li in run_done:
+                continue
             # labels respect the bold-only demotion — "Funding NIH grant…"
             # tails are plausible notes, not section heads; a page-final
             # "References" stays demoted when its body isn't visible
@@ -1227,33 +1300,19 @@ def _render_page(page, page_index: int, state: PipelineState):
                     if m[1]:
                         state.par.append(html.escape(m[1]))
                     continue
-            # blocks opening with a footnote marker are note material —
-            # none of their lines may classify as headings. A demoted
-            # block's *size-signaled* lines may still emit; only its
-            # bold-band lines are silenced by the gate below
-            line_level = (
-                _heading_level(line, body_size)
-                if btext[:1] not in "*†‡§"
-                else None
-            )
-            # the same name-list veto at line level — a bold author
-            # line inside a mixed-weight block is byline material too
-            if line_level and _author_line(
-                _line_text(line).strip(), state.lang.name_joiner
-            ):
-                line_level = None
-            # a line-level h2 promoted by the bold-only band (size <
-            # 1.08×body is unreachable via the size path) needs the same
-            # edge/follower check as a block-level candidate — a bold line
-            # inside a mixed-weight block is just as often a note
-            if (
-                line_level == 2
-                and _line_max_size(line) < body_size * 1.08
-                and not bold_h2_ok
-            ):
-                line_level = None
+            line_level = line_levels[li]
             if line_level:
-                emit_heading(line_level, _line_text(line).strip())
+                run_end = _heading_run_end(
+                    block_lines, li, line_levels, state.line_h)
+                joined = " ".join(
+                    _line_text(l).strip()
+                    for l in block_lines[li:run_end]
+                )
+                if run_end > li + 1 and _looks_like_heading(joined):
+                    emit_heading(line_level, joined)
+                    run_done.update(range(li + 1, run_end))
+                else:
+                    emit_heading(line_level, _line_text(line).strip())
                 continue
             t = _line_html(line, body_size).strip()
             if not t:

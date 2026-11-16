@@ -180,28 +180,8 @@
       "frags": [
         [
           "h2",
-          "Impact of a Partner's Presence on",
-          33
-        ]
-      ]
-    },
-    {
-      "file": "chap_11.xhtml",
-      "frags": [
-        [
-          "h2",
-          "Classical Sleep Parameters and REM",
-          34
-        ]
-      ]
-    },
-    {
-      "file": "chap_12.xhtml",
-      "frags": [
-        [
-          "h2",
-          "Sleep Fragmentation",
-          19
+          "Impact of a Partner's Presence on Classical Sleep Parameters",
+          88
         ],
         [
           "p",
@@ -251,7 +231,7 @@
       ]
     },
     {
-      "file": "chap_13.xhtml",
+      "file": "chap_11.xhtml",
       "frags": [
         [
           "h2",
@@ -281,7 +261,7 @@
       ]
     },
     {
-      "file": "chap_14.xhtml",
+      "file": "chap_12.xhtml",
       "frags": [
         [
           "h2",
@@ -356,7 +336,7 @@
       ]
     },
     {
-      "file": "chap_15.xhtml",
+      "file": "chap_13.xhtml",
       "frags": [
         [
           "h2",
@@ -381,7 +361,7 @@
       ]
     },
     {
-      "file": "chap_16.xhtml",
+      "file": "chap_14.xhtml",
       "frags": [
         [
           "h2",
@@ -396,7 +376,7 @@
       ]
     },
     {
-      "file": "chap_17.xhtml",
+      "file": "chap_15.xhtml",
       "frags": [
         [
           "h2",
@@ -411,7 +391,7 @@
       ]
     },
     {
-      "file": "chap_18.xhtml",
+      "file": "chap_16.xhtml",
       "frags": [
         [
           "h2",
@@ -426,7 +406,7 @@
       ]
     },
     {
-      "file": "chap_19.xhtml",
+      "file": "chap_17.xhtml",
       "frags": [
         [
           "h2",
@@ -753,11 +733,11 @@
   ],
   "stats": {
     "asides": 3,
-    "chapters": 20,
+    "chapters": 18,
     "columns": 2,
     "footnotes": 14,
     "grid_tables": 1,
-    "headings": 19,
+    "headings": 17,
     "images": 9,
     "pages": 12,
     "raster_figures": 1,
@@ -803,15 +783,7 @@
     ],
     [
       2,
-      "Impact of a Partner's Presence on"
-    ],
-    [
-      2,
-      "Classical Sleep Parameters and REM"
-    ],
-    [
-      2,
-      "Sleep Fragmentation"
+      "Impact of a Partner's Presence on Classical Sleep Parameters and REM Sleep Fragmentation"
     ],
     [
       2,
