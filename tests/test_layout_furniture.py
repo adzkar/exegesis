@@ -1553,9 +1553,9 @@ def test_lowercase_digit_openers_are_not_heads(
     )
 
 
-def test_multi_block_pages_skip_folio_scan(multi_folio_pdf):
+def test_short_top_pages_skip_folio_scan(multi_folio_pdf):
     """A page whose top block spans under half the page height is not
-    single-block-dominated — the span gate skips it, so tracking
+    top-block-dominated — the span gate skips it, so tracking
     folios across the doc still commit nothing through this pass."""
     with fitz.open(multi_folio_pdf) as doc:
         pages = [(page, page.get_text("dict")) for page in doc]
@@ -1568,6 +1568,8 @@ def test_tall_top_multi_block_pages_still_scan(tall_folio_pdf):
     still scanned, and tracking folio heads commit as usual."""
     with fitz.open(tall_folio_pdf) as doc:
         pages = [(page, page.get_text("dict")) for page in doc]
+        for _page, pdict in pages:
+            assert len(_text_blocks(pdict)) >= 2
         assert _folio_head_rows(pages) == {0: [0], 1: [0], 2: [0]}
 
 
