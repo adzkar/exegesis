@@ -61,6 +61,7 @@ from furniture_fixtures import (
     UPRIGHT_TAGS,
     _sbp_body,
     dual_margin_strips,
+    folio_head_aside_seed,
     front_matter_info_box,
     fused_running_head_title,
     long_repeated_running_head,
@@ -89,6 +90,7 @@ from exegesis import convert
 from exegesis.analyze import (
     _body_font_size,
     _boilerplate_signatures,
+    _detect_asides,
     _doc_column_edges,
     _folio_head_rows,
     _is_furniture,
@@ -348,6 +350,13 @@ def multi_folio_pdf(tmp_path_factory):
     """Generate the multi-block folio-top source independently."""
     directory = tmp_path_factory.mktemp("multi_block_folio_tops")
     return multi_block_folio_tops(directory / "input.pdf")
+
+
+@pytest.fixture(scope="module")
+def folio_seed_pdf(tmp_path_factory):
+    """Generate the folio-head aside-seed trap independently."""
+    directory = tmp_path_factory.mktemp("folio_head_aside_seed")
+    return folio_head_aside_seed(directory / "input.pdf")
 
 
 @pytest.fixture(scope="module")
@@ -1543,3 +1552,18 @@ def test_multi_block_pages_skip_folio_scan(multi_folio_pdf):
     with fitz.open(multi_folio_pdf) as doc:
         pages = [(page, page.get_text("dict")) for page in doc]
         assert _folio_head_rows(pages) == {}
+
+
+def test_folio_head_cannot_seed_info_box(folio_seed_pdf):
+    """A folio_head piece whose lines carry info labels must not seed
+    a field run — the last aside membership path closed, so a
+    committed head on page 0 stays furniture while its unmarked
+    page-1 twin still claims a sidebar."""
+    with fitz.open(folio_seed_pdf) as doc:
+        pages = [(page, page.get_text("dict")) for page in doc]
+        _body_size, line_h = _body_font_size(pages)
+        marked, unmarked = (_text_blocks(pdict)[0] for _p, pdict in pages)
+        marked["folio_head"] = True
+        _detect_asides(pages, line_h, _boilerplate_signatures(pages))
+        assert marked.get("aside") is None
+        assert unmarked.get("aside") is not None

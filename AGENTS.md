@@ -287,8 +287,10 @@ but contributes nothing there).
   the running head is a *line* inside it and no standalone block ever
   emits the head's signature. `_folio_head_rows` (doc-wide, before the
   signature split) scans only pages whose top text block spans at
-  least half the page height — the single-block-dominated shape the
-  heads hide in — and reads that block's in-zone leading lines for an
+  least half the page height — the top-block-dominated shape the
+  heads hide in (a tall top block on a multi-block page still
+  qualifies — a tracking folio fused into a column block is the same
+  pathology) — and reads that block's in-zone leading lines for an
   edge folio — a standalone integer at either end, bare folios
   included — with a head-shaped remainder (no terminal punctuation,
   ≤10 words, no lowercase first word at either edge — prose opens

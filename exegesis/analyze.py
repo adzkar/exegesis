@@ -428,7 +428,7 @@ def _detect_asides(pages, line_h, boilerplate, lang: LangProfile = EN):
     distinct-label runs form a box, and the frozen core admits only
     inside-evidence members. A committed ``folio_head`` split holds
     signature furniture's exemptions — a page-0/1 head can neither
-    extend a run nor attach to a box. ``pages`` is ``convert``'s
+    seed, extend, nor attach to a box. ``pages`` is ``convert``'s
     extracted ``(page, pdict)`` list; each validated member gets a
     shared region key the render's aside path lifts wholesale.
     """
@@ -444,7 +444,10 @@ def _detect_asides(pages, line_h, boilerplate, lang: LangProfile = EN):
         )
         labels_of, first_of = {}, {}
         for b in texts:
-            if b.get("aside") is not None:
+            if (
+                b.get("aside") is not None
+                or b.get("folio_head") is not None
+            ):
                 continue
             ll = [
                 _field_label(_line_text(l), lead_re)
@@ -1567,9 +1570,11 @@ def _folio_head_rows(pages):
     inside body prose (#72).
 
     Only a page whose top block spans at least half the page height is
-    scanned — the single-block-dominated shape the heads hide in; a
-    multi-block page's top block never qualifies, so the heuristic
-    can't reach ordinary articles. A candidate row sits among the
+    scanned — the top-block-dominated shape the heads hide in. A page
+    whose top block doesn't dominate the height is skipped; a tall top
+    block on a multi-block page still qualifies — a tracking folio
+    fused into a column block is the same pathology. A candidate row
+    sits among the
     block's leading lines inside the top edge zone and carries an
     edge folio with a head-shaped (or empty) remainder. Rows commit
     only when ``folio − page_index`` clusters on

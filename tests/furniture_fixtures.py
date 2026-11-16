@@ -617,3 +617,25 @@ def repeated_bottom_foot(path):
         text(page, 72, 768, BOTTOM_FOOT, size=8)
         text(page, 400, 782, f"© 2024 Example Journal page {tag}", size=8)
     return _save(doc, path)
+
+
+def folio_head_aside_seed(path):
+    """Two pages whose top blocks each carry two distinct info-label
+    lines ('EDITED BY … folio', 'RECEIVED …') — enough labels to seed
+    a self-contained info box on a scanned page. Page 0's block is
+    marked ``folio_head`` in the test: seeding is the last aside
+    membership path a committed head could take, and the exemption
+    must close it while the unmarked page-1 twin still claims."""
+    doc = fitz.open()
+    for pi in range(2):
+        page = _page(doc)
+        _sbp_insert(
+            page,
+            54,
+            48,
+            [
+                f"EDITED BY Jane Q. Tester  {138 + pi}",
+                "RECEIVED 12 January 2024",
+            ],
+        )
+    return _save(doc, path)
