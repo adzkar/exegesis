@@ -96,6 +96,21 @@ def _set_language(epub: Path, code: str):
             z.writestr(n, data)
 
 
+def _set_title(epub: Path, title: str):
+    """Rewrite `<dc:title>` inside content.opf — simulates a conversion
+    that leaked the source filename extension into the book title."""
+    with zipfile.ZipFile(epub) as z:
+        members = {n: z.read(n) for n in z.namelist()}
+    opf_name = next(n for n in members if n.endswith("content.opf"))
+    members[opf_name] = re.sub(
+        r"<dc:title[^>]*>[^<]*</dc:title>",
+        f"<dc:title>{title}</dc:title>",
+        members[opf_name].decode()).encode()
+    with zipfile.ZipFile(epub, "w") as z:
+        for n, data in members.items():
+            z.writestr(n, data)
+
+
 def _raster_margin_legend_pdf(path):
     """A rotated raster table beside a margin `Table 1.` strip — the
     legend binds into the raster's `alt`, so the eval's bound-legend
@@ -214,6 +229,20 @@ def test_eval_localized_legends_de(tmp_path):
     r_en = _run(pdf, epub, "--lang", "en")
     assert r_en.returncode == 0, r_en.stdout + r_en.stderr
     assert "Table 1:" not in r_en.stdout
+
+
+def test_eval_pdf_extension_title_flags_low(tmp_path):
+    """A dc:title ending in `.pdf` is a Low finding, not clean — a
+    leaked filename extension is a real defect worth surfacing without
+    gating on it (#71)."""
+    pdf = tmp_path / "clean.pdf"
+    _clean_pdf(pdf)
+    epub = tmp_path / "pdfext.epub"
+    convert(pdf, epub)
+    _set_title(epub, "A Clean Synthetic Study.PDF")
+    r = _run(pdf, epub)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert ".pdf extension" in r.stdout
 
 
 def test_eval_unsupported_language_bails_2(tmp_path):
