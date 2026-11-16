@@ -7,6 +7,7 @@
 - B metadata: title='Seasonal variations in photooxidant formation and light abso'
 - C coverage: rejoined 763, furniture 547, rasterized table cells 0, superscript splits 18, genuine loss 114
 - D toc: 5 entries, h1=1 h2=3, dupes=none
+- J heads: 20 committed source rows, 0 attributable leaks (folio-anchored top-edge rows only — internal, folio-less, and bottom-placed heads are undetectable)
 - G figures: pdf rasters=9, embedded=9, vector pages=[1]
 
 ## Findings (severity-ranked)

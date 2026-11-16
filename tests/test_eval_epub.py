@@ -696,3 +696,128 @@ def test_eval_committed_figure_page_is_capturable(tmp_path):
     r = _run(pdf, epub)
     assert r.returncode == 0, r.stdout + r.stderr
     assert "not capturable" not in r.stdout
+
+
+# ---------- J. running-head leak oracle (#73) ----------
+
+from furniture_fixtures import single_block_book_heads
+
+
+def _inject_epub_text(epub: Path, *paragraphs: str):
+    """Append `<p>` paragraphs to the first chapter — simulates a
+    conversion that emitted committed head text inside body flow."""
+    with zipfile.ZipFile(epub) as zin:
+        members = {n: zin.read(n) for n in zin.namelist()}
+    name = next(
+        n for n in members if n.rsplit("/", 1)[-1].startswith("chap_"))
+    data = members[name].decode()
+    data = data.replace(
+        "</body>",
+        "".join(f"<p>{p}</p>" for p in paragraphs) + "</body>")
+    members[name] = data.encode()
+    with zipfile.ZipFile(epub, "w") as zout:
+        for n, d in members.items():
+            zout.writestr(n, d)
+
+
+def _sbp(tmp_path):
+    """The book-scan fixture: committed folio'd heads on p1-4, a same-y
+    folio pair on p7, a folio-less head on p8 — `convert` strips them
+    all, so injected leakage is the only way head text emits."""
+    pdf = tmp_path / "heads.pdf"
+    single_block_book_heads(pdf)
+    epub = tmp_path / "heads.epub"
+    convert(pdf, epub)
+    return pdf, epub
+
+
+def test_eval_head_leak_baseline_high(tmp_path):
+    """Two glued mid-word splices plus spaced occurrences past the
+    legit-mention budget — ≥2 attributable covering ≥40% of source
+    rows → High (#73, the baseline verdict)."""
+    pdf, epub = _sbp(tmp_path)
+    _inject_epub_text(
+        epub,
+        "prose ends mat139JANE Q. TESTER and body resumes",
+        "a second splice oviposiJournal of Synthetic Layouts "
+        "then continues the sentence",
+        "spaced mention of Journal of Synthetic Layouts here",
+        "and Journal of Synthetic Layouts once more",
+    )
+    r = _run(pdf, epub)
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "| High | J |" in r.stdout
+    assert "running-head leak" in r.stdout
+    # every source row is converter-detected or needle-matched — the
+    # class split reports both buckets honestly
+    assert "confirmed" in r.stdout and "never learned" in r.stdout
+
+
+def test_eval_head_leak_single_is_med(tmp_path):
+    """One attributable leak is a finding but stays below the High
+    gate — severity boundary (#73)."""
+    pdf, epub = _sbp(tmp_path)
+    _inject_epub_text(epub, "body mat140JANE Q. TESTER keeps going")
+    r = _run(pdf, epub)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "| Med | J |" in r.stdout
+    assert "| High | J |" not in r.stdout
+
+
+def test_eval_head_leak_below_share_is_med(tmp_path):
+    """Two attributable leaks under 40% of committed rows — Med, not
+    High (#73 severity boundary)."""
+    pdf, epub = _sbp(tmp_path)
+    _inject_epub_text(
+        epub,
+        "body mat139JANE Q. TESTER mid",
+        "and mat141JANE Q. TESTER again",
+    )
+    r = _run(pdf, epub)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "| Med | J |" in r.stdout
+
+
+def test_eval_head_leak_clean_default(tmp_path):
+    """Correct default output commits source rows but leaks none —
+    the J check reports 0 attributable and stays silent (#73)."""
+    pdf, epub = _sbp(tmp_path)
+    r = _run(pdf, epub)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "| J |" not in r.stdout
+    assert "0 attributable leaks" in r.stdout
+
+
+def test_eval_head_leak_keep_headers_mode(tmp_path):
+    """A --keep-headers conversion emits the heads on purpose — flagged
+    without the flag (heads ARE in body text), clean with it while
+    every other check still runs (#73 mode contract)."""
+    pdf = tmp_path / "heads.pdf"
+    single_block_book_heads(pdf)
+    epub = tmp_path / "heads.epub"
+    convert(pdf, epub, drop_edges=False)
+    default = _run(pdf, epub)
+    assert "| J |" in default.stdout, default.stdout
+    kept = _run(pdf, epub, "--keep-headers")
+    assert "| J |" not in kept.stdout, kept.stdout
+    assert "skipped" in kept.stdout
+    assert "C coverage:" in kept.stdout  # coverage still runs
+
+
+def test_eval_head_leak_never_learned_class(tmp_path):
+    """Unit-level: with an empty converter-confirmation replay every
+    leaked row reports never-learned — the class split works without
+    the optional local corpus (#73 discovery-miss positive)."""
+    sys.path.insert(0, str(EVAL.parent))
+    import eval_epub
+
+    rows = {
+        1: [(0, 48.0, "Journal of Synthetic Layouts     138")],
+        2: [(0, 48.0, "139  JANE Q. TESTER")],
+    }
+    text = ("prose mat138Journal of Synthetic Layouts tail "
+            "and body 139JANE Q. TESTER mid-sentence")
+    src, leaks, details = eval_epub.head_leaks(rows, text)
+    assert src == 2 and leaks == 2
+    assert all(never == src for _s, _l, src, _c, never in details)
+    sys.path.pop(0)

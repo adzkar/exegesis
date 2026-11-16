@@ -7,6 +7,7 @@
 - B metadata: title='Lat-Net: Compressing Lattice Boltzmann Flow Simulations usin'
 - C coverage: rejoined 8, furniture 16, rasterized table cells 0, superscript splits 0, genuine loss 45
 - D toc: 8 entries, h1=1 h2=7, dupes=none
+- J heads: 0 committed source rows, 0 attributable leaks (folio-anchored top-edge rows only — internal, folio-less, and bottom-placed heads are undetectable)
 - G figures: pdf rasters=12, embedded=12, vector pages=[3]
 
 ## Findings (severity-ranked)

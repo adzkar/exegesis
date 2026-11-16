@@ -7,6 +7,7 @@
 - B metadata: title='Use of GLP1 receptor agonists in early pregnancy and reprodu'
 - C coverage: rejoined 142, furniture 168, rasterized table cells 258, superscript splits 23, genuine loss 3
 - D toc: 7 entries, h1=1 h2=5, dupes=none
+- J heads: 0 committed source rows, 0 attributable leaks (folio-anchored top-edge rows only — internal, folio-less, and bottom-placed heads are undetectable)
 - G figures: pdf rasters=1, embedded=1, vector pages=[1, 5, 6, 8]
 
 ## Findings (severity-ranked)

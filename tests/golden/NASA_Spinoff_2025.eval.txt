@@ -7,6 +7,7 @@
 - B metadata: title='NASA Spinoff 2025'
 - C coverage: rejoined 66, furniture 384, rasterized table cells 0, superscript splits 0, genuine loss 6
 - D toc: 285 entries, h1=93 h2=191, dupes=['2025', 'Benefits', 'Applications']
+- J heads: 0 committed source rows, 0 attributable leaks (folio-anchored top-edge rows only — internal, folio-less, and bottom-placed heads are undetectable)
 - G figures: pdf rasters=154, embedded=154, vector pages=[1, 25, 26, 47, 51, 52, 53, 54, 55, 56]
 
 ## Findings (severity-ranked)

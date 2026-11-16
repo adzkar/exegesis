@@ -7,6 +7,7 @@
 - B metadata: title='arxiv_revtex'
 - C coverage: rejoined 8, furniture 63, rasterized table cells 0, superscript splits 107, genuine loss 134
 - D toc: 2 entries, h1=0 h2=1, dupes=none
+- J heads: 8 committed source rows, 0 attributable leaks (folio-anchored top-edge rows only — internal, folio-less, and bottom-placed heads are undetectable)
 - G figures: pdf rasters=0, embedded=0, vector pages=[]
 
 ## Findings (severity-ranked)

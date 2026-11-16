@@ -11,11 +11,14 @@ layout analysis over PyMuPDF blocks — no OCR, no ML dependencies.
   then spot-check a chapter's XHTML for reading order
 - Report: `python3 scripts/build_report.py` (converts root `*.pdf` corpus
   → `docs/report/` for GitHub Pages)
-- Eval: `python3 scripts/eval_epub.py <input.pdf> <output.epub> [--lang en|de|fr|es]` —
+- Eval: `python3 scripts/eval_epub.py <input.pdf> <output.epub> [--lang en|de|fr|es] [--keep-headers]` —
   severity-ranked quality report; exits 1 on High findings (CI gate),
   0 clean, 2 on operational failure or an unsupported language.
   Language-bound patterns ride the `LangProfile` from `--lang`,
-  else `dc:language`, else `en`
+  else `dc:language`, else `en`. `--keep-headers` marks a
+  `convert(--keep-headers)` conversion — the running-head leak check
+  (J) is disabled since kept furniture is intentional; every other
+  check still runs.
 - Release: `scripts/bump.sh X.Y.Z` then `scripts/release.sh X.Y.Z`
   (prep + tag/publish; see `RELEASE.md`)
 - Tests: `python3 -m pytest -q` (self-contained tests run without local PDFs;
@@ -699,7 +702,8 @@ cases deselected). Converter heuristics and golden snapshots are unchanged.
   text *by design*, not just furniture: rotated tables leave the flow as
   `images/table_*.png` and figure regions as `images/fig_*.png`, so both
   raster mirrors replay the converter's own preparation through
-  `_claim_pages` (signature splits, asides, margin lifts, document
+  `_claim_pages` (signature splits, folio-head splits, asides, margin
+  lifts, document
   edges) and call `analyze._page_claims` — a replay, not a mirror, so
   aside marks, the provisional-label note mask, table precedence, and
   crop validation can't drift — and a figure page stops flagging "not
@@ -711,6 +715,16 @@ cases deselected). Converter heuristics and golden snapshots are unchanged.
   resolves 'rasterized', not 'missing' — an unmodeled path grades
   intended behavior as loss, the report contradicts itself, and the
   High gate fails a correct conversion.
+  The one deliberate exception is the #73 running-head leak oracle:
+  `source_folio_rows`/`head_leaks` detect *survived* furniture in the
+  emitted text and must NOT mirror the converter's detector — a check
+  keyed to the detector it watches would share its blind spot (the
+  pre-#72 baseline graded 33 leaked heads 'clean' exactly that way).
+  The oracle may be *looser* than the removal rule (its needle-match
+  arm counts folio-less rows the converter can't flag — a false
+  positive costs a finding, not deleted content), while the furniture
+  excuse side still replays `analyze._folio_head_rows`/`_split_folio_heads`
+  so dropped heads can't masquerade as genuine loss.
 - A repeated regex group must match its text exactly one way — no
   empty-able repeat nested inside it (`(?:<t>x</t>|[^<]*)*`,
   `(?:\.?\s*)*`) and no two alternatives that can consume the same
