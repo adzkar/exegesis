@@ -378,8 +378,15 @@ def _figure_alt(
 
 
 def _footnote_text(block, body_size, lang: LangProfile = EN):
-    """Render a footnote block's text; returns (marker_number, html)."""
-    pieces = [_line_html(l, body_size) for l in _block_lines(block)]
+    """Render a footnote block's text; returns (marker_number, html).
+
+    Underscore rules never emit — a ``rule_note`` tail carries its own
+    separator line, which is furniture, not note text."""
+    pieces = [
+        _line_html(l, body_size)
+        for l in _block_lines(block)
+        if not re.fullmatch(r"[_ ]*", _line_text(l))
+    ]
     return _sup_marker(block, body_size), _join_lines(
         [p for p in pieces if p.strip()], lang
     )

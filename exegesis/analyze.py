@@ -44,6 +44,9 @@ from .const import (
     OUTDENT_HEADING_SHARE,
     OUTDENT_MIN_BLOCKS,
     PAGE_FRAME_RATIO,
+    RULE_NOTE_MIN_LINES,
+    RULE_NOTE_MIN_UNDERSCORES,
+    RULE_NOTE_MIN_Y,
     SIGNATURE_PREFIX_MAX_LINES,
     VOTE_MIN_WORDS,
     WRAP_BAND_SHARE,
@@ -1680,6 +1683,75 @@ def _split_folio_heads(blocks, rows):
     return out
 
 
+def _rule_note_cut(block, height, body_size):
+    """Line index where a page-dominant block's note tail begins —
+    the underscore rule line itself — else ``None`` (#75).
+
+    Only a block spanning ``FOLIO_HEAD_BLOCK_SPAN`` of the page is
+    scanned: the single-block book-scan shape a fused note tail
+    hides in. The rule is a whole line of ≥
+    ``RULE_NOTE_MIN_UNDERSCORES`` underscores below
+    ``RULE_NOTE_MIN_Y`` of the page; every nonempty line under it is
+    note-size (all spans < 0.95× body) and the tail reaches the
+    block's end, so a cover decoration or a mid-table rule — body
+    text below — can never cut the block."""
+    if (
+        block["bbox"][3] - block["bbox"][1]
+        < height * FOLIO_HEAD_BLOCK_SPAN
+    ):
+        return None
+    lines = _block_lines(block)
+    bound = body_size * 0.95
+    for li, line in enumerate(lines[:-1]):
+        text = _line_text(line).strip()
+        if not re.fullmatch(rf"_{{{RULE_NOTE_MIN_UNDERSCORES},}}", text):
+            continue
+        if line["bbox"][1] < height * RULE_NOTE_MIN_Y:
+            continue
+        tail = [
+            l
+            for l in lines[li + 1 :]
+            if _line_text(l).strip()
+        ]
+        if len(tail) < RULE_NOTE_MIN_LINES:
+            continue
+        if all(
+            all(
+                s["size"] < bound
+                for s in l["spans"]
+            )
+            for l in tail
+        ):
+            return li
+    return None
+
+
+def _split_rule_notes(blocks, height, body_size):
+    """Split a text rule + note tail off a page-dominant block.
+
+    The rule and everything under it lift into their own
+    ``rule_note``-marked block — ``_footnote_tops`` seeds the column's
+    top from the mark, the tail renders to notes.xhtml like any zone
+    member, and the body above keeps the ordinary block with a
+    recomputed bbox."""
+    out = []
+    for b in blocks:
+        if b["type"] != 0:
+            out.append(b)
+            continue
+        cut = _rule_note_cut(b, height, body_size)
+        if cut is None:
+            out.append(b)
+            continue
+        lines = _block_lines(b)
+        body, note = lines[:cut], lines[cut:]
+        out.append(dict(b, lines=body, bbox=_lines_bbox(body)))
+        out.append(
+            dict(b, lines=note, bbox=_lines_bbox(note), rule_note=True)
+        )
+    return out
+
+
 def _light_ground(page, pix, rect):
     """True when the rendered pixels under ``rect`` are mostly light.
 
@@ -2621,6 +2693,12 @@ def _footnote_tops(
         col = _assign_column(b, edges)
         cols.setdefault(col, []).append(b)
         if b["bbox"][1] >= page_height * 0.45 and _sup_marker(b, body_size) is not None:
+            tops[col] = min(tops.get(col, b["bbox"][1]), b["bbox"][1])
+            if seeds is not None:
+                seeds.setdefault(col, []).append((id(b),))
+        if b.get("rule_note"):
+            # a rule-anchored tail split off a fused block (#75) —
+            # geometry already proved the note; it needs no other arm
             tops[col] = min(tops.get(col, b["bbox"][1]), b["bbox"][1])
             if seeds is not None:
                 seeds.setdefault(col, []).append((id(b),))

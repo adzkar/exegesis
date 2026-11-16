@@ -22,6 +22,7 @@ from .analyze import (
     _grids_agree,
     _page_grids,
     _split_folio_heads,
+    _split_rule_notes,
     _split_signature_prefixes,
     _zone_reading_maps,
 )
@@ -98,6 +99,12 @@ def convert(
             blocks = _split_folio_heads(blocks, folio_rows[pi])
         pdict["blocks"] = _split_signature_prefixes(
             blocks, page.rect.height, boilerplate, profile
+        )
+        # a fused note tail sits behind a textual underscore rule in
+        # the same single-block shape — split it off so the footnote
+        # machinery sees an ordinary note block (#75)
+        pdict["blocks"] = _split_rule_notes(
+            pdict["blocks"], page.rect.height, body_size
         )
     # front-matter info boxes are claimed before column-edge voting so
     # their field column can never seed a phantom document edge

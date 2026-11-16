@@ -605,6 +605,7 @@ def _page_ctx(page, boilerplate: set[str], lang: LangProfile,
         _lines_bbox,
         _signature_prefix_len,
         _split_folio_heads,
+        _split_rule_notes,
         _split_signature_prefixes,
         _strip_clip,
         _upright_dir,
@@ -623,6 +624,9 @@ def _page_ctx(page, boilerplate: set[str], lang: LangProfile,
         post_blocks = _split_folio_heads(post_blocks, folio)
     post = _split_signature_prefixes(
         post_blocks, page.rect.height, boilerplate, lang)
+    if getattr(prepared, "body_size", None) is not None:
+        post = _split_rule_notes(
+            post, page.rect.height, prepared.body_size)
     splits = {}
     # committed folio lines are only ever on the page's top-most text
     # block — they seed that block's head side before the signature loop
@@ -882,6 +886,7 @@ def _claim_pages(ctxs, boilerplate: set[str], lang: LangProfile):
         _page_claims,
         _page_grids,
         _split_folio_heads,
+        _split_rule_notes,
         _split_signature_prefixes,
         _strip_clip,
     )
@@ -898,6 +903,10 @@ def _claim_pages(ctxs, boilerplate: set[str], lang: LangProfile):
             blocks = _split_folio_heads(blocks, folio_rows[pi])
         d["blocks"] = _split_signature_prefixes(
             blocks, p.rect.height, boilerplate, lang)
+        # the rule-anchored note tail split rides the same stream —
+        # `rule_note` marks seed `_footnote_tops` identically (#75)
+        d["blocks"] = _split_rule_notes(
+            d["blocks"], p.rect.height, body_size)
     _detect_asides(pages, line_h, boilerplate, lang=lang)
     edges = _doc_column_edges(pages, boilerplate, lang)
     if _detect_margins(pages, edges, boilerplate, lang=lang):
@@ -1701,6 +1710,13 @@ def main() -> int:
     # boilerplate recurrence, the per-page ctx mirrors, and the
     # `_claim_pages` claim composition all grade the text convert saw
     prepared = [_prepared_page(p) for p in pdf]
+    # body size rides the prepared stream — the `_page_ctx` post-split
+    # mirror needs it for the rule-note tail cut like `_claim_pages`
+    from exegesis.analyze import _body_font_size
+    body_size = _body_font_size(
+        [(p.page, p.pdict) for p in prepared])[0]
+    for prep in prepared:
+        prep.body_size = body_size
     boilerplate = boilerplate_signatures(prepared)
     # the converter's own folio-anchored detection — replayed for the
     # furniture excuse (`_page_ctx`/`_claim_pages`) and for the leak
