@@ -7,6 +7,7 @@
 - B metadata: title='CardiaTics: An explainable AI integrated heart disease diagn'
 - C coverage: rejoined 10, furniture 363, rasterized table cells 0, superscript splits 6, genuine loss 31
 - D toc: 13 entries, h1=1 h2=11, dupes=none
+- J heads: 0 committed source rows, 0 attributable leaks (folio-anchored top-edge rows only — internal, folio-less, and bottom-placed heads are undetectable)
 - G figures: pdf rasters=13, embedded=13, vector pages=[14, 16, 18]
 
 ## Findings (severity-ranked)
@@ -30,8 +31,8 @@
 ## Classified word loss
 | class | words | top examples |
 |-------|-------|--------------|
-| rejoined hyphenation | 10 | slope, n2genetic, nusvm, validation, per, instance, cross, grad |
-| stripped furniture | 363 | of, 13, 27, 2026, and, ghose, jamil, journal |
+| rejoined hyphenation | 10 | cam, cross, grad, instance, n2genetic, nusvm, per, slope |
+| stripped furniture | 363 | of, 13, 27, 2026, 59, and, big, data |
 | rasterized table cells | 0 |  |
 | superscript splits | 6 | f1, 1department, 2department, cva1, cva2 |
-| genuine loss | 31 | yi, xi, ei, ai, oi, cvak, modelx, omax |
+| genuine loss | 31 | yi, ei, xi, ai, cvak, fcardiat, modelx, oi |

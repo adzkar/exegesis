@@ -7,6 +7,7 @@
 - B metadata: title='The call of the forest'
 - C coverage: rejoined 33, furniture 259, rasterized table cells 0, superscript splits 11, genuine loss 1
 - D toc: 148 entries, h1=34 h2=113, dupes=['The call of the forest', 'Discover our offers', 'United States, 1954', 'United Kingdom, 1970']
+- J heads: 0 committed source rows, 0 attributable leaks (folio-anchored top-edge rows only — internal, folio-less, and bottom-placed heads are undetectable)
 - G figures: pdf rasters=47, embedded=47, vector pages=[1, 54, 55, 56, 57, 59, 60]
 
 ## Findings (severity-ranked)
@@ -66,8 +67,8 @@
 ## Classified word loss
 | class | words | top examples |
 |-------|-------|--------------|
-| rejoined hyphenation | 33 | non, indigenous, policy, jean, present, native, ever, year |
-| stripped furniture | 259 | unesco, 2023, the, courier, july, september, lillian, erud |
+| rejoined hyphenation | 33 | non, anthropo, approx, bertrand, bon, car, driven, ever |
+| stripped furniture | 259 | unesco, 2023, courier, the, july, september, erud, lillian |
 | rasterized table cells | 0 |  |
 | superscript splits | 11 | co2, km2 |
 | genuine loss | 1 | world |

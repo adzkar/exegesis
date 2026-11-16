@@ -7,6 +7,7 @@
 - B metadata: title='arxiv_revtex'
 - C coverage: rejoined 8, furniture 63, rasterized table cells 0, superscript splits 107, genuine loss 134
 - D toc: 2 entries, h1=0 h2=1, dupes=none
+- J heads: 8 committed source rows, 0 attributable leaks (folio-anchored top-edge rows only — internal, folio-less, and bottom-placed heads are undetectable)
 - G figures: pdf rasters=0, embedded=0, vector pages=[]
 
 ## Findings (severity-ranked)
@@ -18,8 +19,8 @@
 ## Classified word loss
 | class | words | top examples |
 |-------|-------|--------------|
-| rejoined hyphenation | 8 | charac, ter, min, istry, gauthier, villars, pa, rameters |
-| stripped furniture | 63 | of, centralizer, two, permutation, groups, order, 1344, algebras |
+| rejoined hyphenation | 8 | charac, gauthier, istry, min, pa, rameters, ter, villars |
+| stripped furniture | 63 | of, 1344, centralizer, groups, order, permutation, two, algebras |
 | rasterized table cells | 0 |  |
-| superscript splits | 107 | 2k, 7k, 3k, c1, c11, c2, c6, h1 |
-| genuine loss | 134 | 23k, 22k, ci, ag, ah, md, cg, vi |
+| superscript splits | 107 | 2k, 3k, 7k, c1, c11, c2, c6, h1 |
+| genuine loss | 134 | 23k, 22k, ci, ag, ah, cg, md, 3222k |

@@ -7,6 +7,7 @@
 - B metadata: title='TreeViewer: Flexible, modular software to visualise and mani'
 - C coverage: rejoined 132, furniture 128, rasterized table cells 0, superscript splits 0, genuine loss 8
 - D toc: 14 entries, h1=1 h2=12, dupes=none
+- J heads: 0 committed source rows, 0 attributable leaks (folio-anchored top-edge rows only — internal, folio-less, and bottom-placed heads are undetectable)
 - G figures: pdf rasters=9, embedded=9, vector pages=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
 
 ## Findings (severity-ranked)
@@ -29,8 +30,8 @@
 ## Classified word loss
 | class | words | top examples |
 |-------|-------|--------------|
-| rejoined hyphenation | 132 | ing, re, de, fig, ures, con, exam, ple |
-| stripped furniture | 128 | 16, and, of, s, bianchini, nchez, baracaldo, 10 |
+| rejoined hyphenation | 132 | ing, de, re, con, exam, fig, man, map |
+| stripped furniture | 128 | 16, and, baracaldo, bianchini, nchez, of, s, 10 |
 | rasterized table cells | 0 |  |
 | superscript splits | 0 |  |
-| genuine loss | 8 | formed, dividual, clia, javascriptb, guic, ain, bthe, cin |
+| genuine loss | 8 | ain, bthe, cin, clia, dividual, formed, guic, javascriptb |

@@ -96,6 +96,21 @@ def _set_language(epub: Path, code: str):
             z.writestr(n, data)
 
 
+def _set_title(epub: Path, title: str):
+    """Rewrite `<dc:title>` inside content.opf — simulates a conversion
+    that leaked the source filename extension into the book title."""
+    with zipfile.ZipFile(epub) as z:
+        members = {n: z.read(n) for n in z.namelist()}
+    opf_name = next(n for n in members if n.endswith("content.opf"))
+    members[opf_name] = re.sub(
+        r"<dc:title[^>]*>[^<]*</dc:title>",
+        f"<dc:title>{title}</dc:title>",
+        members[opf_name].decode()).encode()
+    with zipfile.ZipFile(epub, "w") as z:
+        for n, data in members.items():
+            z.writestr(n, data)
+
+
 def _raster_margin_legend_pdf(path):
     """A rotated raster table beside a margin `Table 1.` strip — the
     legend binds into the raster's `alt`, so the eval's bound-legend
@@ -214,6 +229,20 @@ def test_eval_localized_legends_de(tmp_path):
     r_en = _run(pdf, epub, "--lang", "en")
     assert r_en.returncode == 0, r_en.stdout + r_en.stderr
     assert "Table 1:" not in r_en.stdout
+
+
+def test_eval_pdf_extension_title_flags_low(tmp_path):
+    """A dc:title ending in `.pdf` is a Low finding, not clean — a
+    leaked filename extension is a real defect worth surfacing without
+    gating on it (#71)."""
+    pdf = tmp_path / "clean.pdf"
+    _clean_pdf(pdf)
+    epub = tmp_path / "pdfext.epub"
+    convert(pdf, epub)
+    _set_title(epub, "A Clean Synthetic Study.PDF")
+    r = _run(pdf, epub)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert ".pdf extension" in r.stdout
 
 
 def test_eval_unsupported_language_bails_2(tmp_path):
@@ -696,3 +725,175 @@ def test_eval_committed_figure_page_is_capturable(tmp_path):
     r = _run(pdf, epub)
     assert r.returncode == 0, r.stdout + r.stderr
     assert "not capturable" not in r.stdout
+
+
+# ---------- J. running-head leak oracle (#73) ----------
+
+from furniture_fixtures import single_block_book_heads
+
+
+def _inject_epub_text(epub: Path, *paragraphs: str):
+    """Append `<p>` paragraphs to the first chapter — simulates a
+    conversion that emitted committed head text inside body flow."""
+    with zipfile.ZipFile(epub) as zin:
+        members = {n: zin.read(n) for n in zin.namelist()}
+    name = next(
+        n for n in members if n.rsplit("/", 1)[-1].startswith("chap_"))
+    data = members[name].decode()
+    data = data.replace(
+        "</body>",
+        "".join(f"<p>{p}</p>" for p in paragraphs) + "</body>")
+    members[name] = data.encode()
+    with zipfile.ZipFile(epub, "w") as zout:
+        for n, d in members.items():
+            zout.writestr(n, d)
+
+
+def _sbp(tmp_path):
+    """The book-scan fixture: committed folio'd heads on p1-4, a same-y
+    folio pair on p7, a folio-less head on p8 — `convert` strips them
+    all, so injected leakage is the only way head text emits."""
+    pdf = tmp_path / "heads.pdf"
+    single_block_book_heads(pdf)
+    epub = tmp_path / "heads.epub"
+    convert(pdf, epub)
+    return pdf, epub
+
+
+def test_eval_head_leak_baseline_high(tmp_path):
+    """Two glued mid-word splices plus spaced occurrences past the
+    legit-mention budget — ≥2 attributable covering ≥40% of source
+    rows → High (#73, the baseline verdict)."""
+    pdf, epub = _sbp(tmp_path)
+    _inject_epub_text(
+        epub,
+        "prose ends mat139JANE Q. TESTER and body resumes",
+        "a second splice oviposiJournal of Synthetic Layouts "
+        "then continues the sentence",
+        "spaced mention of Journal of Synthetic Layouts here",
+        "and Journal of Synthetic Layouts once more",
+    )
+    r = _run(pdf, epub)
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "| High | J |" in r.stdout
+    assert "running-head leak" in r.stdout
+    # every source row is converter-detected or needle-matched — the
+    # class split reports both buckets honestly
+    assert "confirmed" in r.stdout and "never learned" in r.stdout
+
+
+def test_eval_head_leak_single_is_med(tmp_path):
+    """One attributable leak is a finding but stays below the High
+    gate — severity boundary (#73)."""
+    pdf, epub = _sbp(tmp_path)
+    _inject_epub_text(epub, "body mat140JANE Q. TESTER keeps going")
+    r = _run(pdf, epub)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "| Med | J |" in r.stdout
+    assert "| High | J |" not in r.stdout
+
+
+def test_eval_head_leak_below_share_is_med(tmp_path):
+    """Two attributable leaks under 40% of committed rows — Med, not
+    High (#73 severity boundary)."""
+    pdf, epub = _sbp(tmp_path)
+    _inject_epub_text(
+        epub,
+        "body mat139JANE Q. TESTER mid",
+        "and mat141JANE Q. TESTER again",
+    )
+    r = _run(pdf, epub)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "| Med | J |" in r.stdout
+
+
+def test_eval_head_leak_clean_default(tmp_path):
+    """Correct default output commits source rows but leaks none —
+    the J check reports 0 attributable and stays silent (#73)."""
+    pdf, epub = _sbp(tmp_path)
+    r = _run(pdf, epub)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "| J |" not in r.stdout
+    assert "0 attributable leaks" in r.stdout
+
+
+def test_eval_head_leak_keep_headers_mode(tmp_path):
+    """A --keep-headers conversion emits the heads on purpose — flagged
+    without the flag (heads ARE in body text), clean with it while
+    every other check still runs (#73 mode contract)."""
+    pdf = tmp_path / "heads.pdf"
+    single_block_book_heads(pdf)
+    epub = tmp_path / "heads.epub"
+    convert(pdf, epub, drop_edges=False)
+    default = _run(pdf, epub)
+    assert "| J |" in default.stdout, default.stdout
+    kept = _run(pdf, epub, "--keep-headers")
+    assert "| J |" not in kept.stdout, kept.stdout
+    assert "skipped" in kept.stdout
+    assert "C coverage:" in kept.stdout  # coverage still runs
+
+
+def test_eval_head_leak_never_learned_class(tmp_path):
+    """Unit-level: with an empty converter-confirmation replay every
+    leaked row reports never-learned — the class split works without
+    the optional local corpus (#73 discovery-miss positive)."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("eval_epub", EVAL)
+    eval_epub = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(eval_epub)
+
+    rows = {
+        1: [(0, 48.0, "Journal of Synthetic Layouts     138")],
+        2: [(0, 48.0, "139  JANE Q. TESTER")],
+    }
+    text = ("prose mat138Journal of Synthetic Layouts tail "
+            "and body 139JANE Q. TESTER mid-sentence")
+    src, leaks, details = eval_epub.head_leaks(rows, text)
+    assert src == 2 and leaks == 2
+    assert all(never == src for _s, _l, src, _c, never in details)
+
+
+def test_eval_head_leak_multi_row_page(tmp_path):
+    """A page carrying two distinct head rows grades each row's own
+    needle — a flagged folio row beside a needle-matched folio-less
+    line joins no composite, the emitted splice attributes, and the
+    class split labels rows, not pages (#83 review)."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("eval_epub", EVAL)
+    eval_epub = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(eval_epub)
+
+    rows = {0: [(0, 48.0, "139  JANE Q. TESTER"),
+                (3, 75.0, "JANE Q. TESTER")]}
+    src, leaks, details = eval_epub.head_leaks(
+        rows, "prose mat139JANE Q. TESTER mid-sentence",
+        conv_rows={0: [0]})
+    assert src == 2 and leaks == 1
+    (_sp, _lk, src_n, conf, never), = details
+    assert src_n == 2 and conf == 1 and never == 1
+
+
+def test_eval_head_leak_nested_needles(tmp_path):
+    """Prefix-related alternating heads keep separate accounting — the
+    shorter needle grades hits outside the longer one's matches
+    instead of being deduped away (#83 review)."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("eval_epub", EVAL)
+    eval_epub = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(eval_epub)
+
+    rows = {1: [(0, 48.0, "137  LANGMUIR")],
+            2: [(0, 48.0, "LANGMUIR LETTERS  138")]}
+    src, leaks, details = eval_epub.head_leaks(
+        rows, "prose xx137LANGMUIR tail")
+    assert src == 2 and leaks == 1
+    assert details[0][0] == "langmuir"
+    # both heads leaking: the longer needle claims its match span, so
+    # the shorter one's own splice still counts — no double-count
+    src, leaks, details = eval_epub.head_leaks(
+        rows, "aaLANGMUIR LETTERS mid bbLANGMUIR tail")
+    assert src == 2 and leaks == 2
+    assert {d[0] for d in details} == {"langmuir", "langmuir letters"}

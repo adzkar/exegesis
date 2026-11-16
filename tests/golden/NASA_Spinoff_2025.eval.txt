@@ -7,6 +7,7 @@
 - B metadata: title='NASA Spinoff 2025'
 - C coverage: rejoined 66, furniture 384, rasterized table cells 0, superscript splits 0, genuine loss 6
 - D toc: 285 entries, h1=93 h2=191, dupes=['2025', 'Benefits', 'Applications']
+- J heads: 0 committed source rows, 0 attributable leaks (folio-anchored top-edge rows only — internal, folio-less, and bottom-placed heads are undetectable)
 - G figures: pdf rasters=154, embedded=154, vector pages=[1, 25, 26, 47, 51, 52, 53, 54, 55, 56]
 
 ## Findings (severity-ranked)
@@ -174,8 +175,8 @@
 ## Classified word loss
 | class | words | top examples |
 |-------|-------|--------------|
-| rejoined hyphenation | 66 | based, to, large, high, california, self, time, powered |
-| stripped furniture | 384 | spinoff, 2025, nasa, kennedy, 3, 27, 32, 34 |
+| rejoined hyphenation | 66 | based, california, high, large, to, powered, resistant, scale |
+| stripped furniture | 384 | 2025, nasa, spinoff, 10, 100, 101, 102, 103 |
 | rasterized table cells | 0 |  |
 | superscript splits | 0 |  |
-| genuine loss | 6 | and, a, 89, 93, 88, 92 |
+| genuine loss | 6 | 88, 89, 92, 93, a, and |

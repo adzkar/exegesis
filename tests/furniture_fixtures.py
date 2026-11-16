@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import fitz
-from builders import _page, _save, block, text
+from builders import _page, _save, block, image, text
 
 ROTATED_STAMP = "arXiv:2412.00001v1 [cs.LG] 8 Nov 2024"
 ROTATED_PREFIX = (
@@ -389,6 +389,209 @@ BOTTOM_BODY = (
     "Their positions also establish one stable document column above the edge.",
 )
 
+# Single-block-page (book-scan) shapes. Every text page is ONE dict block:
+# one insert call at body size/leading, heads fused as leading lines. The
+# alternating heads recur below the signature floor — each leading sig
+# appears 2-3 times against a 12-page floor of 4 — so only folio evidence,
+# not recurrence, can separate them from body.
+SBP_TITLE_HEAD = "Journal of Synthetic Layouts"
+SBP_AUTHOR_HEAD = "Jane Q. Tester"
+SBP_AUTHOR_VARIANT = "TESTER"
+SBP_TITLE = "Fused Evidence and Synthetic Heads"
+SBP_HEAD_BLANK = " "
+SBP_OPENER = (
+    "7",
+    "___________________",
+    " ",
+    SBP_AUTHOR_HEAD.upper(),
+    "TEST UNIVERSITY",
+    " ",
+    "Introduction",
+    "The opener paragraph presents a general framework for the study.",
+    "Its byline line above carries no folio and must survive intact.",
+)
+SBP_BODY_LINES = (
+    "Synthetic {} body page {} line {} keeps the measured argument moving.",
+    "Every retained sentence {} {} {} reports evidence the removal must spare.",
+    "This filler row {} {} {} carries the block toward a realistic page depth.",
+    "No line in the body column {} {} {} is signed as running furniture.",
+)
+# letter-varied per-page tags: digit-stripped signatures would otherwise
+# collapse every page's filler into one whole-block signature
+SBP_PAGE_TAGS = (
+    "Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot",
+    "Golf", "Hotel", "India", "Juliet", "Kilo", "Lima",
+)
+SBP_FOOTNOTE_LINES = (
+    "___________________",
+    "1. A trailing note at smaller size belongs to the page,",
+    "   and must stay out of any trailing-head scan.",
+)
+
+
+def _sbp_insert(page, x, y, lines, *, size=10, leading=13.4):
+    """One insert per page: same-x0 lines fuse into the scan's single block."""
+    page.insert_text(
+        (x, y), "\n".join(lines), fontsize=size,
+        lineheight=leading / size,
+    )
+
+
+def _sbp_body(pi, count=44):
+    """``count`` per-page-unique filler lines — one long block per page."""
+    tag = SBP_PAGE_TAGS[pi % len(SBP_PAGE_TAGS)]
+    return [
+        SBP_BODY_LINES[i % len(SBP_BODY_LINES)].format(tag, pi, i)
+        for i in range(count)
+    ]
+
+
+def single_block_book_heads(path):
+    """A 12-page book-scan shape: each text page extracts as one
+    page-long block, alternating folio'd running heads sit as leading
+    lines below the signature floor (title head 3x, author head 2x
+    against a floor of 4), and the opener carries a chapter number,
+    rule, and folio-less byline that must survive. Residual shapes —
+    a suffix head, an internal head, a same-y separate-line folio
+    variant, and a folio-less head — reproduce the measured edge
+    cases of the motivating scan."""
+    doc = fitz.open()
+    folio_of = {1: 138, 2: 139, 3: 140, 4: 141, 6: 143, 7: 144, 9: 146}
+    for pi in range(12):
+        page = _page(doc)
+        if pi == 0:
+            # opener: folio-free chapter number, rule, byline,
+            # affiliation, the chapter title, then the Introduction
+            # label and body — all inside one page-long block
+            lines = [SBP_OPENER[0], SBP_OPENER[1], *SBP_OPENER[2:6],
+                     SBP_TITLE, *SBP_OPENER[6:], *_sbp_body(pi, 40)]
+            _sbp_insert(page, 54, 48, lines)
+            continue
+        if pi == 5:
+            # head-less image page
+            image(page, (150, 200, 400, 450))
+            _sbp_insert(page, 54, 500, tuple(_sbp_body(pi, 8)))
+            continue
+        if pi == 7:
+            # same-y separate-line folio variant: folio and partial
+            # head text are two line objects on the head row; the body
+            # insert below fuses all of it into the page's one block
+            head_y = 48
+            text(page, 54, head_y, str(folio_of[pi]), size=10)
+            text(page, 400, head_y, SBP_AUTHOR_VARIANT, size=10)
+            _sbp_insert(page, 54, head_y + 13.4,
+                        [SBP_HEAD_BLANK] + _sbp_body(pi))
+            continue
+        body = _sbp_body(pi)
+        if pi == 9:
+            # internal head at line index 10, outside the edge zone
+            lines = body[:10] + [
+                f"{folio_of[pi]}  {SBP_AUTHOR_HEAD.upper()}"] + body[10:]
+        elif pi == 6:
+            # trailing (suffix) head at the block's end — after a
+            # footnote-shaped region that must also stay put
+            lines = body + list(SBP_FOOTNOTE_LINES)
+            lines += [SBP_HEAD_BLANK,
+                      f"{SBP_TITLE_HEAD}     {folio_of[pi]}"]
+        elif pi == 8:
+            # folio-less leading head — the p27 residual shape
+            lines = [SBP_TITLE_HEAD, SBP_HEAD_BLANK] + body
+        elif pi >= 10:
+            # head-less body pages
+            lines = body
+        else:
+            head = (
+                f"{SBP_TITLE_HEAD}     {folio_of[pi]}"
+                if pi % 2 else
+                f"{folio_of[pi]}  {SBP_AUTHOR_HEAD.upper()}"
+            )
+            lines = [head, SBP_HEAD_BLANK] + body
+        _sbp_insert(page, 54, 48, lines)
+    return _save(doc, path)
+
+
+def stacked_digit_heads(path):
+    """One page opens with three in-zone folio'd head-shaped rows whose
+    offsets cluster — the quorum counts *distinct pages*, so a lone
+    stacked page can never satisfy it and all three lines stay in
+    body flow."""
+    doc = fitz.open()
+    for pi in range(6):
+        page = _page(doc)
+        lead = (
+            [
+                "138 STACKED JOURNAL HEAD",
+                "138 SECOND STACKED HEAD",
+                "139 THIRD STACKED HEAD",
+            ]
+            if pi == 0 else []
+        )
+        _sbp_insert(page, 54, 48, lead + _sbp_body(pi))
+    return _save(doc, path)
+
+
+def lowercase_digit_openers(path):
+    """Every page opens on a lowercase filler line ending in a small
+    digit — prose, not a head. The digits sit inside the cluster's
+    ±1 window on early pages without tracking anything; a lowercase
+    remainder keeps the line out of candidacy at either folio edge."""
+    doc = fitz.open()
+    for pi in range(6):
+        page = _page(doc)
+        _sbp_insert(
+            page, 54, 48,
+            [f"filler words carry the page {pi}"] + _sbp_body(pi),
+        )
+    return _save(doc, path)
+
+
+def multi_block_folio_tops(path):
+    """Every page carries a tracking folio'd head in its own small top
+    block — a multi-block page, not a single-block scan. The span
+    gate skips the page outright, so even a doc-wide folio cluster
+    commits nothing through the folio pass."""
+    doc = fitz.open()
+    for pi in range(6):
+        page = _page(doc)
+        text(page, 200, 48, f"{138 + pi}  MULTI HEAD", size=10)
+        _sbp_insert(page, 54, 200, _sbp_body(pi, 30))
+    return _save(doc, path)
+
+
+RECURRING_OPENER = "The experiment continues with further measurements below."
+
+
+def recurring_page_opener(path):
+    """Every page opens with one identical sentence — 100% recurrence at
+    the page top inside a page-long block, but shared *content*, not
+    furniture. A rule that keys on bare line recurrence would strip it;
+    it must stay in flow."""
+    doc = fitz.open()
+    for pi in range(6):
+        page = _page(doc)
+        _sbp_insert(page, 54, 48, [RECURRING_OPENER] + _sbp_body(pi))
+    return _save(doc, path)
+
+
+NUMBERED_TOP_LINES = (
+    "Figure {}.",
+    "Table {}.",
+    "Column {} label",
+)
+
+
+def numbered_page_top_lines(path):
+    """Pages open with numbered lines whose digit-stripped signatures
+    collapse to one token ('figure', 'table', 'columnlabel') recurring at
+    the page top: a naive line collector learns the shared signature and
+    eats the labels. They are ordinary content and must stay in flow."""
+    doc = fitz.open()
+    for pi in range(9):
+        page = _page(doc)
+        first = NUMBERED_TOP_LINES[pi % 3].format(pi // 3 + 1)
+        _sbp_insert(page, 54, 48, [first] + _sbp_body(pi))
+    return _save(doc, path)
+
 
 def repeated_bottom_foot(path):
     """Three pages carrying a repeated bottom running foot plus a
@@ -413,4 +616,46 @@ def repeated_bottom_foot(path):
         )
         text(page, 72, 768, BOTTOM_FOOT, size=8)
         text(page, 400, 782, f"© 2024 Example Journal page {tag}", size=8)
+    return _save(doc, path)
+
+
+def tall_top_folio_tops(path):
+    """Multi-block pages whose top block still dominates the height:
+    a tall block holding the folio'd head plus body lines, and a
+    small secondary block below. The span gate scans them — it bounds
+    the heuristic to top-block-dominated pages, not single-block
+    ones — so the tracking heads commit exactly like a fused
+    one-block page's."""
+    doc = fitz.open()
+    for pi in range(3):
+        page = _page(doc)
+        _sbp_insert(
+            page,
+            54,
+            48,
+            [f"{138 + pi} JANE Q. TESTER"] + _sbp_body(pi, 30),
+        )
+        text(page, 300, 700, "a small trailing block", size=10)
+    return _save(doc, path)
+
+
+def folio_head_aside_seed(path):
+    """Two pages whose top blocks each carry two distinct info-label
+    lines ('EDITED BY … folio', 'RECEIVED …') — enough labels to seed
+    a self-contained info box on a scanned page. Page 0's block is
+    marked ``folio_head`` in the test: seeding is the last aside
+    membership path a committed head could take, and the exemption
+    must close it while the unmarked page-1 twin still claims."""
+    doc = fitz.open()
+    for pi in range(2):
+        page = _page(doc)
+        _sbp_insert(
+            page,
+            54,
+            48,
+            [
+                f"EDITED BY Jane Q. Tester  {138 + pi}",
+                "RECEIVED 12 January 2024",
+            ],
+        )
     return _save(doc, path)

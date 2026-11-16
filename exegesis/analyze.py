@@ -23,6 +23,9 @@ from .const import (
     FIGURE_LABEL_CHARS,
     FIGURE_LABEL_PAD,
     FIGURE_MIN_LABELS,
+    FOLIO_HEAD_BLOCK_SPAN,
+    FOLIO_HEAD_LEAD_LINES,
+    FOLIO_HEAD_MIN_PAGES,
     FRAG_PROSE_SHARE,
     INFO_ADJ_GAP,
     INFO_ATTACH_GAP,
@@ -350,6 +353,7 @@ def _field_runs(texts, first_of, h, boilerplate, line_h):
                     <= INFO_RUN_MAX_LINES
                 )
                 or cand.get("aside") is not None
+                or cand.get("folio_head") is not None
                 or _is_signature_furniture(cand, h, boilerplate)
             ):
                 break
@@ -422,9 +426,11 @@ def _detect_asides(pages, line_h, boilerplate, lang: LangProfile = EN):
     (info boxes are front matter) and only grid-independent evidence:
     labels open fields, aligned wraps extend them, adjacent
     distinct-label runs form a box, and the frozen core admits only
-    inside-evidence members. ``pages`` is ``convert``'s extracted
-    ``(page, pdict)`` list; each validated member gets a shared
-    region key the render's aside path lifts wholesale.
+    inside-evidence members. A committed ``folio_head`` split holds
+    signature furniture's exemptions — a page-0/1 head can neither
+    seed, extend, nor attach to a box. ``pages`` is ``convert``'s
+    extracted ``(page, pdict)`` list; each validated member gets a
+    shared region key the render's aside path lifts wholesale.
     """
     lead_re = _info_lead_re(lang)
     if lead_re is None:
@@ -438,7 +444,10 @@ def _detect_asides(pages, line_h, boilerplate, lang: LangProfile = EN):
         )
         labels_of, first_of = {}, {}
         for b in texts:
-            if b.get("aside") is not None:
+            if (
+                b.get("aside") is not None
+                or b.get("folio_head") is not None
+            ):
                 continue
             ll = [
                 _field_label(_line_text(l), lead_re)
@@ -472,6 +481,7 @@ def _detect_asides(pages, line_h, boilerplate, lang: LangProfile = EN):
                     continue
                 if b["type"] == 1 or (
                     len(_block_lines(b)) <= INFO_MEMBER_MAX_LINES
+                    and b.get("folio_head") is None
                     and not _is_signature_furniture(b, h, boilerplate)
                     and not re.search(
                         r"[.!?…][\"”’)\]]*$",
@@ -505,6 +515,7 @@ def _detect_asides(pages, line_h, boilerplate, lang: LangProfile = EN):
                 if (
                     id(b) in member_ids | attached_ids
                     or b.get("aside") is not None
+                    or b.get("folio_head") is not None
                     or _is_signature_furniture(b, h, boilerplate)
                     or not (
                         b["bbox"][2] > cx0 and b["bbox"][0] < cx1
@@ -1410,12 +1421,16 @@ def _is_pattern_furniture(block, page, text, lang: LangProfile = EN):
 
 def _is_furniture(block, page, text, lang: LangProfile = EN, clip=None):
     """Edge furniture by shape or content: rotated margin strips in the
-    outer 10% margins, or pattern furniture/page numbers in the outer 7%
-    edge. Content patterns come from the document's language profile.
+    outer 10% margins, pattern furniture/page numbers in the outer 7%
+    edge, or a ``folio_head``-marked split piece (a fused running head
+    the doc-wide folio cluster already committed). Content patterns
+    come from the document's language profile.
     ``clip`` exempts the strip arm only (a rotated table's outer cells);
     edge zones stay on displayed ``page.rect`` like the signature layer."""
-    return _is_margin_strip(block, page, clip) or _is_pattern_furniture(
-        block, page, text, lang
+    return (
+        block.get("folio_head") is not None
+        or _is_margin_strip(block, page, clip)
+        or _is_pattern_furniture(block, page, text, lang)
     )
 
 
@@ -1518,6 +1533,150 @@ def _split_signature_prefixes(blocks, height, boilerplate, lang: LangProfile = E
             )
             rest = dict(rest, lines=lines[k:], bbox=_lines_bbox(lines[k:]))
         out.append(rest)
+    return out
+
+
+def _edge_folio(text):
+    """A standalone integer at either end of a line = folio candidate;
+    digit runs inside ``2.2`` / ``0.528`` / ``16.`` / ``2%`` / ``7‡§``
+    are not tokens."""
+    m = re.match(r"^(\d{1,4})(?=\s|$)", text) or re.search(
+        r"(?<=\s)(\d{1,4})$", text
+    )
+    return int(m.group(1)) if m else None
+
+
+def _head_remainder(text):
+    """The non-folio remainder should look like a head — or be empty
+    (a bare folio is furniture by itself). Returns ``None`` when the
+    remainder looks like content: a sentence (terminal punctuation,
+    more than ten words, or a lowercase first word — prose opens
+    lowercase at either folio edge while heads almost never do)."""
+    rest = re.sub(r"^\s*\d{1,4}\s*|\s*\d{1,4}\s*$", "", text).strip()
+    if not rest:
+        return ""
+    if rest.endswith((".", ",", ";", ":")):
+        return None
+    if len(rest) > 70 or len(rest.split()) > 10:
+        return None
+    if rest.split()[0][0].islower():
+        return None
+    return rest
+
+
+def _folio_head_rows(pages):
+    """Map page_index → flagged leading line indices of its top-most
+    text block — the fused running heads a single-block page hides
+    inside body prose (#72).
+
+    Only a page whose top block spans at least half the page height is
+    scanned — the top-block-dominated shape the heads hide in. A page
+    whose top block doesn't dominate the height is skipped; a tall top
+    block on a multi-block page still qualifies — a tracking folio
+    fused into a column block is the same pathology. A candidate row
+    sits among the
+    block's leading lines inside the top edge zone and carries an
+    edge folio with a head-shaped (or empty) remainder. Rows commit
+    only when ``folio − page_index`` clusters on
+    ``FOLIO_HEAD_MIN_PAGES`` distinct pages: a genuine folio tracks
+    the page index across the document while a body number, year, or
+    section counter does not — the cluster is the whole evidence, so
+    a page whose leading row merely looks like a head never qualifies
+    on its own. Each page votes every distinct offset once and the
+    quorum counts pages, not rows — one stacked page can neither
+    hijack the mode nor satisfy the floor alone."""
+    rows = []  # (pi, line_index, folio)
+    firsts = {}
+    for pi, (page, pdict) in enumerate(pages):
+        height = page.rect.height
+        first = next(
+            (
+                b
+                for b in sorted(
+                    (b for b in pdict["blocks"] if b["type"] == 0),
+                    key=lambda b: b["bbox"][1],
+                )
+            ),
+            None,
+        )
+        if first is None or (
+            first["bbox"][3] - first["bbox"][1]
+            < height * FOLIO_HEAD_BLOCK_SPAN
+        ):
+            continue
+        firsts[pi] = first
+        for li, line in enumerate(_block_lines(first)[:FOLIO_HEAD_LEAD_LINES]):
+            if line["bbox"][1] / height > EDGE_ZONE:
+                break
+            text = _line_text(line).strip()
+            folio = _edge_folio(text)
+            if folio is not None and _head_remainder(text) is not None:
+                rows.append((pi, li, folio))
+    if not rows:
+        return {}
+    page_offsets = {}
+    for pi, _li, folio in rows:
+        page_offsets.setdefault(pi, set()).add(folio - pi)
+    offs = Counter(
+        offset for offsets in page_offsets.values() for offset in offsets
+    )
+    mode = offs.most_common(1)[0][0]
+    hits = [
+        (pi, li)
+        for pi, li, folio in rows
+        if abs(folio - pi - mode) <= 1
+    ]
+    if len({pi for pi, _li in hits}) < FOLIO_HEAD_MIN_PAGES:
+        return {}
+    out = {}
+    for pi, li in hits:
+        out.setdefault(pi, []).append(li)
+    # same-row siblings: a folio and its head text can extract as
+    # separate line objects on one printed row — flag every in-window
+    # line at the committed row's y so 'ROBERT L. TRIVERS' can't leak
+    # beside its dropped folio
+    for pi, lis in out.items():
+        page, _ = pages[pi]
+        lines = _block_lines(firsts[pi])[:FOLIO_HEAD_LEAD_LINES]
+        ys = {lines[i]["bbox"][1] for i in lis}
+        out[pi] = [
+            i
+            for i, l in enumerate(lines)
+            if l["bbox"][1] <= page.rect.height * EDGE_ZONE
+            and min(abs(l["bbox"][1] - y) for y in ys) <= 2.0
+        ]
+    return out
+
+
+def _split_folio_heads(blocks, rows):
+    """Split flagged leading rows off the page's top-most text block.
+
+    Each flagged row becomes its own ``folio_head``-marked block —
+    furniture everywhere downstream, dropped by default and kept
+    verbatim at the page edge under ``--keep-headers`` — while the
+    remainder keeps the ordinary block with a recomputed bbox."""
+    texts = [b for b in blocks if b["type"] == 0]
+    if not texts:
+        return blocks
+    first = min(texts, key=lambda b: b["bbox"][1])
+    lines = _block_lines(first)
+    head = [l for i, l in enumerate(lines) if i in rows]
+    keep = [l for i, l in enumerate(lines) if i not in rows]
+    out = []
+    for b in blocks:
+        if b is not first:
+            out.append(b)
+            continue
+        out.append(
+            dict(
+                b,
+                lines=head,
+                bbox=_lines_bbox(head),
+                folio_head=True,
+            )
+        )
+        if keep:
+            out.append(dict(b, lines=keep, bbox=_lines_bbox(keep)))
     return out
 
 

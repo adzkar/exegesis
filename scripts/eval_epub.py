@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Evaluate a PDF -> EPUB conversion and print a severity-ranked report.
 
-Usage: python3 scripts/eval_epub.py <input.pdf> <output.epub> [--lang CODE]
+Usage: python3 scripts/eval_epub.py <input.pdf> <output.epub>
+       [--lang CODE] [--keep-headers]
 
 The report grades one conversion the same way every time so regressions
 are visible: container validity, metadata sanity, classified word
@@ -266,6 +267,269 @@ def _prepared_page(page):
     )
 
 
+# ---- running-head leak oracle (#73) --------------------------------------
+# The evaluator reported the motivating EPUB clean while 33 running heads
+# sat inside body prose: coverage excuses furniture that is *missing* but
+# nothing graded furniture that *survived*. The detector below is
+# deliberately independent of `analyze._folio_head_rows` — a check keyed
+# to the converter's own learned set would share its blind spot, which is
+# exactly the failure it exists to catch (the deliberate exception to
+# this module's mirror-the-pipeline rule, scoped to this one oracle).
+LEAK_RETAIN_BUDGET = 2   # legit mentions a head text may earn (title, byline, cite)
+LEAK_MIN_NEEDLE = 8      # collapsed alnum chars — shorter head texts are undetectable
+LEAK_HIGH_SHARE = 0.4    # attributable leaks >= this share of source rows -> High
+LEAK_LEAD_LINES = 4      # leading rows of a page's first block scanned
+LEAK_ROW_Y_TOL = 2.0     # same-y lines belong to one printed row
+
+
+def _src_edge_folio(text: str):
+    """Standalone integer at either end of the line — a folio candidate.
+    Digit runs inside '2.2' / '16.' / '2%' are not tokens (independent
+    reimplementation of the converter-side helper on purpose)."""
+    m = re.match(r"^(\d{1,4})(?=\s|$)", text) or re.search(
+        r"(?<=\s)(\d{1,4})$", text)
+    return int(m.group(1)) if m else None
+
+
+def _src_head_rest(text: str):
+    """The non-folio remainder of a candidate row: head-shaped (no
+    terminal punctuation, <=10 words, no lowercase first word — prose
+    opens lowercase at either folio edge, heads almost never do) or
+    empty — a bare folio counts on its own."""
+    rest = re.sub(r"^\s*\d{1,4}\s*|\s*\d{1,4}\s*$", "", text).strip()
+    if not rest:
+        return ""
+    if rest.endswith((".", ",", ";", ":")):
+        return None
+    if len(rest) > 70 or len(rest.split()) > 10:
+        return None
+    if rest.split()[0][0].islower():
+        return None
+    return rest
+
+
+def _row_groups(rs):
+    """Cluster a page's committed row-lines into printed rows by y —
+    same-y siblings (a folio and its head text extracting as separate
+    line objects on one printed row) join one needle, while lines at
+    distinct y are distinct head rows — stacked double heads, or a
+    needle-matched folio-less row beside a flagged one — that must
+    each grade their own emitted hits."""
+    groups = []
+    for li, y, t in sorted(rs, key=lambda r: r[1]):
+        if groups and y - groups[-1][-1][1] <= LEAK_ROW_Y_TOL:
+            groups[-1].append((li, y, t))
+        else:
+            groups.append([(li, y, t)])
+    return groups
+
+
+def _free_span(m, claimed):
+    """True when regex match ``m`` overlaps no ``(start, end)`` span a
+    longer needle already claimed — a hit inside a containing head's
+    occurrence belongs to that head, not the nested needle."""
+    return not any(m.start() < ce and m.end() > cs for cs, ce in claimed)
+
+
+def source_folio_rows(pages):
+    """Committed running-head rows in the source, report-only.
+
+    ``pages`` is a list of ``(fitz.Page, page.get_text('dict'))`` — the
+    prepared stream, so the oracle grades the text conversion saw.
+    Scans the in-zone leading lines of each page's top-most text block
+    for an edge folio with a head-shaped (or empty) remainder; rows
+    commit only when ``folio - page_index`` clusters on >=3 distinct
+    pages (mode +-1, each page voting a distinct offset once) — a
+    genuine folio tracks the page index while a body
+    number or year does not. Returns ``{pi: [(li, y0, text)]}``
+    including the committed row's same-y sibling lines — a folio and
+    its head text can extract as separate line objects on one printed
+    row, so the row joins them for the needle. A page can carry
+    several committed rows (stacked double heads, or a needle-matched
+    row beside a flagged one): the flat entry list clusters per
+    printed row (`_row_groups`), and each row builds its own needle —
+    joining the page into one composite would never match an emitted
+    splice — plus a second, looser
+    arm the converter deliberately doesn't have: an in-zone leading
+    line whose collapsed text equals a committed head needle is the
+    same head on a folio-less page (no clustered folio to flag it).
+    Those needle-matched rows count as source occurrences and land in
+    the never-learned class — a false positive here costs a finding,
+    not deleted content, so the oracle may reach further than the
+    removal rule it watches."""
+    cand = []      # (pi, li, folio)
+    firsts = {}
+    for pi, (page, pdict) in enumerate(pages):
+        height = page.rect.height
+        first = next(
+            (b for b in sorted(
+                (b for b in pdict["blocks"] if b["type"] == 0),
+                key=lambda b: b["bbox"][1])),
+            None)
+        if first is None:
+            continue
+        firsts[pi] = first
+        for li, line in enumerate(_block_lines(first)[:LEAK_LEAD_LINES]):
+            if line["bbox"][1] / height > 0.20:
+                break
+            text = _line_text(line).strip()
+            folio = _src_edge_folio(text)
+            if folio is not None and _src_head_rest(text) is not None:
+                cand.append((pi, li, folio))
+    if not cand:
+        return {}
+    page_offsets = {}
+    for pi, _li, f in cand:
+        page_offsets.setdefault(pi, set()).add(f - pi)
+    offs = Counter(
+        offset for offsets in page_offsets.values() for offset in offsets
+    )
+    mode = offs.most_common(1)[0][0]
+    hits = [(pi, li) for pi, li, f in cand if abs(f - pi - mode) <= 1]
+    if len({pi for pi, _li in hits}) < 3:
+        return {}
+    flagged = {}
+    for pi, li in hits:
+        flagged.setdefault(pi, []).append(li)
+    out = {}
+    for pi, lis in flagged.items():
+        page, _ = pages[pi]
+        lines = _block_lines(firsts[pi])[:LEAK_LEAD_LINES]
+        ys = {lines[i]["bbox"][1] for i in lis}
+        rows = [
+            (i, l["bbox"][1], _line_text(l).strip())
+            for i, l in enumerate(lines)
+            if l["bbox"][1] <= page.rect.height * 0.20
+            and min(abs(l["bbox"][1] - y) for y in ys) <= LEAK_ROW_Y_TOL
+        ]
+        if rows:
+            out[pi] = rows
+    # needle-match arm — looser than the converter's rule on purpose:
+    # an in-zone leading line whose collapsed text equals a committed
+    # head needle is the same head on a folio-less page (the converter
+    # can't flag it — it carries no clustered folio) — it counts as a
+    # source occurrence so its emitted splice is attributable, and it
+    # lands in the never-learned bucket rather than pretending the
+    # folio rule saw it
+    needles = {
+        _head_needle(" ".join(t for _i, _y, t in g))[1]
+        for rs in out.values()
+        for g in _row_groups(rs)
+    }
+    needles = {n for n in needles if len(n) >= LEAK_MIN_NEEDLE}
+    flagged_lines = {pi: {i for i, _y, _t in rs} for pi, rs in out.items()}
+    for pi, (page, pdict) in enumerate(pages):
+        height = page.rect.height
+        first = next(
+            (b for b in sorted(
+                (b for b in pdict["blocks"] if b["type"] == 0),
+                key=lambda b: b["bbox"][1])),
+            None)
+        if first is None:
+            continue
+        for li, line in enumerate(_block_lines(first)[:LEAK_LEAD_LINES]):
+            if line["bbox"][1] / height > 0.20:
+                break
+            if li in flagged_lines.get(pi, ()):
+                continue
+            if _head_needle(_line_text(line))[1] in needles:
+                out.setdefault(pi, []).append(
+                    (li, line["bbox"][1], _line_text(line).strip()))
+    return out
+
+
+def _head_needle(row_text: str):
+    """The two match forms for one committed row: the row's lines
+    joined, the edge folio token stripped (folios vary per page — the
+    head text is what recurs). Returns ``(spaced, collapsed)`` — words
+    joined by single spaces for the word-boundary match, alnum-only
+    for the mid-word-splice match."""
+    rest = re.sub(
+        r"^\s*\d{1,4}\s*|\s*\d{1,4}\s*$", "", row_text.strip()).strip()
+    words = re.findall(r"[a-z0-9]+", rest.lower())
+    return " ".join(words), "".join(words)
+
+
+def head_leaks(rows, epub_text: str, conv_rows=None):
+    """Grade emitted body text against committed source rows.
+
+    ``rows`` is ``source_folio_rows`` output; ``epub_text`` is the
+    chapter-body text (``xhtml_text`` already drops the head/title
+    members). For each distinct head needle — one per committed row,
+    the row's same-y siblings joined and its edge folio stripped —
+    count word-bounded hits (legit mentions or clean splices;
+    ambiguous) and collapsed hits (mid-word splices like
+    'mat168ROBERT'/'oviposiParental' — unambiguous: no one writes
+    glued text on purpose). Needles grade longest-first and each
+    claims its match spans: a needle nested inside a longer one
+    ('LANGMUIR' verso vs 'LANGMUIR LETTERS' recto) is a distinct head,
+    not a duplicate — it grades only hits outside the longer needle's
+    matches, keeping its own source rows and occurrences instead of
+    double-counting one head. Occurrences past LEAK_RETAIN_BUDGET are
+    attributable, capped at that needle's source-row count.
+    ``conv_rows`` is the converter's own ``_folio_head_rows`` map —
+    each source row carries a class: converter-confirmed (the folio
+    rule flagged it, so an emitted hit is a removal bug) or
+    never-learned (a needle-matched folio-less row the converter
+    can't see — the blind spot this check exists to surface).
+    Emitted hits can't be mapped back to specific source rows, so
+    the class split is reported per needle over its row counts.
+    Returns ``(total_src, leaks, details)`` where ``details`` lists
+    ``(spaced, leaked, src, confirmed, never)`` per leaked needle."""
+    spaced = " ".join(re.findall(r"[a-z0-9]+", epub_text.lower()))
+    collapsed = spaced.replace(" ", "")
+    needles = {}
+    conv_rows = conv_rows or {}
+    for pi, rs in rows.items():
+        conv_lis = set(conv_rows.get(pi, []))
+        # one needle per committed row — a page can carry several
+        # (stacked double heads, or a folio-less needle-matched row
+        # beside a flagged one); same-y siblings join into their row,
+        # and each row checks its own lines against the converter's
+        # flags so an unflagged line can't mislabel the row it pooled
+        # with as never-learned
+        for g in _row_groups(rs):
+            text = " ".join(t for _i, _y, t in g)
+            sp, col = _head_needle(text)
+            if len(col) < LEAK_MIN_NEEDLE:
+                continue
+            lis = {i for i, _y, _t in g}
+            confirmed = lis.issubset(conv_lis)
+            e = needles.setdefault(
+                col, {"sp": sp, "src": 0, "confirmed": 0})
+            e["src"] += 1
+            e["confirmed"] += confirmed
+    total_src = sum(e["src"] for e in needles.values())
+    leaks = 0
+    details = []
+    claimed_col = []   # (start, end) spans in `collapsed`
+    claimed_sp = []    # (start, end) spans in `spaced`
+    for col, e in sorted(needles.items(), key=lambda kv: -len(kv[0])):
+        src, sp = e["src"], e["sp"]
+        col_hits = [
+            m for m in re.finditer(re.escape(col), collapsed)
+            if _free_span(m, claimed_col)]
+        claimed_col += [(m.start(), m.end()) for m in col_hits]
+        if not col_hits:
+            continue
+        sp_hits = [
+            m for m in re.finditer(
+                r"(?<!\w)" + re.escape(sp) + r"(?!\w)", spaced)
+            if _free_span(m, claimed_sp)]
+        claimed_sp += [(m.start(), m.end()) for m in sp_hits]
+        glued = len(col_hits)
+        ambiguous = len(sp_hits)
+        splice = max(0, glued - ambiguous)
+        attributable = splice + max(0, ambiguous - LEAK_RETAIN_BUDGET)
+        leaked = min(attributable, src)
+        if not leaked:
+            continue
+        leaks += leaked
+        details.append((sp, leaked, src, e["confirmed"],
+                        src - e["confirmed"]))
+    return total_src, leaks, details
+
+
 def boilerplate_signatures(pages) -> set[str]:
     """Running heads by recurrence, mirroring
     `analyze._boilerplate_signatures`: letters-only sigs of text blocks
@@ -296,7 +560,7 @@ def boilerplate_signatures(pages) -> set[str]:
 
 
 def _page_ctx(page, boilerplate: set[str], lang: LangProfile,
-              prepared=None):
+              prepared=None, folio=None):
     """Per-page context `_dropped` needs to mirror
     `order._ordered_blocks` exactly: the displayed rect (edge zones),
     the mediabox width and upright reading direction the margin-strip
@@ -315,6 +579,10 @@ def _page_ctx(page, boilerplate: set[str], lang: LangProfile,
     reads the canonical helper's post-split stream — the same
     `_ordered_blocks` sees — so a fused block's head lines can't
     inflate the clip's tall-seed shape or stretch its region union.
+    `folio` is this page's committed `_folio_head_rows` line indices —
+    the converter's folio-anchored pre-pass runs before the signature
+    split, so its flagged lines seed the head side of the same
+    splits entry and the remainder still re-enters the signature loop.
 
     ``prepared`` is the page's `_prepared_page` result — the post-drop
     dict stream shared by `boilerplate_signatures` and the
@@ -336,6 +604,7 @@ def _page_ctx(page, boilerplate: set[str], lang: LangProfile,
     from exegesis.analyze import (
         _lines_bbox,
         _signature_prefix_len,
+        _split_folio_heads,
         _split_signature_prefixes,
         _strip_clip,
         _upright_dir,
@@ -347,14 +616,32 @@ def _page_ctx(page, boilerplate: set[str], lang: LangProfile,
     pdict = prepared.pdict
     dmap = {prepared.raw_bbox[id(b)]: b for b in pdict["blocks"]}
     # the post-split stream ordering sees — the pipeline's own pre-pass,
-    # not a re-implementation, so the clip input can never drift
+    # not a re-implementation, so the clip input can never drift; the
+    # folio-anchored split runs before the signature one like `convert`
+    post_blocks = pdict["blocks"]
+    if folio:
+        post_blocks = _split_folio_heads(post_blocks, folio)
     post = _split_signature_prefixes(
-        pdict["blocks"], page.rect.height, boilerplate, lang)
+        post_blocks, page.rect.height, boilerplate, lang)
     splits = {}
+    # committed folio lines are only ever on the page's top-most text
+    # block — they seed that block's head side before the signature loop
+    first_block = min(
+        (b for b in pdict["blocks"] if b["type"] == 0),
+        key=lambda b: b["bbox"][1], default=None)
     for b in pdict["blocks"]:
         if b["type"] != 0:
             continue
         heads, rest = [], b
+        if folio and b is first_block:
+            lines = _block_lines(b)
+            flagged = [l for i, l in enumerate(lines) if i in folio]
+            if flagged:
+                heads.append(flagged)
+                keep = [l for i, l in enumerate(lines) if i not in folio]
+                rest = dict(
+                    rest, lines=keep,
+                    bbox=_lines_bbox(keep) if keep else rest["bbox"])
         while True:
             k = _signature_prefix_len(
                 rest, page.rect.height, boilerplate, lang)
@@ -590,9 +877,11 @@ def _claim_pages(ctxs, boilerplate: set[str], lang: LangProfile):
         _detect_asides,
         _detect_margins,
         _doc_column_edges,
+        _folio_head_rows,
         _is_body_block,
         _page_claims,
         _page_grids,
+        _split_folio_heads,
         _split_signature_prefixes,
         _strip_clip,
     )
@@ -602,9 +891,13 @@ def _claim_pages(ctxs, boilerplate: set[str], lang: LangProfile):
         for ctx in ctxs
     ]
     body_size, line_h = _body_font_size(pages)
-    for p, d in pages:
+    folio_rows = _folio_head_rows(pages)
+    for pi, (p, d) in enumerate(pages):
+        blocks = d["blocks"]
+        if pi in folio_rows:
+            blocks = _split_folio_heads(blocks, folio_rows[pi])
         d["blocks"] = _split_signature_prefixes(
-            d["blocks"], p.rect.height, boilerplate, lang)
+            blocks, p.rect.height, boilerplate, lang)
     _detect_asides(pages, line_h, boilerplate, lang=lang)
     edges = _doc_column_edges(pages, boilerplate, lang)
     if _detect_margins(pages, edges, boilerplate, lang=lang):
@@ -1297,6 +1590,11 @@ def main() -> int:
     ap.add_argument("--lang", default=None, metavar="CODE",
                     help="language profile to grade against (en/de/fr/es); "
                          "overrides the EPUB's dc:language")
+    ap.add_argument("--keep-headers", action="store_true",
+                    help="conversion ran with --keep-headers — furniture is "
+                         "expected in the output, so the running-head leak "
+                         "check (J) is disabled. Coverage and the other "
+                         "checks still run.")
     args = ap.parse_args()
     if not args.pdf.exists() or not args.epub.exists():
         print("error: input file not found", file=sys.stderr)
@@ -1370,6 +1668,9 @@ def main() -> int:
         return 2
     if looks_like_junk_title(meta["title"]):
         findings.append(("High", "B", f"dc:title looks like junk: {meta['title']!r}"))
+    elif re.search(r"\.pdf\s*$", meta["title"], re.IGNORECASE):
+        findings.append(
+            ("Low", "B", f"dc:title retains .pdf extension: {meta['title']!r}"))
     creator = meta["creator"]
     # Contamination is about content, not length — a 10-author byline
     # clears 150 chars legitimately. Flag an affiliation tail
@@ -1401,8 +1702,18 @@ def main() -> int:
     # `_claim_pages` claim composition all grade the text convert saw
     prepared = [_prepared_page(p) for p in pdf]
     boilerplate = boilerplate_signatures(prepared)
-    ctxs = [_page_ctx(prep.page, boilerplate, lang, prep)
-            for prep in prepared]
+    # the converter's own folio-anchored detection — replayed for the
+    # furniture excuse (`_page_ctx`/`_claim_pages`) and for the leak
+    # check's confirmed/never-learned class labels — while the
+    # independent oracle (`source_folio_rows`, #73) reads the same
+    # prepared stream without sharing the detector's blind spots
+    from exegesis.analyze import _folio_head_rows
+    conv_pages = [(prep.page, prep.pdict) for prep in prepared]
+    conv_rows = _folio_head_rows(conv_pages)
+    src_rows = source_folio_rows(conv_pages)
+    ctxs = [_page_ctx(prep.page, boilerplate, lang, prep,
+                      folio=conv_rows.get(pi))
+            for pi, prep in enumerate(prepared)]
     raster_vocab, raster_legends, fig_raster_legends, n_regions, \
         raster_claimed = rasterized_blocks(ctxs, boilerplate, lang)
     # validated figure regions get the same accounting as the rotated
@@ -1513,6 +1824,28 @@ def main() -> int:
         findings.append(("Med", "C", f"genuine word loss {n_genuine}: {genuine.most_common(10)}"))
     elif n_genuine:
         findings.append(("Low", "C", f"genuine word loss {n_genuine}: {genuine.most_common(10)}"))
+
+    # ---- J. running-head leak ----
+    # The oracle is independent of the converter's detector (#73):
+    # coverage excuses furniture that is missing, this check grades
+    # furniture that *survived*. Default mode expects stripping —
+    # --keep-headers disables it (kept furniture is intentional).
+    leak_src, n_leaks, leak_details = 0, 0, []
+    if not args.keep_headers:
+        leak_src, n_leaks, leak_details = head_leaks(
+            src_rows, epub_text, conv_rows)
+        if n_leaks:
+            detail = (
+                f"running-head leak: {n_leaks} attributable of "
+                f"{leak_src} committed source rows: "
+                + "; ".join(
+                    f"'{sp}' {lk}/{src} (confirmed {cf}, "
+                    f"never learned {nv})"
+                    for sp, lk, src, cf, nv in leak_details[:5]))
+            if n_leaks >= 2 and n_leaks >= leak_src * LEAK_HIGH_SHARE:
+                findings.append(("High", "J", detail))
+            else:
+                findings.append(("Med", "J", detail))
 
     # ---- D. TOC / headings ----
     entries = nav_entries(nav)
@@ -1713,6 +2046,12 @@ def main() -> int:
           f"rasterized table cells {sum(raster_vocab.values())}, "
           f"superscript splits {sum(supers.values())}, genuine loss {n_genuine}")
     print(f"- D toc: {len(entries)} entries, h1={n_h1} h2={n_h2}, dupes={dup or 'none'}")
+    if args.keep_headers:
+        print("- J heads: skipped — --keep-headers expects furniture in the output")
+    else:
+        print(f"- J heads: {leak_src} committed source rows, {n_leaks} attributable leaks "
+              "(folio-anchored top-edge rows only — internal, folio-less, "
+              "and bottom-placed heads are undetectable)")
     print(f"- G figures: pdf rasters={pdf_rasters}, embedded={len(epub_imgs)}, "
           f"vector pages={[i + 1 for i in vec_pages]}\n")
     print("## Findings (severity-ranked)")
@@ -1728,7 +2067,10 @@ def main() -> int:
     for label, c in (("rejoined hyphenation", rejoined), ("stripped furniture", furn),
                      ("rasterized table cells", raster_vocab),
                      ("superscript splits", supers), ("genuine loss", genuine)):
-        ex = ", ".join(w for w, _ in c.most_common(8))
+        # count-desc then word-asc: most_common ties ride set/claim
+        # iteration order, so equal-count samples flapped between runs
+        ex = ", ".join(
+            w for w, _ in sorted(c.items(), key=lambda kv: (-kv[1], kv[0]))[:8])
         print(f"| {label} | {sum(c.values())} | {ex} |")
     return min(n_high, 1)
 
