@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-10 20:27",
+  "generated": "2026-11-17 22:36",
   "version": "0.2.1",
   "results": [
     {
@@ -7,8 +7,8 @@
       "status": "ok",
       "title": "Bed-Sharing in Couples Is Associated With Increased and Stabilized REM Sleep and Sleep-Stage Synchronization",
       "pages": 12,
-      "chapters": 20,
-      "headings": 19,
+      "chapters": 18,
+      "headings": 17,
       "footnotes": 14,
       "images": 9,
       "columns": 2,
@@ -16,7 +16,7 @@
       "raster_tables": 0,
       "raster_figures": 1,
       "asides": 3,
-      "seconds": 0.6
+      "seconds": 0.5
     },
     {
       "pdf": "NASA_Spinoff_2025.pdf",
@@ -32,7 +32,7 @@
       "raster_tables": 0,
       "raster_figures": 0,
       "asides": 0,
-      "seconds": 17.6
+      "seconds": 16.8
     },
     {
       "pdf": "UNESCO_Courier_2023_3.pdf",
@@ -48,7 +48,7 @@
       "raster_tables": 0,
       "raster_figures": 0,
       "asides": 2,
-      "seconds": 3.1
+      "seconds": 2.7
     },
     {
       "pdf": "acp_copernicus.pdf",
@@ -64,7 +64,7 @@
       "raster_tables": 0,
       "raster_figures": 0,
       "asides": 1,
-      "seconds": 1.7
+      "seconds": 1.6
     },
     {
       "pdf": "arxiv_latnet_1705.09036.pdf",
@@ -87,8 +87,8 @@
       "status": "ok",
       "title": "arxiv_revtex",
       "pages": 9,
-      "chapters": 2,
-      "headings": 1,
+      "chapters": 3,
+      "headings": 2,
       "footnotes": 9,
       "images": 0,
       "columns": 1,
@@ -144,7 +144,7 @@
       "raster_tables": 3,
       "raster_figures": 0,
       "asides": 1,
-      "seconds": 2.1
+      "seconds": 2.0
     },
     {
       "pdf": "frontiers_2col.pdf",
@@ -160,15 +160,15 @@
       "raster_tables": 2,
       "raster_figures": 0,
       "asides": 1,
-      "seconds": 1.2
+      "seconds": 1.1
     },
     {
       "pdf": "iscience_cell.pdf",
       "status": "ok",
       "title": "Soil salinization in agriculture: Mitigation and adaptation strategies combining nature-based solutions and bioengineering",
       "pages": 9,
-      "chapters": 8,
-      "headings": 7,
+      "chapters": 9,
+      "headings": 8,
       "footnotes": 2,
       "images": 3,
       "columns": 1,
@@ -208,7 +208,7 @@
       "raster_tables": 0,
       "raster_figures": 0,
       "asides": 1,
-      "seconds": 0.4
+      "seconds": 0.3
     },
     {
       "pdf": "peerj_oa.pdf",
@@ -224,7 +224,7 @@
       "raster_tables": 0,
       "raster_figures": 0,
       "asides": 3,
-      "seconds": 0.4
+      "seconds": 0.3
     },
     {
       "pdf": "plosone_marginalia.pdf",
@@ -247,8 +247,8 @@
       "status": "ok",
       "title": "Science Journals \u2014 AAAS",
       "pages": 9,
-      "chapters": 3,
-      "headings": 2,
+      "chapters": 4,
+      "headings": 3,
       "footnotes": 7,
       "images": 4,
       "columns": 2,
@@ -288,7 +288,7 @@
       "raster_tables": 0,
       "raster_figures": 0,
       "asides": 0,
-      "seconds": 1.4
+      "seconds": 1.3
     }
   ]
 }
