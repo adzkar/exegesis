@@ -719,11 +719,20 @@ cases deselected). Converter heuristics and golden snapshots are unchanged.
   re-implementation (page-wide signatures, no floor, unconditional edge
   zone) produces false "clean" verdicts on 1-page inputs, repeated body
   text, and real content near the edge — the same drift applies to any
-  check that borrows a pipeline heuristic. Mirror every path that drops
+  check that borrows a pipeline heuristic. Every `convert` pre-pass that
+  detaches text ahead of ordering needs both eval mirrors — the
+  post-split stream `_strip_clip`/`_claim_pages` read, and the
+  `_page_ctx` `splits` entry `_dropped`/`furniture_words` excuse through
+  — or a fragment convert strips *after* detaching it reports as false
+  genuine loss; a detached side that usually keeps (a rule-note tail
+  emitting to notes.xhtml) excuses only when the drop arms hold for its
+  own recomputed view, not unconditionally like a signature head.
+  Mirror every path that drops
   text *by design*, not just furniture: rotated tables leave the flow as
   `images/table_*.png` and figure regions as `images/fig_*.png`, so both
   raster mirrors replay the converter's own preparation through
-  `_claim_pages` (signature splits, folio-head splits, asides, margin
+  `_claim_pages` (signature splits, folio-head splits, rule-note tail
+  cuts, asides, margin
   lifts, document
   edges) and call `analyze._page_claims` — a replay, not a mirror, so
   aside marks, the provisional-label note mask, table precedence, and
