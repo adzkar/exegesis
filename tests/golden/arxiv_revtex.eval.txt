@@ -3,10 +3,10 @@
 **Verdict:** 2 high-severity findings — needs attention; verbatim word coverage 89.2% (2053/2302, epub emitted 2590 words after rejoins)
 
 ## Checks
-- A container: PASS — 8 members, 1 chapters, 0 images
+- A container: PASS — 9 members, 2 chapters, 0 images
 - B metadata: title='arxiv_revtex'
 - C coverage: rejoined 8, furniture 63, rasterized table cells 0, superscript splits 107, genuine loss 134
-- D toc: 2 entries, h1=0 h2=1, dupes=none
+- D toc: 3 entries, h1=0 h2=2, dupes=none
 - J heads: 8 committed source rows, 0 attributable leaks (folio-anchored top-edge rows only — internal, folio-less, and bottom-placed heads are undetectable)
 - G figures: pdf rasters=0, embedded=0, vector pages=[]
 

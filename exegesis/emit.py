@@ -26,15 +26,21 @@ from .analyze import (
     _split_signature_prefixes,
     _zone_reading_maps,
 )
-from .const import PAGES_PER_FALLBACK_CHAPTER
+from .const import MIN_HEADING_CHARS, PAGES_PER_FALLBACK_CHAPTER
 from .lang import LangProfile, get_lang
 from .render import (
     _flush_paragraph,
+    _head_needle,
     _render_page,
     _strip_dead_fn_links,
 )
 from .state import PipelineState
-from .text import _sanitize_spans, _sanitize_text
+from .text import (
+    _block_lines,
+    _line_text,
+    _sanitize_spans,
+    _sanitize_text,
+)
 
 
 def _valid_title(t):
@@ -92,11 +98,28 @@ def convert(
     folio_rows = _folio_head_rows(pages)
     # pre-pass: a running head fused to the block below it escapes the
     # whole-block signature test — split the matched leading lines off
-    # so ordering and every later consumer sees them as furniture
+    # so ordering and every later consumer sees them as furniture.
+    # Their collapsed head texts double as the #74 veto vocabulary:
+    # a folio-less line repeating a committed head *exactly* is the
+    # same furniture, not a section head — and a needle under the
+    # heading floor can't identify anything, so it isn't harvested
+    head_needles = set()
     for pi, (page, pdict) in enumerate(pages):
         blocks = pdict["blocks"]
         if pi in folio_rows:
             blocks = _split_folio_heads(blocks, folio_rows[pi])
+        for b in blocks:
+            if b.get("folio_head"):
+                rows = [
+                    _line_text(l).strip() for l in _block_lines(b)
+                ]
+                # per-row needles cover a stacked head's single-row
+                # residual; the joined row covers one line carrying
+                # the whole fused head
+                for t in (*rows, " ".join(rows)):
+                    col = _head_needle(t)
+                    if len(col) >= MIN_HEADING_CHARS:
+                        head_needles.add(col)
         pdict["blocks"] = _split_signature_prefixes(
             blocks, page.rect.height, boilerplate, profile
         )
@@ -153,6 +176,7 @@ def convert(
         boilerplate=boilerplate,
         page_frags=[[] for _ in range(doc.page_count)],
         lang=profile,
+        head_needles=head_needles,
     )
 
     for i, (page, pdict) in enumerate(pages):

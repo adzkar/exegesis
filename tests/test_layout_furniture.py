@@ -76,6 +76,7 @@ from furniture_fixtures import (
     rotated_table_margin_cells,
     rotated_table_staggered_cells,
     single_block_book_heads,
+    single_block_section_heads,
     stacked_digit_heads,
     stacked_fused_heads,
     tall_top_folio_tops,
@@ -108,9 +109,9 @@ from exegesis.analyze import (
     _strip_clip,
     _table_regions,
 )
-from exegesis.lang import EN
+from exegesis.lang import EN, get_lang
 from exegesis.order import _ordered_blocks
-from exegesis.render import _footnote_text
+from exegesis.render import _footnote_text, _isolated_head_lines
 from exegesis.text import _block_text, _line_text
 
 
@@ -1506,6 +1507,164 @@ def test_issue72_single_block_leading_heads_absent(sbp_case):
         issue="#72: leading running heads leak into single-block page flow",
     )
 
+
+@pytest.fixture(scope="module")
+def sbp_heads_pdf(tmp_path_factory):
+    """Generate the section-head recovery source before any conversion."""
+    directory = tmp_path_factory.mktemp("single_block_section_heads")
+    return single_block_section_heads(directory / "input.pdf")
+
+
+@pytest.fixture(scope="module")
+def sbp_heads_case(sbp_heads_pdf):
+    """Convert the isolated-head source once; the #74 pass owns the h2s."""
+    return _converted_case(sbp_heads_pdf)
+
+
+def _h2_texts(epub_path):
+    """Heading text of every h2 in document order."""
+    out = []
+    for t in doc_html(epub_path).values():
+        out += [
+            re.sub(r"<[^>]+>", "", m)
+            for m in re.findall(r"<h2[^>]*>.*?</h2>", t)
+        ]
+    return out
+
+
+def test_single_block_section_heads_conversion_and_lint(sbp_heads_case):
+    """Packaging stays healthy: valid EPUB, chapters split at each
+    recovered h2, every committed head row still lifts out."""
+    case = sbp_heads_case
+    assert case.epub.is_file()
+    assert lint_epub(case.epub) == []
+    assert case.stats["chapters"] >= 5
+
+
+def test_issue74_isolated_heads_promote(sbp_heads_case):
+    """Each isolation class emits an h2: Title-Case, all-caps, the
+    wrapped caps pair (merged into one heading), the vocabulary
+    `Summary`, the roman-numeral `IV`, `CHAPTER FIVE` (exact-match
+    needles leave it promotable beside the committed `CHAPTER 4`
+    running head), and a head behind a marker-opening page; the
+    opener's `Introduction` promotes on vocabulary alone since page 0
+    admits nothing else (#74)."""
+    heads = _h2_texts(sbp_heads_case.epub)
+    for want in (
+        "Isolated Section Head",
+        "CAPS SECTION HEAD",
+        "WRAPPED CAPS SECTION HEAD",
+        "Summary",
+        "Introduction",
+        "CHAPTER FIVE",
+        "IV",
+        "Marker Page Head",
+    ):
+        assert want in heads, f"{want!r} missing from {heads}"
+
+
+def test_issue74_head_traps_stay_prose(sbp_heads_case):
+    """The veto battery never emits an h2: the opener's isolated
+    byline names (pages 0–1 admit vocabulary hits only), the
+    folio-less `CHAPTER 4` residual matching a committed needle
+    exactly, the committed `ROBERT TRIVERS` head wrap-split into a
+    `ROBERT`/`TRIVERS` pair (vetoed on the unit's joined needle),
+    a period-ending isolated line, a paragraph-final tail,
+    under-floor tokens, and the caption-shaped `PLATE IV`/`PLATE
+    IV-B`."""
+    heads = _h2_texts(sbp_heads_case.epub)
+    for trap in (
+        "JANE Q. TESTER",
+        "TEST UNIVERSITY",
+        "Fused Evidence and Synthetic Layouts",
+        "University Press.",
+        "Short tail",
+        "CHAPTER 4",
+        "ROBERT",
+        "TRIVERS",
+        "PLATE IV",
+        "PLATE IV-B",
+        "DID",
+    ):
+        assert not any(trap in h for h in heads), trap
+    # substring matching can't guard one/two-letter tokens — `ON`
+    # rides inside `SECTION HEAD` and `D` inside any capitalized
+    # head — so the floor traps assert exact text
+    for trap in ("ON", "D"):
+        assert trap not in heads, trap
+    text = sbp_heads_case.text
+    for trap in (
+        "University Press.", "Short tail", "ON", "DID",
+        "PLATE IV", "PLATE IV-B", "ROBERT", "TRIVERS",
+    ):
+        assert trap in text, trap
+
+
+def _iso_line(y, text):
+    """One synthetic line dict at y for the isolated-head unit tests."""
+    return {
+        "bbox": (54.0, y, 400.0, y + 10.0),
+        "spans": [{"text": text, "size": 10.0}],
+    }
+
+
+def _iso_rows(head, after=0.0):
+    """Body-isolated-body rows around a single head line: 13.4pt pitch
+    in the fixture, so 24pt gaps isolate and 13.4pt gaps abut."""
+    return [
+        _iso_line(after, "An ordinary body line keeps the page full."),
+        _iso_line(after + 14.0, "Another plain line of running prose."),
+        _iso_line(after + 40.0, head),
+        _iso_line(after + 80.0, "The running prose resumes after it."),
+        _iso_line(after + 94.0, "And one more body line trails below."),
+    ]
+
+
+def test_issue84_title_case_connectors_ride_profile():
+    """The Title-Case arm reads joiners from the profile, not a shared
+    English set: `Krieg und Frieden` and `L'Amour et l'Argent` satisfy
+    it under their own languages but not under English."""
+    for code, head in (
+        ("de", "Krieg und Frieden"),
+        # the elision rides the apostrophe split — a head always
+        # capitalizes its opener, so `l'` can only matter mid-head
+        ("fr", "L'Amour et l'Argent"),
+    ):
+        rows = _iso_rows(head)
+        got = _isolated_head_lines(
+            rows, 13.4, get_lang(code), page_index=3, needles=set()
+        )
+        assert got == {2}, (code, got)
+        got = _isolated_head_lines(
+            rows, 13.4, get_lang("en"), page_index=3, needles=set()
+        )
+        assert got == set(), (code, got)
+
+
+def test_issue84_needle_veto_is_exact():
+    """The needle veto fires on exact collapsed matches only: a
+    folio-less residual repeating the committed `CHAPTER 4` running
+    head stays prose while `CHAPTER FIVE` — which bare containment
+    swallowed — still promotes; and a committed single-row head also
+    vetoes its wrap-split residual (`ROBERT`/`TRIVERS` joins to the
+    same `roberttrivers` needle)."""
+    rows = (
+        _iso_rows("CHAPTER 4", 0.0)
+        + _iso_rows("CHAPTER FIVE", 200.0)
+        + [
+            _iso_line(400.0, "An ordinary body line fills the page."),
+            _iso_line(414.0, "Another plain line of running prose."),
+            _iso_line(440.0, "ROBERT"),
+            _iso_line(454.0, "TRIVERS"),
+            _iso_line(480.0, "The running prose resumes after it."),
+            _iso_line(494.0, "And one more body line trails below."),
+        ]
+    )
+    got = _isolated_head_lines(
+        rows, 13.4, get_lang("en"), page_index=3,
+        needles={"chapter", "roberttrivers"},
+    )
+    assert got == {7}, got
 
 def _note_block(parts, y0=95.0, leading=13.4):
     """Fabricated dominant block: `(text, size)` lines — the fused

@@ -23,7 +23,6 @@ from .const import (
     FIGURE_LABEL_CHARS,
     FIGURE_LABEL_PAD,
     FIGURE_MIN_LABELS,
-    FOLIO_HEAD_BLOCK_SPAN,
     FOLIO_HEAD_LEAD_LINES,
     FOLIO_HEAD_MIN_PAGES,
     FRAG_PROSE_SHARE,
@@ -43,6 +42,7 @@ from .const import (
     OUTDENT_BAND_FILL,
     OUTDENT_HEADING_SHARE,
     OUTDENT_MIN_BLOCKS,
+    PAGE_BLOCK_MIN_SPAN,
     PAGE_FRAME_RATIO,
     RULE_NOTE_MIN_LINES,
     RULE_NOTE_MIN_UNDERSCORES,
@@ -1604,7 +1604,7 @@ def _folio_head_rows(pages):
         )
         if first is None or (
             first["bbox"][3] - first["bbox"][1]
-            < height * FOLIO_HEAD_BLOCK_SPAN
+            < height * PAGE_BLOCK_MIN_SPAN
         ):
             continue
         firsts[pi] = first
@@ -1687,7 +1687,7 @@ def _rule_note_cut(block, height, body_size):
     """Line index where a page-dominant block's note tail begins —
     the underscore rule line itself — else ``None`` (#75).
 
-    Only a block spanning ``FOLIO_HEAD_BLOCK_SPAN`` of the page is
+    Only a block spanning ``PAGE_BLOCK_MIN_SPAN`` of the page is
     scanned: the single-block book-scan shape a fused note tail
     hides in. The rule is a whole line of ≥
     ``RULE_NOTE_MIN_UNDERSCORES`` underscores below
@@ -1697,7 +1697,7 @@ def _rule_note_cut(block, height, body_size):
     text below — can never cut the block."""
     if (
         block["bbox"][3] - block["bbox"][1]
-        < height * FOLIO_HEAD_BLOCK_SPAN
+        < height * PAGE_BLOCK_MIN_SPAN
     ):
         return None
     lines = _block_lines(block)
