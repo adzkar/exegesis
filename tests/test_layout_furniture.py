@@ -1543,10 +1543,13 @@ def test_rule_note_cut_gates():
                 ("   because note evidence lives in the smaller font.",
                  10.0)])
     assert _rule_note_cut(flat, H, 10.0) is None
-    # a mid-page rule is a decoration shape — zone gate
+    # a mid-page rule is a decoration shape — the zone gate vetoes it
+    # even inside a dominant block (rule y0 415 < 0.6·H 475)
     mid = _note_block(
-        body[:18] + [("___________________", 10.0)] + tail[1:],
+        body[:28] + [("___________________", 10.0)] + tail[1:],
         y0=40.0)
+    assert mid["bbox"][3] - mid["bbox"][1] >= H * 0.5
+    assert mid["lines"][28]["bbox"][1] < H * 0.6
     assert _rule_note_cut(mid, H, 10.0) is None
     # one note line is under the evidence floor
     shallow = _note_block(
@@ -1589,6 +1592,39 @@ def test_split_rule_notes_splits_once():
     assert num is None  # `1.` at note size is no callout — no link
     assert "___" not in note_html
     assert "trailing note at smaller size" in note_html
+
+
+def test_split_rule_notes_stacks_after_signature_heads():
+    """A book-scan block can carry both a fused running head and a fused
+    rule-note tail: the signature prefix splits first, then the note cut
+    fires on the remainder — the order `convert` applies the pre-passes
+    (#75)."""
+    boilerplate = {_signature("Jane Q Tester Collected Works")}
+    parts = ([("Jane Q. Tester Collected Works 138", 10.0)]
+             + [(f"body line {i} carries the page flow along", 10.0)
+                for i in range(31)]
+             + [("___________________", 10.0),
+                ("1. A trailing note at smaller size belongs to notes,", 8.5),
+                ("   and must leave the body flow for the note chapter.", 8.5)])
+    fused = _note_block(parts)
+    sig_out = _split_signature_prefixes([fused], H, boilerplate, EN)
+    assert len(sig_out) == 2
+    head_b, rest_b = sig_out
+    assert [_line_text(l) for l in head_b["lines"]] == [
+        "Jane Q. Tester Collected Works 138"]
+    assert len(rest_b["lines"]) == 34
+    assert not head_b.get("rule_note")
+    # the note cut sees the post-signature remainder — the same position
+    # `convert` applies it
+    out = _split_rule_notes(sig_out, H, 10.0)
+    assert len(out) == 3
+    assert out[0] is head_b
+    body_b, note_b = out[1:]
+    assert not body_b.get("rule_note")
+    assert note_b.get("rule_note")
+    assert len(note_b["lines"]) == 3
+    assert len(body_b["lines"]) == 31
+    assert body_b["bbox"][3] < note_b["bbox"][1]
 
 
 def test_recurring_page_opener_is_retained(recurring_case):
