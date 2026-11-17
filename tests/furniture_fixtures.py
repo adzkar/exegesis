@@ -519,9 +519,12 @@ def single_block_section_heads(path):
     by blank lines from its body — promote to h2, while the traps
     stay prose: the opener's isolated byline names (pages 0–1 admit
     vocabulary hits only), a folio-less residual repeating the
-    committed `CHAPTER 4` head, a period-ending isolated line, a
-    paragraph-final short line, an under-floor caps token `ON`, and
-    the caption-shaped `PLATE IV`."""
+    committed `CHAPTER 4` head, the same committed `ROBERT TRIVERS`
+    head wrap-split into a `ROBERT`/`TRIVERS` pair (the unit's joined
+    needle vetoes it), a period-ending isolated line, a
+    paragraph-final short line, under-floor tokens `ON`/`D`/`DID`
+    (a lone letter is a drop cap and `DID` is no numeral), and the
+    caption-shaped `PLATE IV`/`PLATE IV-B`."""
     doc = fitz.open()
     folio_of = {1: 138, 2: 139, 3: 140}
     for pi in range(6):
@@ -536,8 +539,14 @@ def single_block_section_heads(path):
             _sbp_insert(page, 54, 48, lines)
             continue
         body = _sbp_body(pi)
+        # folio rows cluster on the 137 offset whatever their text —
+        # a multi-word committed head seeds the wrap-split veto
         head = (
-            [f"{folio_of[pi]}  CHAPTER 4", SBP_HEAD_BLANK]
+            [
+                f"{folio_of[pi]}  ROBERT TRIVERS"
+                if pi == 2 else f"{folio_of[pi]}  CHAPTER 4",
+                SBP_HEAD_BLANK,
+            ]
             if pi in folio_of else []
         )
         if pi == 2:
@@ -562,21 +571,31 @@ def single_block_section_heads(path):
                 SBP_HEAD_BLANK, "CHAPTER FIVE", SBP_HEAD_BLANK,
             ] + body[26:34]
         elif pi == 4:
+            # the traps page stays inside the 792pt sheet — ~54 lines
+            # at the fixture's 13.4pt pitch from y=48
             lines = body[:6] + [
                 SBP_HEAD_BLANK, "University Press.", SBP_HEAD_BLANK,
             ] + body[6:14] + [
                 # paragraph-final short line — no isolation, no head
                 "Short tail",
-            ] + body[14:24] + [
+            ] + body[14:22] + [
                 # a bare two-letter caps token is under the floor…
                 SBP_HEAD_BLANK, "ON", SBP_HEAD_BLANK,
-            ] + body[24:30] + [
+            ] + body[22:26] + [
                 # …but a roman numeral is a real head in this domain
                 SBP_HEAD_BLANK, "IV", SBP_HEAD_BLANK,
-            ] + body[30:36] + [
+            ] + body[26:30] + [
                 # caption-shaped, not a section head
                 SBP_HEAD_BLANK, "PLATE IV", SBP_HEAD_BLANK,
-            ] + body[36:42]
+                # a sub-plate dash suffix is still a caption
+                SBP_HEAD_BLANK, "PLATE IV-B", SBP_HEAD_BLANK,
+                # the committed `ROBERT TRIVERS` head, wrap-split —
+                # the unit's joined needle vetoes the pair
+                SBP_HEAD_BLANK, "ROBERT", "TRIVERS", SBP_HEAD_BLANK,
+                # a lone letter is a drop cap; `DID` is no numeral
+                SBP_HEAD_BLANK, "D", SBP_HEAD_BLANK,
+                SBP_HEAD_BLANK, "DID",
+            ]
         elif pi == 5:
             # a marker-opening block (a carried-over footnote) can't
             # veto the page's heads — only its own marker lines

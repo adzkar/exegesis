@@ -202,21 +202,28 @@ def _heading_run_end(lines, start, levels, line_h):
     return end
 
 
-_ROMAN_HEAD = re.compile(r"^[IVXLCDM]+$")
+# a real numeral — `IV`, `XII`, `MCMXCIV` — ducks the heading floor;
+# a single letter is more often a drop cap than a head, and
+# `DID`/`ILL`-shaped tokens are not numerals at all
+_ROMAN_HEAD = re.compile(
+    r"^M{0,3}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3})$"
+)
 
 
 def _head_shape(text):
     """True when a line reads like a section head: ≤8 words, inside the
-    shared heading char bounds — a lone roman numeral (`IV`) ducks the
-    floor since numbered heads are real in this domain — no terminal
-    punctuation, no footnote marker, opens on an uppercase letter or
-    digit. A mid-sentence fragment fails each of these."""
+    shared heading char bounds — a roman numeral of ≥2 chars (`IV`)
+    ducks the floor since numbered heads are real in this domain — no
+    terminal punctuation, no footnote marker, opens on an uppercase
+    letter or digit. A mid-sentence fragment fails each of these."""
     words = text.split()
     if not (1 <= len(words) <= 8) or not re.search(r"[A-Za-z]", text):
         return False
     if len(text) > MAX_HEADING_CHARS:
         return False
-    if len(text) < MIN_HEADING_CHARS and not _ROMAN_HEAD.fullmatch(text):
+    if len(text) < MIN_HEADING_CHARS and not (
+        len(text) >= 2 and _ROMAN_HEAD.fullmatch(text)
+    ):
         return False
     if re.search(r"[.!?…;:,][\"”’)\]]*$", text):
         return False
@@ -245,8 +252,9 @@ def _isolated_head_lines(lines, line_h, lang, page_index, needles):
     chain of consecutive nonempty head-shaped lines starting at an
     isolated-above line (wrapped caps heads like `…PARENTAL INVESTME`
     + `ATTRIBUTES` ride at normal pitch inside one unit); member
-    lines keep the shared heading bounds (`IV`-style roman numerals
-    duck the floor) and a `*†‡§` opener fails each member
+    lines keep the shared heading bounds (a roman numeral of ≥2
+    chars — `IV`, `XII` — ducks the floor; a lone letter is a drop
+    cap, not a head) and a `*†‡§` opener fails each member
     individually, so a footnote continuation at the block's head
     can't veto the whole page. The unit promotes to h2 when one of:
       - it is bounded below the same way — the fully isolated case
@@ -260,13 +268,15 @@ def _isolated_head_lines(lines, line_h, lang, page_index, needles):
         `REFERENCES` loses its gap below to the first entry.
     Pages 0–1 admit vocabulary hits only — an opener's byline names
     are isolated all-caps lines too — a caption-shaped unit (`PLATE
-    IV`, `TABLE 3` — a label plus numeral material only) is figure
-    furniture regardless of arm, and any unit whose collapsed text
-    exactly reuses a committed ``folio_head`` needle is vetoed: a
-    folio-less running head is the same shape standing anywhere on
-    the page. The needle match is exact — containment let `CHAPTER 4`
-    suppress `CHAPTER FIVE`, and needles under the heading floor
-    are never harvested."""
+    IV`, `TABLE 3`, `PLATE IV-B` — a label plus numeral material
+    only) is figure furniture regardless of arm, and any unit whose
+    collapsed text — a member's or the joined unit's — exactly
+    reuses a committed ``folio_head`` needle is vetoed: a folio-less
+    running head is the same shape standing anywhere on the page,
+    including wrap-split into a `ROBERT`/`TRIVERS` pair. The needle
+    match is exact — containment let `CHAPTER 4` suppress `CHAPTER
+    FIVE`, and needles under the heading floor are never
+    harvested."""
     ne = [(i, l) for i, l in enumerate(lines) if _line_text(l).strip()]
     if len(ne) < 3:
         return set()
@@ -294,11 +304,18 @@ def _isolated_head_lines(lines, line_h, lang, page_index, needles):
             k += 1
             members.append(ne[k])
         texts = [_line_text(l).strip() for _i, l in members]
+        joined = " ".join(texts)
         # exact collapsed match only: containment let a `CHAPTER 4`
         # needle suppress `CHAPTER FIVE` — over-matching costs the
         # genuine heads this pass exists to recover, and a chapter
-        # title repeating its own running head is the accepted miss
-        if {_head_needle(t) for t in texts} & needles:
+        # title repeating its own running head is the accepted miss.
+        # The joined text covers the wrap-split residual — a
+        # committed single-row head vetoes its `ROBERT`/`TRIVERS`
+        # two-line re-extraction the same way the harvest's joined
+        # row covers the other direction.
+        cols = {_head_needle(t) for t in texts}
+        cols.add(_head_needle(joined))
+        if cols & needles:
             j = k + 1
             continue
         vocab = (
@@ -317,9 +334,8 @@ def _isolated_head_lines(lines, line_h, lang, page_index, needles):
             or ne[k + 1][1]["bbox"][1] - ne[k][1]["bbox"][1] >= bound
         )
         # a label plus numeral material only is a caption (`PLATE IV`,
-        # `TABLE 3`), never a section head — a real head like `PLATE
+        # `TABLE 3`, `PLATE IV-B` — a real head like `PLATE
         # TECTONICS` carries non-numeral text and survives
-        joined = " ".join(texts)
         labels = "|".join(
             p for p in (lang.figure_labels, lang.table_labels) if p
         )
@@ -327,7 +343,8 @@ def _isolated_head_lines(lines, line_h, lang, page_index, needles):
             labels
             and re.fullmatch(
                 rf"(?:{labels})\s*\.?\s*[0-9ivxlcdm]+"
-                rf"(?:\s*[-–]\s*[0-9ivxlcdm]+)*[a-z]?\s*",
+                rf"(?:\s*[-–]\s*[0-9ivxlcdm]+)*[a-z]?"
+                rf"(?:\s*[-–]\s*[a-z0-9]+)*\s*",
                 joined,
                 re.IGNORECASE,
             )

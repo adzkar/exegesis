@@ -1564,8 +1564,11 @@ def test_issue74_head_traps_stay_prose(sbp_heads_case):
     """The veto battery never emits an h2: the opener's isolated
     byline names (pages 0–1 admit vocabulary hits only), the
     folio-less `CHAPTER 4` residual matching a committed needle
-    exactly, a period-ending isolated line, a paragraph-final tail,
-    an under-floor caps token, and the caption-shaped `PLATE IV`."""
+    exactly, the committed `ROBERT TRIVERS` head wrap-split into a
+    `ROBERT`/`TRIVERS` pair (vetoed on the unit's joined needle),
+    a period-ending isolated line, a paragraph-final tail,
+    under-floor tokens, and the caption-shaped `PLATE IV`/`PLATE
+    IV-B`."""
     heads = _h2_texts(sbp_heads_case.epub)
     for trap in (
         "JANE Q. TESTER",
@@ -1574,14 +1577,23 @@ def test_issue74_head_traps_stay_prose(sbp_heads_case):
         "University Press.",
         "Short tail",
         "CHAPTER 4",
+        "ROBERT",
+        "TRIVERS",
         "PLATE IV",
+        "PLATE IV-B",
+        "DID",
     ):
         assert not any(trap in h for h in heads), trap
-    # substring matching can't guard a two-letter token — `ON` rides
-    # inside `SECTION HEAD` — so the floor trap asserts exact text
-    assert "ON" not in heads
+    # substring matching can't guard one/two-letter tokens — `ON`
+    # rides inside `SECTION HEAD` and `D` inside any capitalized
+    # head — so the floor traps assert exact text
+    for trap in ("ON", "D"):
+        assert trap not in heads, trap
     text = sbp_heads_case.text
-    for trap in ("University Press.", "Short tail", "ON", "PLATE IV"):
+    for trap in (
+        "University Press.", "Short tail", "ON", "DID",
+        "PLATE IV", "PLATE IV-B", "ROBERT", "TRIVERS",
+    ):
         assert trap in text, trap
 
 
@@ -1630,13 +1642,24 @@ def test_issue84_needle_veto_is_exact():
     """The needle veto fires on exact collapsed matches only: a
     folio-less residual repeating the committed `CHAPTER 4` running
     head stays prose while `CHAPTER FIVE` — which bare containment
-    swallowed — still promotes."""
+    swallowed — still promotes; and a committed single-row head also
+    vetoes its wrap-split residual (`ROBERT`/`TRIVERS` joins to the
+    same `roberttrivers` needle)."""
     rows = (
         _iso_rows("CHAPTER 4", 0.0)
         + _iso_rows("CHAPTER FIVE", 200.0)
+        + [
+            _iso_line(400.0, "An ordinary body line fills the page."),
+            _iso_line(414.0, "Another plain line of running prose."),
+            _iso_line(440.0, "ROBERT"),
+            _iso_line(454.0, "TRIVERS"),
+            _iso_line(480.0, "The running prose resumes after it."),
+            _iso_line(494.0, "And one more body line trails below."),
+        ]
     )
     got = _isolated_head_lines(
-        rows, 13.4, get_lang("en"), page_index=3, needles={"chapter"}
+        rows, 13.4, get_lang("en"), page_index=3,
+        needles={"chapter", "roberttrivers"},
     )
     assert got == {7}, got
 

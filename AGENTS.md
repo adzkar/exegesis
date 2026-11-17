@@ -332,12 +332,14 @@ but contributes nothing there).
   spanning `PAGE_BLOCK_MIN_SPAN` of the page, an isolated-above line
   opens a head unit — the maximal chain of consecutive nonempty
   head-shaped lines (≤8 words, within the shared
-  `MIN_HEADING_CHARS`/`MAX_HEADING_CHARS` bounds — a lone roman
-  numeral like `IV` ducks the floor since numbered heads are real in
-  this domain — no terminal punctuation, uppercase initial, no
-  footnote markers — a `*†‡§` opener fails its own line only, never
-  the page — and no name-list markers) riding at normal pitch, so
-  wrapped heads promote whole. The unit emits h2 when it is isolated
+  `MIN_HEADING_CHARS`/`MAX_HEADING_CHARS` bounds — a roman numeral
+  of ≥2 chars like `IV` ducks the floor since numbered heads are
+  real in this domain, while a lone letter is a drop-cap suspect
+  and `DID`/`ILL`-shaped tokens are not numerals — no terminal
+  punctuation, uppercase initial, no footnote markers — a `*†‡§`
+  opener fails its own line only, never the page — and no name-list
+  markers) riding at normal pitch, so wrapped heads promote whole.
+  The unit emits h2 when it is isolated
   below the same way (the mixed-case arm — Title-Case lines where
   every alphabetic word capitalizes or is a small connector riding
   `lang.connectors`, so German `und`, French elided `l`, and Spanish
@@ -347,15 +349,25 @@ but contributes nothing there).
   vocabulary label exactly — `REFERENCES` loses its gap below to the
   first entry. Pages 0–1 admit vocabulary hits only — an opener's
   byline names are isolated all-caps lines too — a caption-shaped
-  unit (`PLATE IV`, `TABLE 3` — a `figure_labels`/`table_labels`
-  opener plus numeral material only) is figure furniture regardless
-  of arm, and any unit whose collapsed text (edge folio stripped)
-  *exactly* reuses a committed `folio_head` needle is vetoed: a
-  folio-less running head is the same shape standing anywhere on the
-  page, so the emit pass harvests each committed head's collapsed
-  rows into `state.head_needles` — floored at `MIN_HEADING_CHARS` and
-  matched exactly, since containment let `CHAPTER 4` suppress
-  `CHAPTER FIVE`.
+  unit (`PLATE IV`, `TABLE 3`, `PLATE IV-B` — a
+  `figure_labels`/`table_labels` opener plus numeral material only,
+  dash-joined ranges and letter suffixes included) is figure
+  furniture regardless of arm, and any unit whose collapsed text —
+  a member's or the joined unit's — *exactly* reuses a committed
+  `folio_head` needle is vetoed: a folio-less running head is the
+  same shape standing anywhere on the page, so the emit pass
+  harvests each committed head's collapsed rows (per row plus
+  joined) into `state.head_needles` — floored at `MIN_HEADING_CHARS`
+  and matched exactly, since containment let `CHAPTER 4` suppress
+  `CHAPTER FIVE`. The normalization is load-bearing on both sides:
+  `_head_needle` strips the edge folio and every non-alphanumeric,
+  so a committed single row vetoes its `ROBERT`/`TRIVERS`
+  wrap-split residual (joined-unit side) and a committed wrapped
+  head vetoes both its fused single-line residual and single-row
+  leftovers (per-row harvest side). The accepted miss is symmetric:
+  a genuine head repeating its own running head verbatim —
+  chapter-title running heads are a common book layout — stays
+  prose, coverage lost rather than corrupted.
   Rotated margin strips (tall+narrow blocks in the outer 10% margins,
   measured in `page.mediabox` space so /Rotate pages compare correctly)
   qualify by *line direction*, not width: every line with reliable
