@@ -575,7 +575,13 @@ def _page_ctx(page, boilerplate: set[str], lang: LangProfile,
     iterated like the pre-pass itself (each remainder re-enters on its
     recomputed bbox) so stacked heads split one at a time: for each
     fused-head block, the split-off head lines' words (the furniture
-    side) and the remainder's text/bbox (the kept side). The strip clip
+    side) and the remainder's text/bbox (the kept side). The rule-note
+    pre-pass then cuts a fused note tail off that same remainder in
+    `convert`'s position: `note` keeps the lifted tail's lines, text
+    and recomputed bbox so `furniture_words` can excuse its words only
+    when convert's drop arms hold for the note block itself — the
+    ordinary case emits the tail to notes.xhtml, where it stays
+    expected. The strip clip
     reads the canonical helper's post-split stream — the same
     `_ordered_blocks` sees — so a fused block's head lines can't
     inflate the clip's tall-seed shape or stretch its region union.
@@ -603,8 +609,10 @@ def _page_ctx(page, boilerplate: set[str], lang: LangProfile,
     # reach the exit-2 net, so it can't sit at module top
     from exegesis.analyze import (
         _lines_bbox,
+        _rule_note_cut,
         _signature_prefix_len,
         _split_folio_heads,
+        _split_rule_notes,
         _split_signature_prefixes,
         _strip_clip,
         _upright_dir,
@@ -623,6 +631,9 @@ def _page_ctx(page, boilerplate: set[str], lang: LangProfile,
         post_blocks = _split_folio_heads(post_blocks, folio)
     post = _split_signature_prefixes(
         post_blocks, page.rect.height, boilerplate, lang)
+    if getattr(prepared, "body_size", None) is not None:
+        post = _split_rule_notes(
+            post, page.rect.height, prepared.body_size)
     splits = {}
     # committed folio lines are only ever on the page's top-most text
     # block — they seed that block's head side before the signature loop
@@ -651,7 +662,29 @@ def _page_ctx(page, boilerplate: set[str], lang: LangProfile,
             heads.append(lines[:k])
             rest = dict(
                 rest, lines=lines[k:], bbox=_lines_bbox(lines[k:]))
-        if not heads:
+        # the rule-note pre-pass runs after the signature split like
+        # `convert`: a cut tail lifts out of the remainder into its own
+        # `rule_note` block, so `kept` shrinks to the body side and the
+        # note's words excuse only when convert's drop arms hold for the
+        # note block itself (unlike head lines, the tail usually keeps —
+        # it emits to notes.xhtml, so an unconditional excuse would mask
+        # a genuinely lost note)
+        note = None
+        if getattr(prepared, "body_size", None) is not None:
+            cut = _rule_note_cut(
+                rest, page.rect.height, prepared.body_size)
+            if cut is not None:
+                lines = _block_lines(rest)
+                note = SimpleNamespace(
+                    lines=lines[cut:],
+                    bbox=_lines_bbox(lines[cut:]),
+                    text="".join(
+                        _line_text(l) + "\n" for l in lines[cut:]),
+                )
+                rest = dict(
+                    rest, lines=lines[:cut],
+                    bbox=_lines_bbox(lines[:cut]))
+        if not heads and note is None:
             continue
         splits[prepared.raw_bbox[id(b)]] = SimpleNamespace(
             head_words=WORD_RE.findall(
@@ -661,10 +694,13 @@ def _page_ctx(page, boilerplate: set[str], lang: LangProfile,
             kept_text="".join(
                 _line_text(l) + "\n" for l in rest["lines"]),
             kept_bbox=rest["bbox"],
+            note=note,
         )
         # the remainder is a synthetic block — give `_strip` its real
         # line dirs like a dict hit, not a miss that falls back to <25pt
         dmap[rest["bbox"]] = {"lines": rest["lines"]}
+        if note is not None:
+            dmap[note.bbox] = {"lines": note.lines}
     return SimpleNamespace(
         page=page,
         rect=page.rect,
@@ -685,14 +721,17 @@ def _kept(block, ctx, boilerplate: set[str], lang: LangProfile):
     """The block's emitted `(bbox, text)`, or None when convert drops it.
 
     The emitted view is the post-split remainder when `convert`'s
-    pre-pass detaches leading signature lines, else the tuple itself;
+    pre-pass detaches leading signature lines or a trailing rule-note
+    tail, else the tuple itself;
     the drop arms then apply to *that* view, not the pre-split tuple —
     a fused head's remainder can itself be signature furniture (stacked
     heads fused on one page split off one at a time, so each kept view
     re-enters the same checks), and expecting its text would report
     genuine loss on a correct conversion. `_dropped` consumers read
     text through this so a head's words can't seed legends, headings, or
-    coverage windows the converter never emitted them to."""
+    coverage windows the converter never emitted them to — and a cut
+    note tail's can't seed them from a position the converter emptied
+    (its lines relocate to notes.xhtml)."""
     s = ctx.splits.get(tuple(block[:4]))
     bb, text = ((s.kept_bbox, s.kept_text) if s
                 else (block[:4], block[4]))
@@ -805,7 +844,12 @@ def furniture_words(ctxs, boilerplate: set[str],
     unjoined fragments. A fused-head block contributes its split-off
     head's words, plus the remainder's when the drop arms hold for the
     remainder too (stacked heads whose own signatures recur — convert
-    strips both halves, so both excuse). A fully-invisible block drops
+    strips both halves, so both excuse). A rule-note tail cut off the
+    same remainder excuses on the same condition — convert's drop arms
+    holding for the note block (a recurring rule+colophon tail is
+    signature furniture on its own bbox) — since the ordinary split
+    emits the tail to notes.xhtml and its words stay expected. A
+    fully-invisible block drops
     on its raw tuple but contributes nothing — every word it had
     already rides `inv_words`."""
     furn: Counter = Counter()
@@ -822,6 +866,14 @@ def furniture_words(ctxs, boilerplate: set[str],
                 if _dropped((*s.kept_bbox, s.kept_text),
                             ctx, boilerplate, lang):
                     furn.update(WORD_RE.findall(s.kept_text.lower()))
+                # a split-off rule-note tail excuses the same way the
+                # kept side does — only when convert's drop arms hold
+                # for the note block itself, since the ordinary case
+                # emits the tail to notes.xhtml
+                if s.note is not None and _dropped(
+                        (*s.note.bbox, s.note.text),
+                        ctx, boilerplate, lang):
+                    furn.update(WORD_RE.findall(s.note.text.lower()))
             elif _dropped(b, ctx, boilerplate, lang):
                 # count only the words convert stripped: a true `dmap`
                 # miss is a vanished (fully-invisible) block whose
@@ -882,6 +934,7 @@ def _claim_pages(ctxs, boilerplate: set[str], lang: LangProfile):
         _page_claims,
         _page_grids,
         _split_folio_heads,
+        _split_rule_notes,
         _split_signature_prefixes,
         _strip_clip,
     )
@@ -898,6 +951,10 @@ def _claim_pages(ctxs, boilerplate: set[str], lang: LangProfile):
             blocks = _split_folio_heads(blocks, folio_rows[pi])
         d["blocks"] = _split_signature_prefixes(
             blocks, p.rect.height, boilerplate, lang)
+        # the rule-anchored note tail split rides the same stream —
+        # `rule_note` marks seed `_footnote_tops` identically (#75)
+        d["blocks"] = _split_rule_notes(
+            d["blocks"], p.rect.height, body_size)
     _detect_asides(pages, line_h, boilerplate, lang=lang)
     edges = _doc_column_edges(pages, boilerplate, lang)
     if _detect_margins(pages, edges, boilerplate, lang=lang):
@@ -1701,6 +1758,13 @@ def main() -> int:
     # boilerplate recurrence, the per-page ctx mirrors, and the
     # `_claim_pages` claim composition all grade the text convert saw
     prepared = [_prepared_page(p) for p in pdf]
+    # body size rides the prepared stream — the `_page_ctx` post-split
+    # mirror needs it for the rule-note tail cut like `_claim_pages`
+    from exegesis.analyze import _body_font_size
+    body_size = _body_font_size(
+        [(p.page, p.pdict) for p in prepared])[0]
+    for prep in prepared:
+        prep.body_size = body_size
     boilerplate = boilerplate_signatures(prepared)
     # the converter's own folio-anchored detection — replayed for the
     # furniture excuse (`_page_ctx`/`_claim_pages`) and for the leak

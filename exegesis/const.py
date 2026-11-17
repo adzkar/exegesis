@@ -28,6 +28,17 @@ SIGNATURE_PREFIX_MAX_LINES = BOILERPLATE_MAX_LINES
 FOLIO_HEAD_LEAD_LINES = 4
 FOLIO_HEAD_MIN_PAGES = 3
 PAGE_BLOCK_MIN_SPAN = 0.5
+# rule-anchored note tails (#75): a book scan's footnote tail sits
+# behind a whole-line underscore rule inside the page's one block, so
+# no note-detector arm ever sees it as a block. A rule candidate is
+# ≥8 whole-line underscores below the top 60% — the unnumbered-note
+# zone bound — with a tail of ≥2 nonempty lines, every one smaller
+# than 0.95× body, running to the block's end (a rule with body text
+# below never splits — cover decorations and table rules fail the
+# zone or the tail evidence).
+RULE_NOTE_MIN_UNDERSCORES = 8
+RULE_NOTE_MIN_Y = 0.6
+RULE_NOTE_MIN_LINES = 2
 MIN_IMAGE_BYTES = 2048
 MIN_HEADING_CHARS = 4
 MAX_HEADING_CHARS = 120

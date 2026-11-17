@@ -64,7 +64,7 @@ flowchart TD
 | Top label | all-caps short text in top 12% of page → `<p class="label">`; a single all-caps word at ≥1.6× emits `p.label` anywhere (badge strips like scirep's `OPEN`) |
 | Byline | median ≥1.15× body, or directly after h1 + name-like (` and `/`,`), or a marker-anchored name list (affiliation digits/`*†‡§` in ≥2 segments) inside the front-matter window (title spread before the first heading, or in the first h1's wake — mid-document marked lists stay body text); short single-line followers merge; trailing drop-cap letter relocates into the paragraph |
 | Abstract | median in (0.75–0.92)× body, inset margins, top half of page 0–1 |
-| Footnote | opens with superscript digit in lower 45% of page |
+| Footnote | opens with superscript digit in lower 45% of page; a `rule_note`-marked block (split off a page-dominant block by `_split_rule_notes` — whole-line ≥8 underscores below the top 60% + ≥2 smaller-than-body tail lines to block end) seeds the column's top directly (#75) |
 | Unnumbered note | bottom 40% + gap >2× line height + <0.95× body, OR acknowledgment opener in bottom 55% |
 | Page number | pure-digit block in outer 7% edge → dropped |
 | List item | line starting `N.`/`N)` → `<p class="listitem">`; absorbs continuation lines |

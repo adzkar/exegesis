@@ -612,6 +612,114 @@ def test_furniture_words_ignores_vanished_ghost_blocks():
     assert furn["42"] == 1 and furn["www"] == 1  # inv_words only
 
 
+def test_rule_note_tail_excuses_only_when_dropped():
+    """A rule-anchored note tail convert itself strips — a recurring
+    rule+colophon tail whose signature is in boilerplate — must excuse
+    its words like a split-off head's, while a kept tail (emitted to
+    notes.xhtml) never joins the furniture vocabulary (#75)."""
+    import importlib.util
+
+    from exegesis.analyze import _signature
+    from exegesis.lang import EN
+
+    spec = importlib.util.spec_from_file_location("eval_epub", EVAL)
+    eval_epub = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(eval_epub)
+
+    def _line(text, size, y0):
+        return {"bbox": (54, y0, 500, y0 + 12.4), "dir": (1, 0),
+                "spans": [{"text": text, "size": size, "color": 0,
+                           "bbox": (54, y0, 500, y0 + 12.4)}]}
+
+    lead = 13.4
+    lines = [_line(f"body line {i} carries the page flow along", 10,
+                   40.0 + i * lead) for i in range(45)]
+    # the rule sits past 0.8h so the lifted note block reads as
+    # signature furniture on its own recomputed bbox
+    rule_y = 40.0 + 45 * lead
+    lines += [
+        _line("___________________", 10, rule_y),
+        _line("Recurring Colophon Note", 8.5, rule_y + lead),
+        _line("Printed By The Test Press", 8.5, rule_y + 2 * lead),
+    ]
+    fused = {"type": 0, "bbox": (54, 40, 500, rule_y + 2 * lead + 12.4),
+             "lines": lines}
+    page = _stub_page([fused])
+    boiler = {
+        _signature("Recurring Colophon Note Printed By The Test Press")}
+    prep = eval_epub._prepared_page(page)
+    prep.body_size = 10.0
+    ctx = eval_epub._page_ctx(page, boiler, EN, prep)
+    s = ctx.splits[(54, 40, 500, rule_y + 2 * lead + 12.4)]
+    assert s.note is not None
+    assert s.note.bbox[1] == rule_y
+    assert "Colophon" not in s.kept_text
+    # kept view shrinks to the body side; the colophon tail drops as
+    # signature furniture so its words excuse rather than grade loss
+    kept = eval_epub._kept(page.get_text("blocks")[0], ctx, boiler, EN)
+    assert kept is not None and "Colophon" not in kept[1]
+    furn = eval_epub.furniture_words([ctx], boiler, EN)
+    assert furn["colophon"] == 1 and furn["press"] == 1
+    assert "flow" not in furn
+    # without the boilerplate match the tail keeps — it emits to
+    # notes.xhtml, so its words must stay off the excuse list
+    ctx2 = eval_epub._page_ctx(page, set(), EN, prep)
+    furn2 = eval_epub.furniture_words([ctx2], set(), EN)
+    assert "colophon" not in furn2 and "press" not in furn2
+
+
+def test_page_ctx_splits_composes_head_and_note():
+    """A block fusing a signature head *and* a rule-note tail lands both
+    detachments on one splits entry — head words excusing outright, the
+    tail on the note's own `_dropped` view, and `kept` shrinking to the
+    body band between them (#75)."""
+    import importlib.util
+
+    from exegesis.analyze import _signature
+    from exegesis.lang import EN
+
+    spec = importlib.util.spec_from_file_location("eval_epub", EVAL)
+    eval_epub = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(eval_epub)
+
+    def _line(text, size, y0):
+        return {"bbox": (54, y0, 500, y0 + 12.4), "dir": (1, 0),
+                "spans": [{"text": text, "size": size, "color": 0,
+                           "bbox": (54, y0, 500, y0 + 12.4)}]}
+
+    lead = 13.4
+    lines = [_line("Jane Q. Tester Collected Works 138", 10, 40.0)]
+    lines += [_line(f"body line {i} carries the page flow along", 10,
+                    40.0 + (i + 1) * lead) for i in range(44)]
+    # past 0.8h so the lifted note block is signature furniture too —
+    # both detached sides excuse, one outright and one conditionally
+    rule_y = 40.0 + 45 * lead
+    lines += [
+        _line("___________________", 10, rule_y),
+        _line("Recurring Colophon Note", 8.5, rule_y + lead),
+        _line("Printed By The Test Press", 8.5, rule_y + 2 * lead),
+    ]
+    fused = {"type": 0, "bbox": (54, 40, 500, rule_y + 2 * lead + 12.4),
+             "lines": lines}
+    page = _stub_page([fused])
+    boiler = {
+        _signature("Jane Q. Tester Collected Works 138"),
+        _signature("Recurring Colophon Note Printed By The Test Press"),
+    }
+    prep = eval_epub._prepared_page(page)
+    prep.body_size = 10.0
+    ctx = eval_epub._page_ctx(page, boiler, EN, prep)
+    s = ctx.splits[(54, 40, 500, rule_y + 2 * lead + 12.4)]
+    # one entry, both sides detached: head words + kept body + note tail
+    assert s.head_words and "jane" in s.head_words
+    assert s.note is not None and s.note.bbox[1] == rule_y
+    assert "Jane" not in s.kept_text and "Colophon" not in s.kept_text
+    assert s.kept_text.count("body line") == 44
+    furn = eval_epub.furniture_words([ctx], boiler, EN)
+    assert furn["jane"] == 1 and furn["colophon"] == 1
+    assert "flow" not in furn
+
+
 def test_eval_bottom_footer_is_excused(tmp_path):
     """A repeated bottom running foot and a varying © line drop as
     furniture — the signature arm's `y0 > 0.80` and the pattern arm's
