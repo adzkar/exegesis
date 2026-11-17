@@ -403,7 +403,15 @@ but contributes nothing there).
   leading marker is always unlinked). Underscore rules never emit —
   `_footnote_text` drops whole-line `[_ ]*` lines, so the split's own
   separator is furniture, not note text. Pure-digit blocks in the outer 7%
-  edge (page numbers) are dropped.
+  edge (page numbers) are dropped. The same page-dominant shape carries
+  rule-framed outlines (#86 — `_outline_spans`/`_outline_html`): a pair
+  of whole-line ≥8-underscore rules bounding ≥3 interior lines that
+  carry the `I.`/`A.`/`(n)` marker grammar at ≥2 distinct indents
+  emits a nested `<ul>` (depth = each marker class's first-appearance
+  rank, so `II.` a space shallower than `I.` still shares the roman
+  level); the rules are separators and never render, unmarked interior
+  lines fold into the current item, and prose trapped between two
+  rules fails the marker majority.
 - **Lists & quotes** — lines starting `N.`/`N)` become `p.listitem`
   paragraphs (absorbing continuation lines); a block indented >12pt from
   its column edge AND vertically isolated (>0.7× line-height gaps on both

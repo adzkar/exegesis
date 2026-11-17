@@ -111,7 +111,12 @@ from exegesis.analyze import (
 )
 from exegesis.lang import EN, get_lang
 from exegesis.order import _ordered_blocks
-from exegesis.render import _footnote_text, _isolated_head_lines
+from exegesis.render import (
+    _footnote_text,
+    _isolated_head_lines,
+    _outline_html,
+    _outline_spans,
+)
 from exegesis.text import _block_text, _line_text
 
 
@@ -1598,6 +1603,100 @@ def test_issue74_head_traps_stay_prose(sbp_heads_case):
         "PLATE IV", "PLATE IV-B", "ROBERT", "TRIVERS",
     ):
         assert trap in text, trap
+
+
+def _outline_lines(texts):
+    """Synthetic line dicts for the rule-framed outline tests —
+    `(text, indent)` pairs become lines with `text` left-padded by
+    `indent` spaces, the scan's only structural signal (#86)."""
+    return [
+        {
+            "bbox": (54.0, 100.0 + i * 13.0, 500.0, 113.0 + i * 13.0),
+            "spans": [
+                {"text": " " * ind + t, "size": 10.0, "flags": 0}
+            ],
+        }
+        for i, (t, ind) in enumerate(texts)
+    ]
+
+
+OUTLINE_T71 = [
+    ("____________________", 0),
+    ("I.    All species, but especially those showing little or no", 3),
+    ("A.  Ability to fertilize eggs", 6),
+    ("(1)  correct species", 11),
+    ("(2)  correct sex", 11),
+    ("(3)  mature", 11),
+    ("(4)  sexually competent", 11),
+    ("B.   Quality of genes", 6),
+    ("(1)  ability of genes to survive", 11),
+    ("(2)  reproductive ability of genes", 11),
+    ("(3)  complementarity of genes", 11),
+    ("II.   Only those species showing male parental investment", 2),
+    ("C.  Quality of parental care", 6),
+    ("(1)  willingness of male to invest", 11),
+    ("(2)  ability of male to invest", 11),
+    ("(3 )  complementarity of parental attributes", 11),
+    ("________________________", 0),
+]
+
+
+def test_outline_spans_commits_only_rule_framed_marked_regions():
+    """The scan needs a rule pair, ≥3 marker lines at ≥2 distinct
+    indents, and a marker majority — every other shape stays prose."""
+    lines = _outline_lines(OUTLINE_T71)
+    assert _outline_spans(lines) == [(0, len(lines) - 1)]
+    # prose between rules fails the marker share
+    prose = _outline_lines([
+        ("____________________", 0),
+        ("Just an ordinary prose paragraph, no markers at all.", 3),
+        ("Another sentence running on below it.", 3),
+        ("________________________", 0),
+    ])
+    assert _outline_spans(prose) == []
+    # too few marker items — under the evidence floor
+    thin = _outline_lines([
+        ("____________________", 0),
+        ("I.    Only one roman item here", 3),
+        ("A.  And one letter", 6),
+        ("________________________", 0),
+    ])
+    assert _outline_spans(thin) == []
+    # one rule alone never frames a region
+    unpaired = _outline_lines([
+        ("____________________", 0),
+        ("A.  Letter item under a lone rule", 6),
+        ("(1)  And a number", 11),
+        ("(2)  And another", 11),
+    ])
+    assert _outline_spans(unpaired) == []
+    # `_____. 1970b.` bibliography elisions are prefix dashes, not
+    # whole-line rules — they can't open or close a span
+    refs = _outline_lines([
+        ("_____. 1970b. Sperm competition and its consequences", 0),
+        ("_____. 1970c. The reproductive behaviour of insects", 0),
+    ])
+    assert _outline_spans(refs) == []
+
+
+def test_outline_html_nests_by_marker_class():
+    """Depth is the marker class's first-appearance rank — `II.` a
+    space shallower than `I.` still shares the roman level — and the
+    rules themselves never emit."""
+    lines = _outline_lines(OUTLINE_T71)
+    out = _outline_html(lines, 0, len(lines) - 1, 10.0)
+    root = ET.fromstring(f"<root>{out}</root>")
+    assert "__" not in out
+    # the root list holds exactly I and II; `II.` a space shallower
+    # than `I.` still shares the roman level
+    top_lis = root.find("ul").findall("li")
+    assert len(top_lis) == 2
+    assert top_lis[0].text.startswith("I.")
+    assert top_lis[1].text.startswith("II.")
+    # roman → letter → num nests; same-class siblings stay flat
+    assert out.count("<ul>") == 6  # root + I's + A/B/C's + II's
+    assert out.count("<li>") == 15
+    assert "(3 )  complementarity of parental attributes" in out
 
 
 def _iso_line(y, text):

@@ -371,6 +371,110 @@ def _isolated_head_lines(lines, line_h, lang, page_index, needles):
     return out
 
 
+# a rule-framed outline's item markers — `I.`/`II.` criteria, `A.`
+# sub-items, `(n)` leaf entries — after leading spaces; `(3 )` keeps
+# its inner space (the scan pads the digit)
+_OUTLINE_MARKER = re.compile(
+    r"^\s*(?:(?P<roman>[IVXL]+\.)|(?P<letter>[A-Z]\.)|"
+    r"(?P<num>\(\s*\d+\s*\)))\s+"
+)
+_OUTLINE_RULE = re.compile(r"_{8,}")
+_OUTLINE_MIN_ITEMS = 3
+_OUTLINE_MIN_MARKER_SHARE = 0.6
+
+
+def _outline_spans(lines):
+    """`(first, last)` line-index spans of rule-framed outlines
+    inside a page-dominant block — the framing rules included (#86).
+
+    A space-indented outline (Table 7.1's `I.`/`A.`/`(n)` tree) is a
+    pair of whole-line underscore rules bounding ≥3 nonempty lines
+    whose marker grammar recurs at ≥2 distinct leading-space indents.
+    Marker lines carry most of the interior — a prose block trapped
+    between two rules fails the share — so bibliography tails, TOCs,
+    and ordinary text can never pair off."""
+    rules = [
+        li for li, l in enumerate(lines)
+        if _OUTLINE_RULE.fullmatch(_line_text(l).strip())
+    ]
+    spans = []
+    i = 0
+    while i + 1 < len(rules):
+        lo, hi = rules[i], rules[i + 1]
+        inner = [
+            _line_text(l) for l in lines[lo + 1 : hi]
+            if _line_text(l).strip()
+        ]
+        markers = [t for t in inner if _OUTLINE_MARKER.match(t)]
+        indents = {
+            len(t) - len(t.lstrip(" ")) for t in markers
+        }
+        if (
+            len(inner) >= 3
+            and len(markers) >= _OUTLINE_MIN_ITEMS
+            and len(markers) >= len(inner) * _OUTLINE_MIN_MARKER_SHARE
+            and len(indents) >= 2
+        ):
+            spans.append((lo, hi))
+            i += 2
+        else:
+            i += 1
+    return spans
+
+
+def _outline_html(lines, lo, hi, body_size):
+    """Nested `<ul>` for one committed span: marker lines become items
+    at depth = their marker class's first-appearance rank — `I.` and
+    `II.` sit a space apart in the scan but share the roman level, so
+    indentation can never rank sibling classes apart — while
+    non-marker lines join the current item. Item text keeps its
+    marker — nothing is re-worded."""
+    items = []
+    for l in lines[lo + 1 : hi]:
+        text = _line_text(l)
+        if not text.strip():
+            continue
+        m = _OUTLINE_MARKER.match(text)
+        if m:
+            cls = next(
+                name for name, v in m.groupdict().items() if v
+            )
+            items.append((cls, text.strip()))
+        elif items:
+            d, t = items[-1]
+            items[-1] = (d, f"{t} {text.strip()}")
+    ranks = {}
+    for cls, _t in items:
+        ranks.setdefault(cls, len(ranks) + 1)
+    out, depth, li_open = [], 0, False
+    for cls, text in items:
+        d = ranks[cls]
+        while depth > d:
+            if li_open:
+                out.append("</li>")
+                li_open = False
+            # every non-root <ul> lives inside exactly one <li> —
+            # closing the list closes its parent item too
+            out.append("</ul></li>")
+            depth -= 1
+        if depth < d:
+            out.append("<ul>")
+            depth += 1
+            li_open = False
+        if li_open:
+            out.append("</li>")
+        out.append(f"<li>{html.escape(text)}")
+        li_open = True
+    if li_open:
+        out.append("</li>")
+    while depth:
+        out.append("</ul>")
+        depth -= 1
+        if depth:
+            out.append("</li>")
+    return "".join(out)
+
+
 def _standalone_heading_level(block, body_size):
     """Classify a single-line block as a heading (h1/h2) or None.
 
@@ -1466,6 +1570,7 @@ def _render_page(page, page_index: int, state: PipelineState):
                 l, body_size, bold_h2_ok, state.lang, marker_block)
             for l in block_lines
         ]
+        outline_at = {}
         if (
             block["bbox"][3] - block["bbox"][1]
             >= page.rect.height * PAGE_BLOCK_MIN_SPAN
@@ -1475,8 +1580,22 @@ def _render_page(page, page_index: int, state: PipelineState):
                 state.head_needles,
             ):
                 line_levels[li] = line_levels[li] or 2
+            outline_at = {
+                lo: (lo, hi)
+                for lo, hi in _outline_spans(block_lines)
+            }
         run_done = set()
         for li, line in enumerate(block_lines):
+            span = outline_at.get(li)
+            if span is not None:
+                # the rules themselves are separators — the interior
+                # emits as one nested list and the rules never render
+                flush_par()
+                frags.append(
+                    _outline_html(block_lines, *span, body_size)
+                )
+                run_done.update(range(li, span[1] + 1))
+                continue
             if li in run_done:
                 continue
             # labels respect the bold-only demotion — "Funding NIH grant…"
