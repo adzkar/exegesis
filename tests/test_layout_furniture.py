@@ -99,6 +99,7 @@ from exegesis.analyze import (
     _is_furniture,
     _is_margin_strip,
     _is_signature_furniture,
+    _outline_spans,
     _rotated_table_region,
     _rotated_table_seeds,
     _rule_note_cut,
@@ -111,7 +112,11 @@ from exegesis.analyze import (
 )
 from exegesis.lang import EN, get_lang
 from exegesis.order import _ordered_blocks
-from exegesis.render import _footnote_text, _isolated_head_lines
+from exegesis.render import (
+    _footnote_text,
+    _isolated_head_lines,
+    _outline_html,
+)
 from exegesis.text import _block_text, _line_text
 
 
@@ -1598,6 +1603,191 @@ def test_issue74_head_traps_stay_prose(sbp_heads_case):
         "PLATE IV", "PLATE IV-B", "ROBERT", "TRIVERS",
     ):
         assert trap in text, trap
+
+
+def _outline_lines(texts):
+    """Synthetic line dicts for the rule-framed outline tests —
+    `(text, indent)` pairs become lines with `text` left-padded by
+    `indent` spaces, the scan's only structural signal (#86)."""
+    return [
+        {
+            "bbox": (54.0, 100.0 + i * 13.0, 500.0, 113.0 + i * 13.0),
+            "spans": [
+                {"text": " " * ind + t, "size": 10.0, "flags": 0}
+            ],
+        }
+        for i, (t, ind) in enumerate(texts)
+    ]
+
+
+OUTLINE_T71 = [
+    ("____________________", 0),
+    ("I.    All species, but especially those showing little or no", 3),
+    ("A.  Ability to fertilize eggs", 6),
+    ("(1)  correct species", 11),
+    ("(2)  correct sex", 11),
+    ("(3)  mature", 11),
+    ("(4)  sexually competent", 11),
+    ("B.   Quality of genes", 6),
+    ("(1)  ability of genes to survive", 11),
+    ("(2)  reproductive ability of genes", 11),
+    ("(3)  complementarity of genes", 11),
+    ("II.   Only those species showing male parental investment", 2),
+    ("C.  Quality of parental care", 6),
+    ("(1)  willingness of male to invest", 11),
+    ("(2)  ability of male to invest", 11),
+    ("(3 )  complementarity of parental attributes", 11),
+    ("________________________", 0),
+]
+
+
+def test_outline_spans_commits_only_rule_framed_marked_regions():
+    """The scan needs a rule pair, ≥3 marker lines at ≥2 distinct
+    indents, and a marker majority — every other shape stays prose."""
+    lines = _outline_lines(OUTLINE_T71)
+    assert _outline_spans(lines) == [(0, len(lines) - 1)]
+    # prose between rules fails the marker share
+    prose = _outline_lines([
+        ("____________________", 0),
+        ("Just an ordinary prose paragraph, no markers at all.", 3),
+        ("Another sentence running on below it.", 3),
+        ("________________________", 0),
+    ])
+    assert _outline_spans(prose) == []
+    # too few marker items — under the evidence floor
+    thin = _outline_lines([
+        ("____________________", 0),
+        ("I.    Only one roman item here", 3),
+        ("A.  And one letter", 6),
+        ("________________________", 0),
+    ])
+    assert _outline_spans(thin) == []
+    # one rule alone never frames a region
+    unpaired = _outline_lines([
+        ("____________________", 0),
+        ("A.  Letter item under a lone rule", 6),
+        ("(1)  And a number", 11),
+        ("(2)  And another", 11),
+    ])
+    assert _outline_spans(unpaired) == []
+    # `_____. 1970b.` bibliography elisions are prefix dashes, not
+    # whole-line rules — they can't open or close a span
+    refs = _outline_lines([
+        ("_____. 1970b. Sperm competition and its consequences", 0),
+        ("_____. 1970c. The reproductive behaviour of insects", 0),
+    ])
+    assert _outline_spans(refs) == []
+
+
+def test_outline_html_nests_by_marker_class():
+    """Depth is the marker class's first-appearance rank — `II.` a
+    space shallower than `I.` still shares the roman level — and the
+    rules themselves never emit."""
+    lines = _outline_lines(OUTLINE_T71)
+    out = _outline_html(lines, 0, len(lines) - 1, 10.0)
+    root = ET.fromstring(f"<root>{out}</root>")
+    assert "__" not in out
+    # the root list holds exactly I and II; `II.` a space shallower
+    # than `I.` still shares the roman level
+    top_lis = root.find("ul").findall("li")
+    assert len(top_lis) == 2
+    assert top_lis[0].text.startswith("I.")
+    assert top_lis[1].text.startswith("II.")
+    # roman → letter → num nests; same-class siblings stay flat
+    assert out.count("<ul>") == 6  # root + I's + A/B/C's + II's
+    assert out.count("<li>") == 15
+    assert "(3 )  complementarity of parental attributes" in out
+
+
+def test_outline_spans_shares_a_boundary_rule():
+    """A committed span's closing rule retries as the next pair's
+    opener, so stacked outlines divided by a single rule both
+    commit (#87)."""
+    stacked = _outline_lines([
+        ("____________________", 0),
+        ("I.   First outline item", 3),
+        ("A.   Sub item", 6),
+        ("(1)  leaf entry", 11),
+        ("II.  Second item", 3),
+        ("____________________", 0),
+        ("I.   Second outline item", 3),
+        ("A.   Sub item", 6),
+        ("(1)  leaf entry", 11),
+        ("II.  Another item", 3),
+        ("________________________", 0),
+    ])
+    assert _outline_spans(stacked) == [(0, 5), (5, 10)]
+
+
+def test_outline_html_keeps_lead_lines_and_span_markup():
+    """Non-marker lines ahead of the first item can't fold — they
+    emit as a paragraph before the list, never vanish; item text
+    rides `_line_html` so span bold/italic and `<sup>` note links
+    survive, and folded continuations dehyphenate like body flow
+    (#87)."""
+    lines = _outline_lines([
+        ("____________________", 0),
+        ("Table 7.1. Criteria for choosing a mate", 0),
+        ("I.    All species, but especially those showing little or no", 3),
+        ("A.  Ability to fertilize eggs", 6),
+        ("(1)  correct species", 11),
+        ("(2)  correct sex", 11),
+        ("II.   Only those species showing male parental invest-", 2),
+        ("ment in offspring", 2),
+        ("B.  Quality of parental care", 6),
+        ("(1)  willingness of male to invest", 11),
+        ("(2)  ability of male to invest", 11),
+        ("________________________", 0),
+    ])
+    # a small digit span in an item is a footnote marker — it links
+    # into notes.xhtml like any body line
+    lines[5]["spans"].append({"text": "2", "size": 7.0, "flags": 0})
+    lines[3]["spans"].append({"text": " Bold", "size": 10.0, "flags": 16})
+    out = _outline_html(lines, 0, len(lines) - 1, 10.0)
+    root = ET.fromstring(f"<root>{out}</root>")
+    p = root.find("p")
+    assert p is not None and "Table 7.1." in p.text
+    assert "__" not in out
+    assert "investment in offspring" in out
+    assert '<sup><a href="notes.xhtml#fn2">2</a></sup>' in out
+    assert "<b> Bold</b>" in out
+    top_lis = root.find("ul").findall("li")
+    assert [li.text[:3].strip() for li in top_lis] == ["I.", "II."]
+
+
+def test_rule_note_cut_yields_to_committed_outline():
+    """A rule closing a committed outline is a boundary, not a note
+    separator: the cut lifts just past the span, so the body side
+    keeps the whole outline while the genuine small-type tail still
+    files (#87)."""
+    body = [(f"body line {i} carries the page flow along", 10.0)
+            for i in range(30)]
+    outline = [
+        ("____________________", 10.0),
+        ("   I.    First criterion line of the outline", 10.0),
+        ("      A.  Second level item", 10.0),
+        ("           (1)  leaf entry", 10.0),
+        ("           (2)  another leaf", 10.0),
+        ("   II.   Second roman item", 10.0),
+        ("____________________", 10.0),
+    ]
+    tail = [
+        ("1. A trailing note at smaller size belongs to notes,", 8.5),
+        ("   and must leave the body flow for the note chapter.", 8.5),
+    ]
+    fused = _note_block(body + outline + tail)
+    closer = len(body) + len(outline) - 1
+    assert fused["lines"][closer]["bbox"][1] >= H * 0.6
+    assert _rule_note_cut(fused, H, 10.0) == closer + 1
+    out = _split_rule_notes([fused], H, 10.0)
+    assert len(out) == 2
+    body_b, note_b = out
+    # the committed span survives whole in the body remainder; the
+    # note block holds only the genuine tail
+    assert _outline_spans(body_b["lines"]) == [(len(body), closer)]
+    assert [
+        _line_text(l).strip() for l in note_b["lines"]
+    ] == [t.strip() for t, _s in tail]
 
 
 def _iso_line(y, text):

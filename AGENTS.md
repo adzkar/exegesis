@@ -393,17 +393,36 @@ but contributes nothing there).
   pattern (`Preparation of`, `Requests for reprints`, `supported by`…),
   OR a rule-anchored tail split out of a page-dominant block (#75 —
   `_rule_note_cut`: a whole-line ≥8-underscore rule below the top 60%
-  inside a block spanning `FOLIO_HEAD_BLOCK_SPAN` of the page, with ≥2
+  inside a block spanning `PAGE_BLOCK_MIN_SPAN` of the page, with ≥2
   following nonempty lines all under 0.95× body size running to the
   block's end; the rule and tail lift into a `rule_note`-marked block
   that seeds the zone directly, so a cover decoration or a mid-table
   rule — zone or tail evidence failing — can never cut body text).
+  A rule committed as outline structure is a boundary, never a
+  separator (#87): an opener can't cut — its tail is the span it
+  frames — and a qualifying closer lifts the cut just past the span,
+  so the body side keeps the whole outline while the genuine small
+  tail still files.
   Removed from the body flow into a `Notes` chapter; superscripts link to
   `#fnN` and dead links are stripped in body and notes alike (a note's own
   leading marker is always unlinked). Underscore rules never emit —
   `_footnote_text` drops whole-line `[_ ]*` lines, so the split's own
   separator is furniture, not note text. Pure-digit blocks in the outer 7%
-  edge (page numbers) are dropped.
+  edge (page numbers) are dropped. The same page-dominant shape carries
+  rule-framed outlines (#86 — `_outline_spans`/`_outline_html`): a pair
+  of whole-line ≥8-underscore rules bounding ≥3 interior lines that
+  carry the `I.`/`A.`/`(n)` marker grammar at ≥2 distinct indents
+  emits a nested `<ul>` (depth = each marker class's first-appearance
+  rank, so `II.` a space shallower than `I.` still shares the roman
+  level); the rules are separators and never render, unmarked interior
+  lines fold into the current item — lines before the first marker
+  have no item and emit as a paragraph ahead of the list — and prose
+  trapped between two rules fails the marker majority. Item text
+  rides `_line_html` (span bold/italic and `<sup>` note links
+  survive) and folds via `_join_lines`, so scan hyphenation
+  dehyphenates like body flow; a committed span's closing rule
+  retries as the next pair's opener, so stacked outlines can share
+  one boundary rule.
 - **Lists & quotes** — lines starting `N.`/`N)` become `p.listitem`
   paragraphs (absorbing continuation lines); a block indented >12pt from
   its column edge AND vertically isolated (>0.7× line-height gaps on both

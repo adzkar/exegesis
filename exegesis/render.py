@@ -12,8 +12,10 @@ import fitz
 from ebooklib import epub
 
 from .analyze import (
+    _OUTLINE_MARKER,
     _assign_column,
     _covered_cols,
+    _outline_spans,
     _overlap_cols,
     _page_claims,
     _RasterRegion,
@@ -369,6 +371,69 @@ def _isolated_head_lines(lines, line_h, lang, page_index, needles):
             out.update(i for i, _l in members)
         j = k + 1
     return out
+
+
+def _outline_html(lines, lo, hi, body_size, lang: LangProfile = EN):
+    """Nested `<ul>` for one committed span: marker lines become items
+    at depth = their marker class's first-appearance rank — `I.` and
+    `II.` sit a space apart in the scan but share the roman level, so
+    indentation can never rank sibling classes apart — while
+    non-marker lines join the current item (`_join_lines` keeps the
+    dehyphenation and drop-cap folds of body flow). Item text rides
+    `_line_html`, so span bold/italic and `<sup>` note links survive,
+    and keeps its marker — nothing is re-worded. Lines before the
+    first marker have no item to join — they emit as a paragraph
+    ahead of the list rather than vanishing."""
+    items = []
+    lead = []
+    for l in lines[lo + 1 : hi]:
+        text = _line_text(l)
+        if not text.strip():
+            continue
+        t = _line_html(l, body_size).strip()
+        m = _OUTLINE_MARKER.match(text)
+        if m:
+            cls = next(
+                name for name, v in m.groupdict().items() if v
+            )
+            items.append((cls, t))
+        elif items:
+            d, cur = items[-1]
+            items[-1] = (d, _join_lines([cur, t], lang))
+        else:
+            lead.append(t)
+    ranks = {}
+    for cls, _t in items:
+        ranks.setdefault(cls, len(ranks) + 1)
+    out, depth, li_open = [], 0, False
+    if lead:
+        out.append(f"<p>{_join_lines(lead, lang)}</p>")
+    for cls, text in items:
+        d = ranks[cls]
+        while depth > d:
+            if li_open:
+                out.append("</li>")
+                li_open = False
+            # every non-root <ul> lives inside exactly one <li> —
+            # closing the list closes its parent item too
+            out.append("</ul></li>")
+            depth -= 1
+        if depth < d:
+            out.append("<ul>")
+            depth += 1
+            li_open = False
+        if li_open:
+            out.append("</li>")
+        out.append(f"<li>{text}")
+        li_open = True
+    if li_open:
+        out.append("</li>")
+    while depth:
+        out.append("</ul>")
+        depth -= 1
+        if depth:
+            out.append("</li>")
+    return "".join(out)
 
 
 def _standalone_heading_level(block, body_size):
@@ -1466,6 +1531,7 @@ def _render_page(page, page_index: int, state: PipelineState):
                 l, body_size, bold_h2_ok, state.lang, marker_block)
             for l in block_lines
         ]
+        outline_at = {}
         if (
             block["bbox"][3] - block["bbox"][1]
             >= page.rect.height * PAGE_BLOCK_MIN_SPAN
@@ -1475,8 +1541,23 @@ def _render_page(page, page_index: int, state: PipelineState):
                 state.head_needles,
             ):
                 line_levels[li] = line_levels[li] or 2
+            outline_at = {
+                lo: (lo, hi)
+                for lo, hi in _outline_spans(block_lines)
+            }
         run_done = set()
         for li, line in enumerate(block_lines):
+            span = outline_at.get(li)
+            if span is not None:
+                # the rules themselves are separators — the interior
+                # emits as one nested list and the rules never render
+                flush_par()
+                frags.append(
+                    _outline_html(
+                        block_lines, *span, body_size, state.lang)
+                )
+                run_done.update(range(li, span[1] + 1))
+                continue
             if li in run_done:
                 continue
             # labels respect the bold-only demotion — "Funding NIH grant…"
