@@ -1,6 +1,6 @@
 {
-  "generated": "2026-11-17 22:42",
-  "version": "0.2.1",
+  "generated": "2026-11-17 22:45",
+  "version": "0.3.0",
   "results": [
     {
       "pdf": "Bed-Sharing in Couples Is Associated With Increased and Stabilized REM Sleep and Sleep- Stage Synchronization.pdf",
@@ -32,7 +32,7 @@
       "raster_tables": 0,
       "raster_figures": 0,
       "asides": 0,
-      "seconds": 16.1
+      "seconds": 17.6
     },
     {
       "pdf": "SEXUAL SELECTION AND THE DESCENT OF MAN 1871-1971.pdf",
@@ -64,7 +64,7 @@
       "raster_tables": 0,
       "raster_figures": 0,
       "asides": 2,
-      "seconds": 2.5
+      "seconds": 2.7
     },
     {
       "pdf": "acp_copernicus.pdf",
@@ -80,7 +80,7 @@
       "raster_tables": 0,
       "raster_figures": 0,
       "asides": 1,
-      "seconds": 1.5
+      "seconds": 1.6
     },
     {
       "pdf": "arxiv_latnet_1705.09036.pdf",
@@ -160,7 +160,7 @@
       "raster_tables": 3,
       "raster_figures": 0,
       "asides": 1,
-      "seconds": 1.9
+      "seconds": 2.0
     },
     {
       "pdf": "frontiers_2col.pdf",
@@ -288,7 +288,7 @@
       "raster_tables": 0,
       "raster_figures": 0,
       "asides": 0,
-      "seconds": 0.5
+      "seconds": 0.7
     },
     {
       "pdf": "wiley_ee.pdf",
@@ -304,7 +304,7 @@
       "raster_tables": 0,
       "raster_figures": 0,
       "asides": 0,
-      "seconds": 1.2
+      "seconds": 1.4
     }
   ]
 }

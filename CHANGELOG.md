@@ -4,6 +4,36 @@ All notable changes to exegesis are documented here. Versions follow
 [Semantic Versioning](https://semver.org); per-release notes are
 generated on each GitHub Release (see `RELEASE.md`).
 
+## [0.3.0] — 2026-11-17
+
+Single-block-page sources (book scans): a scanned book page fused into
+one PyMuPDF block no longer emits furniture, heads, notes, and outlines
+as run-in prose. On the Trivers motivating scan the pipeline recovers
+28 of 28 section heads, files its footnote tail to notes.xhtml, strips
+the recurring running heads, and emits Table 7.1 as a real nested list.
+
+- Running heads: folio-anchored line-level split inside page-dominant
+  blocks — page edge + page-index quorum + lowercase veto; same-row
+  siblings ride along; `--keep-headers` keeps them verbatim (#72)
+- Section heads: body-size isolated-head units recover on geometry —
+  gaps above (and below for Title Case), all-caps, or profile label —
+  with byline/front-matter/needle vetoes (#74)
+- Heading runs: same-style adjacent heading lines merge into one
+  heading — wrapped titles and chapter heads stay whole (#70)
+- Note tails: a whole-line underscore rule + smaller-size tail inside
+  the page block splits into a `rule_note` block and files to
+  notes.xhtml unnumbered — no invented callout links (#75)
+- Rule-framed outlines: a rule pair bounding a marker-grammar
+  (`I.`/`A.`/`(n)`) interior emits a nested `<ul>` — depth by
+  marker-class first appearance (#86)
+- Evaluator: independent running-head leak oracle (severity-ranked,
+  `--keep-headers` aware) confirms converter recovery rather than
+  re-deriving it (#73)
+- Metadata: a trailing `.pdf` extension strips from PDF-derived and
+  CLI titles (#71)
+- Docs: AGENTS.md, dev/pipeline.md, and the conversion report cover
+  the new arms; the Trivers scan joins the report corpus
+
 ## [0.2.1] — 2026-11-10
 
 - test: re-seat the root corpus on the journals/ survey set — 18 samples, goldens regenerated
