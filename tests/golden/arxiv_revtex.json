@@ -252,11 +252,21 @@
           "p",
           "2 16 342 14606 831982 51656046 dim A(k) H 3 82 7328 1159392 ",
           381
+        ]
+      ]
+    },
+    {
+      "file": "chap_2.xhtml",
+      "frags": [
+        [
+          "h2",
+          "REFERENCES",
+          10
         ],
         [
           "p",
-          "REFERENCES [1] Bannai, E., Ito, T., Algebraic Combinatorics ",
-          1096
+          "[1] Bannai, E., Ito, T., Algebraic Combinatorics I: Associat",
+          1085
         ],
         [
           "p",
@@ -303,11 +313,11 @@
   ],
   "stats": {
     "asides": 0,
-    "chapters": 2,
+    "chapters": 3,
     "columns": 1,
     "footnotes": 9,
     "grid_tables": 0,
-    "headings": 1,
+    "headings": 2,
     "images": 0,
     "pages": 9,
     "raster_figures": 0,
@@ -318,6 +328,10 @@
     [
       1,
       "Abstract"
+    ],
+    [
+      1,
+      "REFERENCES"
     ],
     [
       1,

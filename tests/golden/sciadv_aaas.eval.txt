@@ -3,10 +3,10 @@
 **Verdict:** 0 high-severity findings — clean; verbatim word coverage 97.3% (8628/8869, epub emitted 8756 words after rejoins)
 
 ## Checks
-- A container: PASS — 13 members, 2 chapters, 4 images
+- A container: PASS — 14 members, 3 chapters, 4 images
 - B metadata: title='Science Journals — AAAS'
 - C coverage: rejoined 236, furniture 358, rasterized table cells 0, superscript splits 5, genuine loss 0
-- D toc: 3 entries, h1=1 h2=1, dupes=none
+- D toc: 4 entries, h1=1 h2=2, dupes=none
 - J heads: 0 committed source rows, 0 attributable leaks (folio-anchored top-edge rows only — internal, folio-less, and bottom-placed heads are undetectable)
 - G figures: pdf rasters=4, embedded=4, vector pages=[]
 

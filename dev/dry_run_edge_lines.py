@@ -24,7 +24,7 @@ from exegesis.analyze import _signature
 from exegesis.const import (
     BOILERPLATE_COVERAGE,
     EDGE_ZONE,
-    FOLIO_HEAD_BLOCK_SPAN,
+    PAGE_BLOCK_MIN_SPAN,
 )
 from exegesis.text import _line_text
 
@@ -97,7 +97,7 @@ def rule_folio_anchored(pages, rows):
         )
         if first is not None and (
             first["bbox"][3] - first["bbox"][1]
-            >= height * FOLIO_HEAD_BLOCK_SPAN
+            >= height * PAGE_BLOCK_MIN_SPAN
         ):
             eligible.add(pi)
     cand = [

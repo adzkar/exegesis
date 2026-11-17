@@ -146,7 +146,17 @@
         [
           "p",
           "This PDF file includes: Sections S1 to S9 Tables S1 to S18 F",
-          94
+          73
+        ]
+      ]
+    },
+    {
+      "file": "chap_3.xhtml",
+      "frags": [
+        [
+          "h2",
+          "REFERENCES AND NOTES",
+          20
         ],
         [
           "p",
@@ -408,11 +418,11 @@
   ],
   "stats": {
     "asides": 0,
-    "chapters": 3,
+    "chapters": 4,
     "columns": 2,
     "footnotes": 7,
     "grid_tables": 0,
-    "headings": 2,
+    "headings": 3,
     "images": 4,
     "pages": 9,
     "raster_figures": 0,
@@ -427,6 +437,10 @@
     [
       2,
       "Supplementary Materials"
+    ],
+    [
+      2,
+      "REFERENCES AND NOTES"
     ],
     [
       1,
